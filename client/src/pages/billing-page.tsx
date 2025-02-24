@@ -81,9 +81,17 @@ export default function BillingPage() {
               <p className="font-medium mb-2">Add $100.00 to your balance</p>
               <p className="text-sm text-muted-foreground mb-4">Quick and secure payment with PayPal</p>
               <PayPalButtons
-                style={{ layout: "vertical" }}
+                style={{ layout: "vertical", label: "pay" }}
                 createOrder={createOrder}
                 onApprove={onApprove}
+                onError={(err) => {
+                  toast({
+                    title: "Error",
+                    description: "Payment failed. Please try again.",
+                    variant: "destructive",
+                  });
+                  console.error("PayPal error:", err);
+                }}
               />
             </div>
           </CardContent>

@@ -27,12 +27,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PayPalScriptProvider options={{
-        clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID!,
+        clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || '',
         currency: "USD",
         intent: "capture",
-        "enable-funding": "paypal",
-        "disable-funding": "card,paylater",
-        "data-namespace": "PayPalSDK"
+        components: "buttons",
+        "data-client-token": "abc",
       }}>
         <AuthProvider>
           <Router />
