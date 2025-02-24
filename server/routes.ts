@@ -14,7 +14,11 @@ const COSTS = {
     "s-1vcpu-2gb": 14, // $0.014 per hour (~$10/mo)
     "s-2vcpu-4gb": 28, // $0.028 per hour (~$20/mo)
   },
-  storage: 0.14, // $0.00014 per GB per hour (~$0.10/mo)
+  storage: {
+    baseRate: 0.00014, // DO base rate per GB per hour
+    markup: 0.009, // Our markup per GB
+    maxSize: 10000, // Maximum volume size in GB
+  },
 };
 
 // Hourly billing
@@ -171,6 +175,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json(parsed.error);
     }
 
+    // Validate volume size
+    if (parsed.data.size > COSTS.storage.maxSize) {
+      return res.status(400).json({
+        message: `Maximum volume size is ${COSTS.storage.maxSize}GB`
+      });
+    }
+
+    // Calculate hourly cost with markup
+    const hourlyCost = parsed.data.size * (COSTS.storage.baseRate + COSTS.storage.markup);
+
+    // Check if user has enough balance for at least 1 hour
+    try {
+      await checkBalance(req.user.id, hourlyCost);
+    } catch (error) {
+      return res.status(400).json({ 
+        message: `Insufficient balance. Required: $${hourlyCost.toFixed(3)} per hour for ${parsed.data.size}GB`
+      });
+    }
+
     const doVolume = await digitalOcean.createVolume({
       name: parsed.data.name,
       region: server.region,
@@ -183,6 +206,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       serverId: server.id,
       volumeId: doVolume.id,
       region: server.region,
+    });
+
+    // Deduct first hour's cost
+    await storage.updateUserBalance(req.user.id, -hourlyCost);
+    await storage.createTransaction({
+      userId: req.user.id,
+      amount: -hourlyCost,
+      currency: "USD",
+      status: "completed",
+      type: "volume_charge",
+      paypalTransactionId: null,
+      createdAt: new Date(),
     });
 
     res.status(201).json(volume);
@@ -224,9 +259,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "New size must be greater than current size" });
     }
 
-    // In production, you would resize the DO volume here
+    if (size > COSTS.storage.maxSize) {
+      return res.status(400).json({
+        message: `Maximum volume size is ${COSTS.storage.maxSize}GB`
+      });
+    }
+
+    // Calculate additional cost for the new size
+    const newHourlyCost = size * (COSTS.storage.baseRate + COSTS.storage.markup);
+    const currentHourlyCost = volume.size * (COSTS.storage.baseRate + COSTS.storage.markup);
+    const additionalCost = newHourlyCost - currentHourlyCost;
+
+    // Check if user has enough balance for the size increase
+    try {
+      await checkBalance(req.user.id, additionalCost);
+    } catch (error) {
+      return res.status(400).json({ 
+        message: `Insufficient balance. Additional cost: $${additionalCost.toFixed(3)} per hour for ${size - volume.size}GB increase`
+      });
+    }
+
+    // Update volume size
     volume.size = size;
     await storage.updateVolume(volume);
+
+    // Deduct additional cost
+    await storage.updateUserBalance(req.user.id, -additionalCost);
+    await storage.createTransaction({
+      userId: req.user.id,
+      amount: -additionalCost,
+      currency: "USD",
+      status: "completed",
+      type: "volume_resize_charge",
+      paypalTransactionId: null,
+      createdAt: new Date(),
+    });
+
     res.json(volume);
   });
 
