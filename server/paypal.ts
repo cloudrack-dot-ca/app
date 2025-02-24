@@ -1,13 +1,14 @@
 import paypal from "@paypal/checkout-server-sdk";
 
-if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
-  throw new Error("PayPal credentials not found");
+const clientId = process.env.PAYPAL_CLIENT_ID;
+const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+
+if (!clientId || !clientSecret) {
+  console.error("PayPal credentials not found");
 }
 
 function environment() {
-  const clientId = process.env.PAYPAL_CLIENT_ID;
-  const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
-  return new paypal.core.SandboxEnvironment(clientId, clientSecret);
+  return new paypal.core.SandboxEnvironment(clientId || '', clientSecret || '');
 }
 
 const client = new paypal.core.PayPalHttpClient(environment());
