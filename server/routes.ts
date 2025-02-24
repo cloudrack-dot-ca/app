@@ -17,7 +17,7 @@ const COSTS = {
   storage: {
     baseRate: 0.00014, // DO base rate per GB per hour
     markup: 0.009, // Our markup per GB
-    maxSize: 10000, // Maximum volume size in GB
+    maxSize: 1000, // Maximum volume size in GB
   },
 };
 
@@ -182,9 +182,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Validate volume size
-    if (parsed.data.size > COSTS.storage.maxSize) {
+    if (!parsed.data.size || parsed.data.size <= 0 || parsed.data.size > COSTS.storage.maxSize) {
       return res.status(400).json({
-        message: `Maximum volume size is ${COSTS.storage.maxSize}GB`
+        message: `Volume size must be between 1GB and ${COSTS.storage.maxSize}GB`
       });
     }
 
