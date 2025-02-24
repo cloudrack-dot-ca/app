@@ -39,7 +39,6 @@ export interface IStorage {
 
   createMessage(message: Omit<SupportMessage, "id" | "createdAt" | "isRead">): Promise<SupportMessage>;
   getMessagesByTicket(ticketId: number): Promise<SupportMessage[]>;
-  updateMessage(id: number, updates: Partial<SupportMessage>): Promise<SupportMessage>;
 
   sessionStore: session.Store;
 }
@@ -223,14 +222,6 @@ export class DatabaseStorage implements IStorage {
       .from(supportMessages)
       .where(eq(supportMessages.ticketId, ticketId))
       .orderBy(sql`${supportMessages.createdAt} ASC`);
-  }
-
-  async updateMessage(id: number, updates: Partial<SupportMessage>): Promise<SupportMessage> {
-    const [updatedMessage] = await db.update(supportMessages)
-      .set(updates)
-      .where(eq(supportMessages.id, id))
-      .returning();
-    return updatedMessage;
   }
 }
 
