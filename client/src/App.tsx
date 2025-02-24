@@ -10,7 +10,7 @@ import AuthPage from "@/pages/auth-page";
 import BillingPage from "@/pages/billing-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
-import React, { useState } from 'react'; // Added import for useState
+import React, { useState } from 'react';
 
 function Router() {
   return (
@@ -28,7 +28,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PayPalScriptProvider options={{
-        "client-id": process.env.VITE_PAYPAL_CLIENT_ID || "YOUR_PAYPAL_CLIENT_ID", // Updated clientId and used process.env for security. Replace YOUR_PAYPAL_CLIENT_ID with your actual client ID.
+        "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID || "YOUR_PAYPAL_CLIENT_ID",
         currency: "USD",
         intent: "capture",
         components: "buttons",

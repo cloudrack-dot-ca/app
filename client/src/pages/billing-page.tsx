@@ -1,4 +1,4 @@
-import { useState } from "react";
+import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { PayPalButtons } from "@paypal/react-paypal-js";
@@ -14,7 +14,7 @@ import { Link } from "wouter";
 export default function BillingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [depositAmount, setDepositAmount] = useState(100);
+  const [depositAmount, setDepositAmount] = React.useState(100);
 
   const { data: transactions = [], isLoading: loadingTransactions } = useQuery<BillingTransaction[]>({
     queryKey: ["/api/billing/transactions"],
