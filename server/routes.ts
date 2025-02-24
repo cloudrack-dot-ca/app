@@ -4,6 +4,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
 import { insertServerSchema, insertVolumeSchema } from "@shared/schema";
+import { createSubscription, capturePayment, plans } from "./paypal";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -26,7 +27,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
-    
+
     const parsed = insertServerSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(parsed.error);
@@ -56,7 +57,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/servers/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
-    
+
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id) {
       return res.sendStatus(404);
@@ -69,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/servers/:id/volumes", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
-    
+
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id) {
       return res.sendStatus(404);
@@ -81,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/servers/:id/volumes", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
-    
+
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id) {
       return res.sendStatus(404);
@@ -107,6 +108,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     res.status(201).json(volume);
+  });
+
+  app.get("/api/billing/plans", (_req, res) => {
+    res.json(plans);
+  });
+
+  app.post("/api/billing/subscribe", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const { planId } = req.body;
+    if (!planId) return res.status(400).json({ message: "Plan ID is required" });
+
+    try {
+      const order = await createSubscription(planId);
+      res.json(order);
+    } catch (error) {
+      res.status(400).json({ message: (error as Error).message });
+    }
+  });
+
+  app.post("/api/billing/capture/:orderId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const { orderId } = req.params;
+    const { planId } = req.body;
+
+    try {
+      const payment = await capturePayment(orderId);
+
+      // Create subscription record
+      const subscription = await storage.createSubscription({
+        userId: req.user.id,
+        planId,
+        status: "active",
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        paypalSubscriptionId: payment.id,
+      });
+
+      // Create transaction record
+      await storage.createTransaction({
+        userId: req.user.id,
+        subscriptionId: subscription.id,
+        amount: Math.round(plans[planId as keyof typeof plans].price * 100),
+        currency: "USD",
+        status: "completed",
+        paypalTransactionId: payment.id,
+        createdAt: new Date(),
+      });
+
+      res.json({ subscription, payment });
+    } catch (error) {
+      res.status(400).json({ message: (error as Error).message });
+    }
+  });
+
+  app.get("/api/billing/subscriptions", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const subscriptions = await storage.getSubscriptionsByUser(req.user.id);
+    res.json(subscriptions);
+  });
+
+  app.get("/api/billing/transactions", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const transactions = await storage.getTransactionsByUser(req.user.id);
+    res.json(transactions);
   });
 
   const httpServer = createServer(app);
