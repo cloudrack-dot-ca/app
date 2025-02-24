@@ -396,7 +396,7 @@ export default function SupportPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Conversation</h2>
-            {selectedTicketData?.ticket.status === "open" && (
+            {selectedTicketData && selectedTicketData.ticket && selectedTicketData.ticket.status === "open" && (
               <Button
                 variant="outline"
                 onClick={() => closeTicketMutation.mutate(selectedTicketData.ticket.id)}
