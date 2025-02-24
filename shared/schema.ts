@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   apiKey: text("api_key"),
   balance: integer("balance").notNull().default(0), // Balance in cents
+  isAdmin: boolean("is_admin").notNull().default(false), // New: Admin flag
 });
 
 export const servers = pgTable("servers", {
@@ -47,6 +48,26 @@ export const billingTransactions = pgTable("billing_transactions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// New: Support Tickets
+export const supportTickets = pgTable("support_tickets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  subject: text("subject").notNull(),
+  status: text("status").notNull(), // open, closed, pending
+  priority: text("priority").notNull().default('normal'), // low, normal, high
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// New: Support Messages
+export const supportMessages = pgTable("support_messages", {
+  id: serial("id").primaryKey(),
+  ticketId: integer("ticket_id").notNull(),
+  userId: integer("user_id").notNull(), // sender (can be admin or user)
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -63,8 +84,23 @@ export const insertVolumeSchema = createInsertSchema(volumes).pick({
   size: true,
 });
 
+// New: Support Ticket Schema
+export const insertTicketSchema = createInsertSchema(supportTickets).pick({
+  subject: true,
+  priority: true,
+}).extend({
+  message: z.string().min(1, "Initial message is required"),
+});
+
+// New: Support Message Schema
+export const insertMessageSchema = createInsertSchema(supportMessages).pick({
+  message: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Server = typeof servers.$inferSelect;
 export type Volume = typeof volumes.$inferSelect;
 export type BillingTransaction = typeof billingTransactions.$inferSelect;
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type SupportMessage = typeof supportMessages.$inferSelect;
