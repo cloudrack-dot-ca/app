@@ -18,18 +18,30 @@ export const plans = {
     name: "Basic Plan",
     description: "1 VPS Server, 5GB Storage",
     price: 10.00,
+    limits: {
+      maxServers: 1,
+      maxStorageGB: 5,
+    }
   },
   pro: {
     id: "PRO_PLAN",
     name: "Pro Plan",
     description: "3 VPS Servers, 20GB Storage",
     price: 30.00,
+    limits: {
+      maxServers: 3,
+      maxStorageGB: 20,
+    }
   },
   enterprise: {
     id: "ENTERPRISE_PLAN",
     name: "Enterprise Plan",
     description: "10 VPS Servers, 100GB Storage",
     price: 100.00,
+    limits: {
+      maxServers: 10,
+      maxStorageGB: 100,
+    }
   },
 };
 

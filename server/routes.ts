@@ -6,6 +6,39 @@ import { digitalOcean } from "./digital-ocean";
 import { insertServerSchema, insertVolumeSchema } from "@shared/schema";
 import { createSubscription, capturePayment, plans } from "./paypal";
 
+async function checkSubscriptionLimits(userId: number) {
+  // Get user's active subscription
+  const subscriptions = await storage.getSubscriptionsByUser(userId);
+  const activeSubscription = subscriptions.find(sub => sub.status === "active");
+
+  if (!activeSubscription) {
+    throw new Error("No active subscription found. Please subscribe to a plan.");
+  }
+
+  const plan = plans[activeSubscription.planId as keyof typeof plans];
+  if (!plan) {
+    throw new Error("Invalid subscription plan");
+  }
+
+  // Check server limits
+  const userServers = await storage.getServersByUser(userId);
+  if (userServers.length >= plan.limits.maxServers) {
+    throw new Error(`Server limit reached. Your ${plan.name} allows up to ${plan.limits.maxServers} servers.`);
+  }
+
+  // Check storage limits
+  const userVolumes = await Promise.all(
+    userServers.map(server => storage.getVolumesByServer(server.id))
+  );
+  const totalStorage = userVolumes.flat().reduce((sum, vol) => sum + vol.size, 0);
+
+  if (totalStorage >= plan.limits.maxStorageGB) {
+    throw new Error(`Storage limit reached. Your ${plan.name} allows up to ${plan.limits.maxStorageGB}GB of storage.`);
+  }
+
+  return plan;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
@@ -28,31 +61,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
-    const parsed = insertServerSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json(parsed.error);
+    try {
+      // Check subscription limits before creating server
+      await checkSubscriptionLimits(req.user.id);
+
+      const parsed = insertServerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
+
+      const droplet = await digitalOcean.createDroplet({
+        name: parsed.data.name,
+        region: parsed.data.region,
+        size: parsed.data.size,
+      });
+
+      const server = await storage.createServer({
+        ...parsed.data,
+        userId: req.user.id,
+        dropletId: droplet.id,
+        ipAddress: droplet.ip_address,
+        status: "new",
+        specs: {
+          memory: 1024,
+          vcpus: 1,
+          disk: 25,
+        },
+      });
+
+      res.status(201).json(server);
+    } catch (error) {
+      res.status(400).json({ message: (error as Error).message });
     }
-
-    const droplet = await digitalOcean.createDroplet({
-      name: parsed.data.name,
-      region: parsed.data.region,
-      size: parsed.data.size,
-    });
-
-    const server = await storage.createServer({
-      ...parsed.data,
-      userId: req.user.id,
-      dropletId: droplet.id,
-      ipAddress: droplet.ip_address,
-      status: "new",
-      specs: {
-        memory: 1024,
-        vcpus: 1,
-        disk: 25,
-      },
-    });
-
-    res.status(201).json(server);
   });
 
   app.delete("/api/servers/:id", async (req, res) => {
