@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Server } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import ServerCard from "@/components/server-card";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Plus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
@@ -67,6 +68,9 @@ export default function Dashboard() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <div className="space-x-4">
+            <Button variant="outline" asChild>
+              <Link href="/billing">Billing</Link>
+            </Button>
             <span className="text-muted-foreground">Welcome, {user?.username}</span>
             <Button variant="outline" onClick={() => logoutMutation.mutate()}>
               Logout
@@ -120,7 +124,7 @@ export default function Dashboard() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {regions.map((region) => (
+                            {regions.map((region: any) => (
                               <SelectItem key={region.slug} value={region.slug}>
                                 {region.name}
                               </SelectItem>
@@ -147,7 +151,7 @@ export default function Dashboard() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {sizes.map((size) => (
+                            {sizes.map((size: any) => (
                               <SelectItem key={size.slug} value={size.slug}>
                                 {size.memory / 1024}GB RAM, {size.vcpus} vCPUs
                               </SelectItem>

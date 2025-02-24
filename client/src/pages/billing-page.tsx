@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { Subscription, BillingTransaction } from "@shared/schema";
+import { Link } from "wouter";
 
 type Plan = {
   id: string;
@@ -74,7 +75,12 @@ export default function BillingPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Billing & Subscriptions</h1>
+      <nav className="mb-8 flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Billing & Subscriptions</h1>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard">Back to Dashboard</Link>
+        </Button>
+      </nav>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
         {Object.entries(plans).map(([id, plan]) => (
@@ -83,7 +89,10 @@ export default function BillingPage() {
               <CardTitle>{plan.name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold mb-4">${plan.price}/mo</p>
+              <p className="text-2xl font-bold mb-4">
+                ${plan.price}
+                <span className="text-lg text-muted-foreground font-normal"> /mo</span>
+              </p>
               <p className="text-muted-foreground mb-6">{plan.description}</p>
               <PayPalButtons
                 createOrder={() => createOrder(id)}
