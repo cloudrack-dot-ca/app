@@ -36,7 +36,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+
+// Map regions to flag emojis
+const regionFlags: { [key: string]: string } = {
+  'nyc1': '🇺🇸 New York',
+  'sfo1': '🇺🇸 San Francisco',
+  'ams1': '🇳🇱 Amsterdam',
+  'sgp1': '🇸🇬 Singapore',
+  'lon1': '🇬🇧 London',
+  'fra1': '🇩🇪 Frankfurt',
+  'tor1': '🇨🇦 Toronto',
+  'blr1': '🇮🇳 Bangalore',
+};
 
 interface TicketDetails {
   ticket: SupportTicket;
@@ -69,9 +80,16 @@ export default function SupportPage() {
       subject: "",
       message: "",
       priority: "low",
-      serverId: undefined,
+      serverId: undefined as number | undefined,
     },
   });
+
+  const onSubmit = (data: any) => {
+    createTicketMutation.mutate({
+      ...data,
+      serverId: data.serverId ? Number(data.serverId) : undefined
+    });
+  };
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -95,15 +113,6 @@ export default function SupportPage() {
     },
   });
 
-  const onSubmit = (data: any) => {
-    // Convert serverId to number if it exists
-    if (data.serverId) {
-      data.serverId = parseInt(data.serverId);
-    }
-    createTicketMutation.mutate(data);
-  };
-
-  // Close ticket mutation
   const closeTicketMutation = useMutation({
     mutationFn: async (ticketId: number) => {
       const response = await apiRequest("PATCH", `/api/tickets/${ticketId}/status`, {
@@ -121,7 +130,6 @@ export default function SupportPage() {
     },
   });
 
-  // Reply Form
   const replyForm = useForm({
     defaultValues: {
       message: "",
@@ -151,7 +159,6 @@ export default function SupportPage() {
     },
   });
 
-  // Edit message mutation
   const editMessageMutation = useMutation({
     mutationFn: async ({ messageId, message }: { messageId: number; message: string }) => {
       const response = await apiRequest(
@@ -225,8 +232,20 @@ export default function SupportPage() {
                           </FormControl>
                           <SelectContent>
                             {servers.map((server) => (
-                              <SelectItem key={server.id} value={server.id.toString()}>
-                                {server.name}
+                              <SelectItem 
+                                key={server.id} 
+                                value={server.id.toString()}
+                                className="flex flex-col items-start"
+                              >
+                                <div className="font-medium">{server.name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {regionFlags[server.region] || server.region} - {server.ipAddress}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {server.specs?.memory && `${server.specs.memory / 1024}GB RAM`}, 
+                                  {server.specs?.vcpus && `${server.specs.vcpus} vCPUs`}, 
+                                  {server.specs?.disk && `${server.specs.disk}GB Disk`}
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
