@@ -120,15 +120,15 @@ export default function BillingPage() {
             <ul className="space-y-2">
               <li className="flex justify-between">
                 <span>1GB RAM, 1 vCPU</span>
-                <span>$5/mo</span>
+                <span>$0.007/hour</span>
               </li>
               <li className="flex justify-between">
                 <span>2GB RAM, 1 vCPU</span>
-                <span>$10/mo</span>
+                <span>$0.014/hour</span>
               </li>
               <li className="flex justify-between">
                 <span>4GB RAM, 2 vCPU</span>
-                <span>$20/mo</span>
+                <span>$0.028/hour</span>
               </li>
             </ul>
           </CardContent>
@@ -139,8 +139,8 @@ export default function BillingPage() {
             <CardTitle>Storage Pricing</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold mb-2">$0.10/GB</p>
-            <p className="text-muted-foreground">Per month for block storage volumes</p>
+            <p className="text-2xl font-bold mb-2">$0.00014/GB</p>
+            <p className="text-muted-foreground">Per hour for block storage volumes</p>
           </CardContent>
         </Card>
       </div>

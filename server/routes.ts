@@ -9,11 +9,11 @@ import { createSubscription, capturePayment } from "./paypal";
 // Cost constants
 const COSTS = {
   servers: {
-    "s-1vcpu-1gb": 500, // $5.00
-    "s-1vcpu-2gb": 1000, // $10.00
-    "s-2vcpu-4gb": 2000, // $20.00
+    "s-1vcpu-1gb": 7, // $0.007 per hour (~$5/mo)
+    "s-1vcpu-2gb": 14, // $0.014 per hour (~$10/mo)
+    "s-2vcpu-4gb": 28, // $0.028 per hour (~$20/mo)
   },
-  storage: 10, // $0.10 per GB
+  storage: 0.14, // $0.00014 per GB per hour (~$0.10/mo)
 };
 
 async function checkBalance(userId: number, cost: number) {
@@ -51,9 +51,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json(parsed.error);
       }
 
-      // Check if user has enough balance
-      const monthlyCost = COSTS.servers[parsed.data.size as keyof typeof COSTS.servers];
-      await checkBalance(req.user.id, monthlyCost);
+      // Check if user has enough balance (require minimum 24h worth)
+      const hourlyCost = COSTS.servers[parsed.data.size as keyof typeof COSTS.servers];
+      const minimumBalance = hourlyCost * 24; // Require 24h worth of balance
+      await checkBalance(req.user.id, minimumBalance);
 
       const droplet = await digitalOcean.createDroplet({
         name: parsed.data.name,
