@@ -238,7 +238,7 @@ export default function SupportPage() {
                       <FormItem>
                         <FormLabel>Related Server (Optional)</FormLabel>
                         <Select
-                          onValueChange={field.onChange}
+                          onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
                           value={field.value?.toString()}
                         >
                           <FormControl>
