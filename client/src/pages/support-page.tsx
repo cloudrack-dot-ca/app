@@ -495,7 +495,7 @@ export default function SupportPage() {
                     </div>
                   ))}
                 </div>
-                {selectedTicketData.ticket.status === "open" && (
+                {selectedTicketData?.ticket?.status === "open" && (
                   <form
                     onSubmit={replyForm.handleSubmit((data) =>
                       replyMutation.mutate(data)
