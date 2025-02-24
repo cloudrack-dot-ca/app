@@ -50,6 +50,11 @@ export default function SupportPage() {
     enabled: selectedTicket !== null,
   });
 
+  // Get user's servers for ticket creation
+  const { data: servers = [] } = useQuery({
+    queryKey: ["/api/servers"],
+  });
+
   // Create Ticket Form
   const form = useForm({
     resolver: zodResolver(insertTicketSchema),
@@ -57,6 +62,7 @@ export default function SupportPage() {
       subject: "",
       priority: "normal",
       message: "",
+      serverId: undefined,
     },
   });
 
@@ -140,6 +146,33 @@ export default function SupportPage() {
                   )}
                   className="space-y-4"
                 >
+                  <FormField
+                    control={form.control}
+                    name="serverId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Server</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          defaultValue={field.value?.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a server" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {servers.map((server) => (
+                              <SelectItem key={server.id} value={server.id.toString()}>
+                                {server.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="subject"

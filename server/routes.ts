@@ -131,7 +131,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.sendStatus(404);
     }
 
+    // Delete the server from DigitalOcean
     await digitalOcean.deleteDroplet(server.dropletId);
+
+    // Keep the tickets but remove the server association
+    const tickets = await storage.getTicketsByServer(server.id);
+    for (const ticket of tickets) {
+      if (ticket.status === 'open') {
+        await storage.updateTicket(ticket.id, { serverId: null });
+      }
+    }
+
     await storage.deleteServer(server.id);
     res.sendStatus(204);
   });
@@ -287,20 +297,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json(parsed.error);
       }
 
-      const ticket = await storage.createTicket({
-        userId: req.user.id,
-        subject: parsed.data.subject,
-        priority: parsed.data.priority,
-      });
+      // If serverId is provided, check if the server exists and belongs to the user
+      if (parsed.data.serverId) {
+        const server = await storage.getServer(parsed.data.serverId);
+        if (!server || server.userId !== req.user.id) {
+          return res.status(404).json({ message: "Server not found" });
+        }
 
-      // Create initial message
-      await storage.createMessage({
-        ticketId: ticket.id,
-        userId: req.user.id,
-        message: parsed.data.message,
-      });
+        // Check if user already has an open ticket for this server
+        const existingTickets = await storage.getTicketsByUser(req.user.id);
+        const hasOpenTicket = existingTickets.some(
+          ticket => ticket.serverId === parsed.data.serverId && ticket.status === 'open'
+        );
 
-      res.status(201).json(ticket);
+        if (hasOpenTicket) {
+          return res.status(400).json({
+            message: "You already have an open ticket for this server"
+          });
+        }
+
+        // Store the original droplet ID with the ticket
+        const ticket = await storage.createTicket({
+          userId: req.user.id,
+          serverId: parsed.data.serverId,
+          subject: parsed.data.subject,
+          priority: parsed.data.priority,
+          originalDropletId: server.dropletId,
+        });
+
+        // Create initial message
+        await storage.createMessage({
+          ticketId: ticket.id,
+          userId: req.user.id,
+          message: parsed.data.message,
+        });
+
+        res.status(201).json(ticket);
+      } else {
+        // Create ticket without server association
+        const ticket = await storage.createTicket({
+          userId: req.user.id,
+          subject: parsed.data.subject,
+          priority: parsed.data.priority,
+        });
+
+        await storage.createMessage({
+          ticketId: ticket.id,
+          userId: req.user.id,
+          message: parsed.data.message,
+        });
+
+        res.status(201).json(ticket);
+      }
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
     }

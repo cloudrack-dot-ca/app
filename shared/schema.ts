@@ -8,7 +8,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   apiKey: text("api_key"),
   balance: integer("balance").notNull().default(0), // Balance in cents
-  isAdmin: boolean("is_admin").notNull().default(false), // New: Admin flag
+  isAdmin: boolean("is_admin").notNull().default(false), // Admin flag
 });
 
 export const servers = pgTable("servers", {
@@ -48,24 +48,27 @@ export const billingTransactions = pgTable("billing_transactions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// New: Support Tickets
+// Updated: Support Tickets with server relation
 export const supportTickets = pgTable("support_tickets", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
+  serverId: integer("server_id"), // Optional - allows tickets to persist after server deletion
   subject: text("subject").notNull(),
   status: text("status").notNull(), // open, closed, pending
   priority: text("priority").notNull().default('normal'), // low, normal, high
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  originalDropletId: text("original_droplet_id"), // Store the original droplet ID for reference
 });
 
-// New: Support Messages
+// Support Messages with real-time chat support
 export const supportMessages = pgTable("support_messages", {
   id: serial("id").primaryKey(),
   ticketId: integer("ticket_id").notNull(),
   userId: integer("user_id").notNull(), // sender (can be admin or user)
   message: text("message").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  isRead: boolean("is_read").notNull().default(false), // For real-time chat notifications
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -84,15 +87,15 @@ export const insertVolumeSchema = createInsertSchema(volumes).pick({
   size: true,
 });
 
-// New: Support Ticket Schema
+// Updated: Support Ticket Schema with server relation
 export const insertTicketSchema = createInsertSchema(supportTickets).pick({
   subject: true,
   priority: true,
+  serverId: true,
 }).extend({
   message: z.string().min(1, "Initial message is required"),
 });
 
-// New: Support Message Schema
 export const insertMessageSchema = createInsertSchema(supportMessages).pick({
   message: true,
 });
