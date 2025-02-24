@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -73,10 +73,7 @@ export default function SupportPage() {
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("/api/tickets", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/tickets", data);
       return response.json();
     },
     onSuccess: () => {
@@ -97,9 +94,12 @@ export default function SupportPage() {
   });
 
   const onSubmit = (data: any) => {
+    // Convert serverId to number if it exists
+    if (data.serverId) {
+      data.serverId = parseInt(data.serverId);
+    }
     createTicketMutation.mutate(data);
   };
-
 
   // Reply Form
   const replyForm = useForm({
@@ -168,7 +168,7 @@ export default function SupportPage() {
                         <FormLabel>Related Server (Optional)</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value?.toString()}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -208,7 +208,7 @@ export default function SupportPage() {
                         <FormLabel>Priority</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -306,10 +306,10 @@ export default function SupportPage() {
                   <Loader2 className="h-8 w-8 animate-spin mx-auto" />
                 </CardContent>
               </Card>
-            ) : (
+            ) : selectedTicketData ? (
               <div className="space-y-4">
                 <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border rounded-lg">
-                  {selectedTicketData?.messages.map((message) => (
+                  {selectedTicketData.messages?.map((message) => (
                     <div
                       key={message.id}
                       className={`flex flex-col ${
@@ -356,7 +356,7 @@ export default function SupportPage() {
                   </Button>
                 </form>
               </div>
-            )
+            ) : null
           ) : (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
