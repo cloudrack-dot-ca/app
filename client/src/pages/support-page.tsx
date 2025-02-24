@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Plus, Send, Edit2, Check, X } from "lucide-react";
-import { SupportTicket, SupportMessage, Server } from "@shared/schema";
+import { Loader2, Plus, Send, Edit2, Check, X, HardDrive } from "lucide-react";
+import { SupportTicket, SupportMessage, Server, Volume } from "@shared/schema";
 import { Link } from "wouter";
 import {
   Dialog,
@@ -73,6 +73,22 @@ export default function SupportPage() {
   const { data: servers = [] } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
   });
+
+  // Add query for volumes
+  const { data: volumesMap = {} } = useQuery<Record<number, Volume[]>>({
+    queryKey: ["/api/volumes"],
+    queryFn: async () => {
+      const serverVolumes: Record<number, Volume[]> = {};
+      for (const server of servers || []) {
+        const response = await apiRequest("GET", `/api/servers/${server.id}/volumes`);
+        const volumes = await response.json();
+        serverVolumes[server.id] = volumes;
+      }
+      return serverVolumes;
+    },
+    enabled: !!servers?.length,
+  });
+
 
   const createTicketForm = useForm({
     resolver: zodResolver(insertTicketSchema),
@@ -246,6 +262,19 @@ export default function SupportPage() {
                                   {server.specs?.vcpus && `${server.specs.vcpus} vCPUs`}, 
                                   {server.specs?.disk && `${server.specs.disk}GB Disk`}
                                 </div>
+                                {volumesMap[server.id]?.length > 0 && (
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    <div className="flex items-center gap-1">
+                                      <HardDrive className="h-3 w-3" />
+                                      Attached Volumes:
+                                    </div>
+                                    {volumesMap[server.id].map((volume) => (
+                                      <div key={volume.id} className="ml-4">
+                                        • {volume.name}: {volume.size}GB ({regionFlags[volume.region] || volume.region})
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </SelectItem>
                             ))}
                           </SelectContent>
