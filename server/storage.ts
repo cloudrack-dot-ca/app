@@ -24,6 +24,7 @@ export interface IStorage {
   getVolumesByServer(serverId: number): Promise<Volume[]>;
   createVolume(volume: Omit<Volume, "id">): Promise<Volume>;
   deleteVolume(id: number): Promise<void>;
+  updateVolume(volume: Volume): Promise<Volume>;
 
   createTransaction(transaction: Omit<BillingTransaction, "id">): Promise<BillingTransaction>;
   getTransactionsByUser(userId: number): Promise<BillingTransaction[]>;
@@ -125,6 +126,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVolume(id: number): Promise<void> {
     await db.delete(volumes).where(eq(volumes.id, id));
+  }
+
+  async updateVolume(volume: Volume): Promise<Volume> {
+    const [updatedVolume] = await db
+      .update(volumes)
+      .set(volume)
+      .where(eq(volumes.id, volume.id))
+      .returning();
+    return updatedVolume;
   }
 
   async createTransaction(transaction: Omit<BillingTransaction, "id">): Promise<BillingTransaction> {
