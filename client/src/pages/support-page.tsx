@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useState } from "react";
 
 interface TicketDetails {
   ticket: SupportTicket;
@@ -60,26 +61,31 @@ export default function SupportPage() {
     queryKey: ["/api/servers"],
   });
 
-  // Create Ticket Form
-  const form = useForm({
+  const createTicketForm = useForm({
     resolver: zodResolver(insertTicketSchema),
     defaultValues: {
       subject: "",
-      priority: "normal",
       message: "",
+      priority: "low",
       serverId: undefined,
     },
   });
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/tickets", data);
+      const response = await apiRequest("/api/tickets", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
-      toast({ title: "Success", description: "Ticket created successfully" });
-      form.reset();
+      toast({
+        title: "Success",
+        description: "Support ticket created successfully",
+      });
+      createTicketForm.reset();
     },
     onError: (error: Error) => {
       toast({
@@ -89,6 +95,11 @@ export default function SupportPage() {
       });
     },
   });
+
+  const onSubmit = (data: any) => {
+    createTicketMutation.mutate(data);
+  };
+
 
   // Reply Form
   const replyForm = useForm({
@@ -144,22 +155,20 @@ export default function SupportPage() {
               <DialogHeader>
                 <DialogTitle>Create Support Ticket</DialogTitle>
               </DialogHeader>
-              <Form {...form}>
+              <Form {...createTicketForm}>
                 <form
-                  onSubmit={form.handleSubmit((data) =>
-                    createTicketMutation.mutate(data)
-                  )}
+                  onSubmit={createTicketForm.handleSubmit(onSubmit)}
                   className="space-y-4"
                 >
                   <FormField
-                    control={form.control}
+                    control={createTicketForm.control}
                     name="serverId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Server</FormLabel>
+                        <FormLabel>Related Server (Optional)</FormLabel>
                         <Select
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          defaultValue={field.value?.toString()}
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -167,7 +176,7 @@ export default function SupportPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {servers.map((server: Server) => (
+                            {servers.map((server) => (
                               <SelectItem key={server.id} value={server.id.toString()}>
                                 {server.name}
                               </SelectItem>
@@ -179,7 +188,7 @@ export default function SupportPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={createTicketForm.control}
                     name="subject"
                     render={({ field }) => (
                       <FormItem>
@@ -192,7 +201,7 @@ export default function SupportPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={createTicketForm.control}
                     name="priority"
                     render={({ field }) => (
                       <FormItem>
@@ -208,7 +217,7 @@ export default function SupportPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
                             <SelectItem value="high">High</SelectItem>
                           </SelectContent>
                         </Select>
@@ -217,7 +226,7 @@ export default function SupportPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={createTicketForm.control}
                     name="message"
                     render={({ field }) => (
                       <FormItem>
