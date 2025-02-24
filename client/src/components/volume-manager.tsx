@@ -37,6 +37,7 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
   const { toast } = useToast();
   const [resizingVolume, setResizingVolume] = useState<Volume | null>(null);
   const [newSize, setNewSize] = useState<number>(0);
+  const [volumeSize, setVolumeSize] = useState(10);
 
   const { data: volumes = [], isLoading } = useQuery<Volume[]>({
     queryKey: [`/api/servers/${serverId}/volumes`],
@@ -53,6 +54,21 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
       size: 10,
     },
   });
+
+  const handleSliderChange = (value: number[]) => {
+    const newSize = value[0];
+    setVolumeSize(newSize);
+    form.setValue("size", newSize);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value) && value >= 10 && value <= MAX_VOLUME_SIZE) {
+      setVolumeSize(value);
+      form.setValue("size", value);
+    }
+  };
+
 
   async function onSubmit(values: any) {
     try {
@@ -138,8 +154,8 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => {
                               setResizingVolume(volume);
@@ -152,7 +168,7 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {isMaxSize 
+                        {isMaxSize
                           ? "This volume has reached the maximum size limit of 1000GB"
                           : "Click to resize this volume"}
                       </TooltipContent>
@@ -268,25 +284,31 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
                 <FormItem>
                   <FormLabel>Size (GB)</FormLabel>
                   <FormControl>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min="10"
+                    <div className="space-y-4">
+                      <Slider
+                        value={[volumeSize]}
+                        min={10}
                         max={MAX_VOLUME_SIZE}
-                        step="10"
-                        {...field}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (value <= MAX_VOLUME_SIZE) {
-                            field.onChange(value);
-                          }
-                        }}
+                        step={10}
+                        onValueChange={handleSliderChange}
+                        className="py-4"
                       />
-                      <span>GB</span>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={volumeSize}
+                          onChange={handleInputChange}
+                          min={10}
+                          max={MAX_VOLUME_SIZE}
+                          step={10}
+                          className="w-24"
+                        />
+                        <span>GB</span>
+                      </div>
                     </div>
                   </FormControl>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Cost: ${(field.value * (0.00014 + 0.009)).toFixed(5)}/hour
+                    Cost: ${(volumeSize * (0.00014 + 0.009)).toFixed(5)}/hour
                   </p>
                   <FormMessage />
                 </FormItem>
