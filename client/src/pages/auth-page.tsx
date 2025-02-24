@@ -9,19 +9,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation } from "wouter";
 import { Loader2, Server } from "lucide-react";
-// Placeholder for missing VolumeManager export.  Actual implementation needs to be provided separately.
-const VolumeManager = {};
-
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
 
-  React.useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
-  }, [user, navigate]);
+  // Redirect if already logged in
+  if (user) {
+    setLocation("/dashboard");
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex">

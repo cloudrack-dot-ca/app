@@ -21,7 +21,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { useNavigate } from "wouter";
 
 interface Region {
   slug: string;
@@ -33,12 +32,6 @@ interface Size {
   memory: number;
   vcpus: number;
   price_monthly: number;
-}
-
-interface SSHKey {
-  id: number;
-  name: string;
-  publicKey: string;
 }
 
 function calculatePasswordStrength(password: string): number {
@@ -55,7 +48,6 @@ function calculatePasswordStrength(password: string): number {
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const { user, logoutMutation } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,11 +66,6 @@ export default function Dashboard() {
   const { data: sizes = [] } = useQuery<Size[]>({
     queryKey: ["/api/sizes"],
   });
-
-  const { data: sshKeys = [] } = useQuery<SSHKey[]>({
-    queryKey: ["/api/ssh-keys"],
-  });
-
 
   const form = useForm({
     resolver: zodResolver(
@@ -137,11 +124,6 @@ export default function Dashboard() {
     }
   }
 
-  async function handleLogout() {
-    await logoutMutation.mutateAsync();
-    navigate("/");
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <nav className="border-b">
@@ -176,7 +158,7 @@ export default function Dashboard() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem onClick={() => logoutMutation.mutate()}>
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -316,28 +298,7 @@ export default function Dashboard() {
                       />
                     ) : (
                       <FormItem>
-                        <FormLabel>SSH Key</FormLabel>
-                        <Select
-                          onValueChange={(value) => {
-                            const key = sshKeys.find(k => k.id === parseInt(value));
-                            if (key) {
-                              setSshKey(key.publicKey);
-                            }
-                          }}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select an existing key or paste below" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {sshKeys.map((key) => (
-                              <SelectItem key={key.id} value={key.id.toString()}>
-                                {key.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>SSH Public Key</FormLabel>
                         <FormControl>
                           <Textarea
                             value={sshKey}
