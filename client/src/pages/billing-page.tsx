@@ -13,6 +13,7 @@ import { Link } from "wouter";
 export default function BillingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [depositAmount, setDepositAmount] = useState(100);
 
   const { data: transactions = [], isLoading: loadingTransactions } = useQuery<BillingTransaction[]>({
     queryKey: ["/api/billing/transactions"],
@@ -21,7 +22,7 @@ export default function BillingPage() {
   async function createOrder() {
     try {
       const response = await apiRequest("POST", "/api/billing/deposit", {
-        amount: 100.00,
+        amount: depositAmount,
         currency: "USD"
       });
       const data = await response.json();
@@ -81,8 +82,18 @@ export default function BillingPage() {
             </p>
             <p className="text-muted-foreground">Add funds to your account to pay for servers and storage</p>
             <div className="mt-4">
-              <p className="font-medium mb-2">Add $100.00 to your balance</p>
-              <p className="text-sm text-muted-foreground mb-4">Quick and secure payment with PayPal</p>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-lg">$</span>
+                <input 
+                  type="number" 
+                  min="5"
+                  step="0.01"
+                  className="w-24 px-2 py-1 border rounded"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(Math.max(5, Number(e.target.value)))}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">Quick and secure payment with PayPal (Minimum $5.00)</p>
               <PayPalButtons
                 style={{ layout: "vertical", label: "pay" }}
                 createOrder={createOrder}

@@ -150,8 +150,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/billing/deposit", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
+    const { amount } = req.body;
+    if (!amount || amount < 5) {
+      return res.status(400).json({ message: "Minimum deposit amount is $5.00" });
+    }
+
     try {
-      const order = await createSubscription("deposit");
+      const order = await createSubscription(amount);
       res.json(order);
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
