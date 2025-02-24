@@ -31,7 +31,8 @@ function App() {
         currency: "USD",
         intent: "capture",
         components: "buttons",
-        "data-client-token": "abc",
+        enableFunding: "paypal",
+        disableFunding: "card,paylater",
       }}>
         <AuthProvider>
           <Router />
