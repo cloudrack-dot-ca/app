@@ -8,6 +8,7 @@ import HomePage from "@/pages/home-page";
 import Dashboard from "@/pages/dashboard";
 import AuthPage from "@/pages/auth-page";
 import BillingPage from "@/pages/billing-page";
+import SupportPage from "@/pages/support-page"; // New import
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import React, { useState } from 'react';
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/billing" component={BillingPage} />
+      <ProtectedRoute path="/support" component={SupportPage} />
       <Route component={NotFound} />
     </Switch>
   );

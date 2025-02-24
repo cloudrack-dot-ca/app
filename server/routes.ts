@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
 import { insertServerSchema, insertVolumeSchema } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
+import { insertTicketSchema, insertMessageSchema } from "@shared/schema";
 
 // Cost constants
 const COSTS = {
@@ -268,6 +269,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const transactions = await storage.getTransactionsByUser(req.user.id);
     res.json(transactions);
+  });
+
+  // Support Ticket Routes
+  app.get("/api/tickets", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const tickets = await storage.getTicketsByUser(req.user.id);
+    res.json(tickets);
+  });
+
+  app.post("/api/tickets", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const parsed = insertTicketSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
+
+      const ticket = await storage.createTicket({
+        userId: req.user.id,
+        subject: parsed.data.subject,
+        priority: parsed.data.priority,
+      });
+
+      // Create initial message
+      await storage.createMessage({
+        ticketId: ticket.id,
+        userId: req.user.id,
+        message: parsed.data.message,
+      });
+
+      res.status(201).json(ticket);
+    } catch (error) {
+      res.status(400).json({ message: (error as Error).message });
+    }
+  });
+
+  app.get("/api/tickets/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const ticket = await storage.getTicket(parseInt(req.params.id));
+    if (!ticket || (ticket.userId !== req.user.id && !req.user.isAdmin)) {
+      return res.sendStatus(404);
+    }
+
+    const messages = await storage.getMessagesByTicket(ticket.id);
+    res.json({ ticket, messages });
+  });
+
+  app.post("/api/tickets/:id/messages", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const ticket = await storage.getTicket(parseInt(req.params.id));
+    if (!ticket || (ticket.userId !== req.user.id && !req.user.isAdmin)) {
+      return res.sendStatus(404);
+    }
+
+    const parsed = insertMessageSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(parsed.error);
+    }
+
+    const message = await storage.createMessage({
+      ticketId: ticket.id,
+      userId: req.user.id,
+      message: parsed.data.message,
+    });
+
+    // Update ticket's updated_at timestamp
+    if (ticket.status === 'closed') {
+      await storage.updateTicketStatus(ticket.id, 'open');
+    }
+
+    res.status(201).json(message);
   });
 
   const httpServer = createServer(app);
