@@ -169,8 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { orderId } = req.params;
 
     try {
-      const payment = await capturePayment(orderId);
-      const amount = 10000; // $100.00
+      const { payment, amount } = await capturePayment(orderId);
 
       // Add to user's balance
       await storage.updateUserBalance(req.user.id, amount);
@@ -186,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date(),
       });
 
-      res.json({ payment });
+      res.json({ success: true, payment });
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
     }

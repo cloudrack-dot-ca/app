@@ -42,10 +42,12 @@ export async function capturePayment(orderId: string) {
 
   try {
     const capture = await client.execute(request);
-    return capture.result;
+    const payment = capture.result;
+    const amount = parseInt(payment.purchase_units[0].payments.captures[0].amount.value) * 100; // Convert to cents
+    return { payment, amount };
   } catch (err) {
     console.error("Error capturing PayPal payment:", err);
-    throw err;
+    throw new Error("Failed to capture payment");
   }
 }
 
