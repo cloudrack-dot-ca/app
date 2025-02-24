@@ -28,7 +28,7 @@ async function deductHourlyServerCosts() {
       await storage.deleteServer(server.id);
       continue;
     }
-    
+
     // Deduct $1 per hour
     await storage.updateUserBalance(server.userId, -1);
     await storage.createTransaction({
@@ -391,6 +391,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.status(201).json(message);
+  });
+
+  app.patch("/api/tickets/:id/status", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const ticket = await storage.getTicket(parseInt(req.params.id));
+    if (!ticket || ticket.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    const { status } = req.body;
+    if (!status || !["open", "closed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const updatedTicket = await storage.updateTicketStatus(ticket.id, status);
+    res.json(updatedTicket);
+  });
+
+  app.patch("/api/tickets/:id/messages/:messageId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const ticket = await storage.getTicket(parseInt(req.params.id));
+    if (!ticket || ticket.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    const messages = await storage.getMessagesByTicket(ticket.id);
+    const message = messages.find(m => m.id === parseInt(req.params.messageId));
+
+    if (!message || message.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    // Check if message is within 10-minute edit window
+    const createdAt = new Date(message.createdAt);
+    const now = new Date();
+    const diffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+
+    if (diffInMinutes > 10) {
+      return res.status(400).json({ message: "Message can no longer be edited" });
+    }
+
+    const { message: newMessage } = req.body;
+    if (!newMessage || typeof newMessage !== "string") {
+      return res.status(400).json({ message: "Invalid message" });
+    }
+
+    const updatedMessage = await storage.updateMessage(message.id, { message: newMessage });
+    res.json(updatedMessage);
   });
 
   const httpServer = createServer(app);

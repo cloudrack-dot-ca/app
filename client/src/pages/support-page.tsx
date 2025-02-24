@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Plus, Send } from "lucide-react";
+import { Loader2, Plus, Send, Edit2, Check, X } from "lucide-react";
 import { SupportTicket, SupportMessage, Server } from "@shared/schema";
 import { Link } from "wouter";
 import {
@@ -46,6 +46,8 @@ interface TicketDetails {
 export default function SupportPage() {
   const { toast } = useToast();
   const [selectedTicket, setSelectedTicket] = React.useState<number | null>(null);
+  const [editingMessage, setEditingMessage] = React.useState<number | null>(null);
+  const [editText, setEditText] = React.useState("");
 
   const { data: tickets = [], isLoading: loadingTickets } = useQuery<SupportTicket[]>({
     queryKey: ["/api/tickets"],
@@ -101,6 +103,24 @@ export default function SupportPage() {
     createTicketMutation.mutate(data);
   };
 
+  // Close ticket mutation
+  const closeTicketMutation = useMutation({
+    mutationFn: async (ticketId: number) => {
+      const response = await apiRequest("PATCH", `/api/tickets/${ticketId}/status`, {
+        status: "closed"
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets", selectedTicket] });
+      toast({
+        title: "Success",
+        description: "Ticket closed successfully",
+      });
+    },
+  });
+
   // Reply Form
   const replyForm = useForm({
     defaultValues: {
@@ -130,6 +150,34 @@ export default function SupportPage() {
       });
     },
   });
+
+  // Edit message mutation
+  const editMessageMutation = useMutation({
+    mutationFn: async ({ messageId, message }: { messageId: number; message: string }) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/tickets/${selectedTicket}/messages/${messageId}`,
+        { message }
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets", selectedTicket] });
+      setEditingMessage(null);
+      setEditText("");
+      toast({
+        title: "Success",
+        description: "Message updated successfully",
+      });
+    },
+  });
+
+  const canEditMessage = (message: SupportMessage) => {
+    const createdAt = new Date(message.createdAt);
+    const now = new Date();
+    const diffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+    return diffInMinutes <= 10;
+  };
 
   if (loadingTickets) {
     return (
@@ -298,7 +346,22 @@ export default function SupportPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold mb-4">Conversation</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Conversation</h2>
+            {selectedTicketData?.ticket.status === "open" && (
+              <Button
+                variant="outline"
+                onClick={() => closeTicketMutation.mutate(selectedTicketData.ticket.id)}
+                disabled={closeTicketMutation.isPending}
+              >
+                {closeTicketMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Close Ticket"
+                )}
+              </Button>
+            )}
+          </div>
           {selectedTicket ? (
             loadingTicketDetails ? (
               <Card>
@@ -325,36 +388,89 @@ export default function SupportPage() {
                             : "bg-muted"
                         }`}
                       >
-                        <p>{message.message}</p>
-                        <p className="text-xs opacity-70 mt-1">
-                          {new Date(message.createdAt).toLocaleString()}
-                        </p>
+                        {editingMessage === message.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="bg-background"
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingMessage(null);
+                                  setEditText("");
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  editMessageMutation.mutate({
+                                    messageId: message.id,
+                                    message: editText,
+                                  })
+                                }
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p>{message.message}</p>
+                            <div className="flex items-center justify-between mt-1">
+                              <p className="text-xs opacity-70">
+                                {new Date(message.createdAt).toLocaleString()}
+                              </p>
+                              {message.userId === selectedTicketData.ticket.userId &&
+                                canEditMessage(message) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => {
+                                      setEditingMessage(message.id);
+                                      setEditText(message.message);
+                                    }}
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
-                <form
-                  onSubmit={replyForm.handleSubmit((data) =>
-                    replyMutation.mutate(data)
-                  )}
-                  className="flex gap-2"
-                >
-                  <Input
-                    {...replyForm.register("message")}
-                    placeholder="Type your message..."
-                  />
-                  <Button
-                    type="submit"
-                    disabled={replyMutation.isPending}
-                    size="icon"
-                  >
-                    {replyMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
+                {selectedTicketData.ticket.status === "open" && (
+                  <form
+                    onSubmit={replyForm.handleSubmit((data) =>
+                      replyMutation.mutate(data)
                     )}
-                  </Button>
-                </form>
+                    className="flex gap-2"
+                  >
+                    <Input
+                      {...replyForm.register("message")}
+                      placeholder="Type your message..."
+                    />
+                    <Button
+                      type="submit"
+                      disabled={replyMutation.isPending}
+                      size="icon"
+                    >
+                      {replyMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </form>
+                )}
               </div>
             ) : null
           ) : (
