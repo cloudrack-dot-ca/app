@@ -1,20 +1,23 @@
-import { User, Server, Volume, InsertUser } from "@shared/schema";
+import { users, servers, volumes, type User, type Server, type Volume, type InsertUser } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   getServer(id: number): Promise<Server | undefined>;
   getServersByUser(userId: number): Promise<Server[]>;
   createServer(server: Omit<Server, "id">): Promise<Server>;
   updateServer(id: number, updates: Partial<Server>): Promise<Server>;
   deleteServer(id: number): Promise<void>;
-  
+
   getVolume(id: number): Promise<Volume | undefined>;
   getVolumesByServer(serverId: number): Promise<Volume[]>;
   createVolume(volume: Omit<Volume, "id">): Promise<Volume>;
@@ -23,89 +26,75 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private servers: Map<number, Server>;
-  private volumes: Map<number, Volume>;
-  private currentId: number;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.servers = new Map();
-    this.volumes = new Map();
-    this.currentId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async getServer(id: number): Promise<Server | undefined> {
-    return this.servers.get(id);
+    const [server] = await db.select().from(servers).where(eq(servers.id, id));
+    return server;
   }
 
   async getServersByUser(userId: number): Promise<Server[]> {
-    return Array.from(this.servers.values()).filter(
-      (server) => server.userId === userId,
-    );
+    return await db.select().from(servers).where(eq(servers.userId, userId));
   }
 
   async createServer(server: Omit<Server, "id">): Promise<Server> {
-    const id = this.currentId++;
-    const newServer: Server = { ...server, id };
-    this.servers.set(id, newServer);
+    const [newServer] = await db.insert(servers).values(server).returning();
     return newServer;
   }
 
   async updateServer(id: number, updates: Partial<Server>): Promise<Server> {
-    const server = await this.getServer(id);
-    if (!server) throw new Error("Server not found");
-    const updatedServer = { ...server, ...updates };
-    this.servers.set(id, updatedServer);
+    const [updatedServer] = await db
+      .update(servers)
+      .set(updates)
+      .where(eq(servers.id, id))
+      .returning();
     return updatedServer;
   }
 
   async deleteServer(id: number): Promise<void> {
-    this.servers.delete(id);
+    await db.delete(servers).where(eq(servers.id, id));
   }
 
   async getVolume(id: number): Promise<Volume | undefined> {
-    return this.volumes.get(id);
+    const [volume] = await db.select().from(volumes).where(eq(volumes.id, id));
+    return volume;
   }
 
   async getVolumesByServer(serverId: number): Promise<Volume[]> {
-    return Array.from(this.volumes.values()).filter(
-      (volume) => volume.serverId === serverId,
-    );
+    return await db.select().from(volumes).where(eq(volumes.serverId, serverId));
   }
 
   async createVolume(volume: Omit<Volume, "id">): Promise<Volume> {
-    const id = this.currentId++;
-    const newVolume: Volume = { ...volume, id };
-    this.volumes.set(id, newVolume);
+    const [newVolume] = await db.insert(volumes).values(volume).returning();
     return newVolume;
   }
 
   async deleteVolume(id: number): Promise<void> {
-    this.volumes.delete(id);
+    await db.delete(volumes).where(eq(volumes.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
