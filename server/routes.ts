@@ -21,23 +21,28 @@ const COSTS = {
   },
 };
 
+// Convert dollar amount to cents
+function toCents(dollars: number): number {
+  return Math.round(dollars * 100);
+}
+
 // Hourly billing
 async function deductHourlyServerCosts() {
   const allServers = await storage.getAllServers();
   for (const server of allServers) {
     const user = await storage.getUser(server.userId);
-    if (!user || user.balance < 1) {
+    if (!user || user.balance < 100) { // Less than $1
       // If user can't pay, delete the server
       await digitalOcean.deleteDroplet(server.dropletId);
       await storage.deleteServer(server.id);
       continue;
     }
 
-    // Deduct $1 per hour
-    await storage.updateUserBalance(server.userId, -1);
+    // Deduct $1 per hour (100 cents)
+    await storage.updateUserBalance(server.userId, -100);
     await storage.createTransaction({
       userId: server.userId,
-      amount: -1,
+      amount: -100,
       currency: "USD",
       status: "completed",
       type: "hourly_server_charge",
@@ -50,9 +55,10 @@ async function deductHourlyServerCosts() {
 // Run billing every hour
 setInterval(deductHourlyServerCosts, 60 * 60 * 1000);
 
-async function checkBalance(userId: number, cost: number) {
+async function checkBalance(userId: number, costInDollars: number) {
+  const costInCents = toCents(costInDollars);
   const user = await storage.getUser(userId);
-  if (!user || user.balance < cost) {
+  if (!user || user.balance < costInCents) {
     throw new Error("Insufficient balance. Please add funds to your account.");
   }
 }
@@ -87,8 +93,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if user has enough balance (require minimum 1h worth)
       const hourlyCost = 1; // $1 per hour
-      const minimumBalance = hourlyCost; // Require 1h worth of balance
-      await checkBalance(req.user.id, minimumBalance);
+      const minimumBalance = toCents(hourlyCost); // Require 1h worth of balance in cents
+      await checkBalance(req.user.id, hourlyCost);
 
       const droplet = await digitalOcean.createDroplet({
         name: parsed.data.name,
@@ -113,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserBalance(req.user.id, -minimumBalance);
       await storage.createTransaction({
         userId: req.user.id,
-        amount: minimumBalance,
+        amount: -minimumBalance,
         currency: "USD",
         status: "completed",
         type: "server_charge",
@@ -209,10 +215,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     // Deduct first hour's cost
-    await storage.updateUserBalance(req.user.id, -hourlyCost);
+    const costInCents = toCents(hourlyCost);
+    await storage.updateUserBalance(req.user.id, -costInCents);
     await storage.createTransaction({
       userId: req.user.id,
-      amount: -hourlyCost,
+      amount: -costInCents,
       currency: "USD",
       status: "completed",
       type: "volume_charge",
@@ -284,10 +291,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await storage.updateVolume(volume);
 
     // Deduct additional cost
-    await storage.updateUserBalance(req.user.id, -additionalCost);
+    const costInCents = toCents(additionalCost);
+    await storage.updateUserBalance(req.user.id, -costInCents);
     await storage.createTransaction({
       userId: req.user.id,
-      amount: -additionalCost,
+      amount: -costInCents,
       currency: "USD",
       status: "completed",
       type: "volume_resize_charge",
@@ -323,12 +331,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { payment, amount } = await capturePayment(orderId);
 
       // Add to user's balance
-      await storage.updateUserBalance(req.user.id, amount);
+      const amountInCents = toCents(amount);
+      await storage.updateUserBalance(req.user.id, amountInCents);
 
       // Create transaction record
       await storage.createTransaction({
         userId: req.user.id,
-        amount,
+        amount: amountInCents,
         currency: "USD",
         status: "completed",
         type: "deposit",
