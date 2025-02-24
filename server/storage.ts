@@ -31,11 +31,13 @@ export interface IStorage {
   createTicket(ticket: Omit<SupportTicket, "id" | "createdAt" | "updatedAt">): Promise<SupportTicket>;
   getTicket(id: number): Promise<SupportTicket | undefined>;
   getTicketsByUser(userId: number): Promise<SupportTicket[]>;
+  getTicketsByServer(serverId: number): Promise<SupportTicket[]>;
   getAllTickets(): Promise<SupportTicket[]>; 
   updateTicketStatus(id: number, status: string): Promise<SupportTicket>;
   updateTicketPriority(id: number, priority: string): Promise<SupportTicket>;
+  updateTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket>;
 
-  createMessage(message: Omit<SupportMessage, "id" | "createdAt">): Promise<SupportMessage>;
+  createMessage(message: Omit<SupportMessage, "id" | "createdAt" | "isRead">): Promise<SupportMessage>;
   getMessagesByTicket(ticketId: number): Promise<SupportMessage[]>;
 
   sessionStore: session.Store;
@@ -159,6 +161,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(sql`${supportTickets.updatedAt} DESC`);
   }
 
+  async getTicketsByServer(serverId: number): Promise<SupportTicket[]> {
+    return await db.select()
+      .from(supportTickets)
+      .where(eq(supportTickets.serverId, serverId))
+      .orderBy(sql`${supportTickets.updatedAt} DESC`);
+  }
+
   async getAllTickets(): Promise<SupportTicket[]> {
     return await db.select()
       .from(supportTickets)
@@ -187,9 +196,23 @@ export class DatabaseStorage implements IStorage {
     return updatedTicket;
   }
 
-  async createMessage(message: Omit<SupportMessage, "id" | "createdAt">): Promise<SupportMessage> {
+  async updateTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket> {
+    const [updatedTicket] = await db.update(supportTickets)
+      .set({ 
+        ...updates,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .where(eq(supportTickets.id, id))
+      .returning();
+    return updatedTicket;
+  }
+
+  async createMessage(message: Omit<SupportMessage, "id" | "createdAt" | "isRead">): Promise<SupportMessage> {
     const [newMessage] = await db.insert(supportMessages)
-      .values(message)
+      .values({
+        ...message,
+        isRead: false
+      })
       .returning();
     return newMessage;
   }

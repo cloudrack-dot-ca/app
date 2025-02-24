@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Plus, Send } from "lucide-react";
-import { SupportTicket, SupportMessage } from "@shared/schema";
+import { SupportTicket, SupportMessage, Server } from "@shared/schema";
 import { Link } from "wouter";
 import {
   Dialog,
@@ -37,6 +37,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface TicketDetails {
+  ticket: SupportTicket;
+  messages: SupportMessage[];
+}
+
 export default function SupportPage() {
   const { toast } = useToast();
   const [selectedTicket, setSelectedTicket] = React.useState<number | null>(null);
@@ -45,13 +50,13 @@ export default function SupportPage() {
     queryKey: ["/api/tickets"],
   });
 
-  const { data: selectedTicketData, isLoading: loadingTicketDetails } = useQuery({
+  const { data: selectedTicketData, isLoading: loadingTicketDetails } = useQuery<TicketDetails>({
     queryKey: ["/api/tickets", selectedTicket],
     enabled: selectedTicket !== null,
   });
 
   // Get user's servers for ticket creation
-  const { data: servers = [] } = useQuery({
+  const { data: servers = [] } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
   });
 
@@ -162,7 +167,7 @@ export default function SupportPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {servers.map((server) => (
+                            {servers.map((server: Server) => (
                               <SelectItem key={server.id} value={server.id.toString()}>
                                 {server.name}
                               </SelectItem>
@@ -295,7 +300,7 @@ export default function SupportPage() {
             ) : (
               <div className="space-y-4">
                 <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border rounded-lg">
-                  {selectedTicketData?.messages.map((message: SupportMessage) => (
+                  {selectedTicketData?.messages.map((message) => (
                     <div
                       key={message.id}
                       className={`flex flex-col ${
