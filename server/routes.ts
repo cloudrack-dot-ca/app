@@ -12,6 +12,9 @@ const COSTS = {
     "s-1vcpu-1gb": 7, // $0.007 per hour (~$5/mo)
     "s-1vcpu-2gb": 14, // $0.014 per hour (~$10/mo)
     "s-2vcpu-4gb": 28, // $0.028 per hour (~$20/mo)
+  },
+  storage: 0.14, // $0.00014 per GB per hour (~$0.10/mo)
+};
 
 // Hourly billing
 async function deductHourlyServerCosts() {
@@ -41,10 +44,6 @@ async function deductHourlyServerCosts() {
 
 // Run billing every hour
 setInterval(deductHourlyServerCosts, 60 * 60 * 1000);
-
-  },
-  storage: 0.14, // $0.00014 per GB per hour (~$0.10/mo)
-};
 
 async function checkBalance(userId: number, cost: number) {
   const user = await storage.getUser(userId);
