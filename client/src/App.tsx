@@ -31,7 +31,8 @@ function App() {
         clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || '',
         currency: "USD",
         intent: "capture",
-        components: "buttons",
+        components: "buttons,marks",
+        disableFunding: "paylater",
       }}>
         <AuthProvider>
           <Router />
