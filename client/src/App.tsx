@@ -29,7 +29,10 @@ function App() {
       <PayPalScriptProvider options={{
         clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID!,
         currency: "USD",
-        intent: "capture"
+        intent: "capture",
+        "enable-funding": "paypal",
+        "disable-funding": "card,paylater",
+        "data-namespace": "PayPalSDK"
       }}>
         <AuthProvider>
           <Router />
