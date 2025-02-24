@@ -45,20 +45,17 @@ export const plans = {
   },
 };
 
-export async function createSubscription(planId: string) {
-  const plan = plans[planId as keyof typeof plans];
-  if (!plan) throw new Error("Invalid plan");
-
+export async function createSubscription(amount: number, currency: string = "USD") {
   const request = new paypal.orders.OrdersCreateRequest();
   request.prefer("return=representation");
   request.requestBody({
     intent: "CAPTURE",
     purchase_units: [{
       amount: {
-        currency_code: "USD",
-        value: plan.price.toString(),
+        currency_code: currency,
+        value: amount.toString(),
       },
-      description: plan.description,
+      description: `Add $${amount.toFixed(2)} to balance`,
     }],
   });
 

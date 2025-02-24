@@ -20,7 +20,10 @@ export default function BillingPage() {
 
   async function createOrder() {
     try {
-      const response = await apiRequest("POST", "/api/billing/deposit");
+      const response = await apiRequest("POST", "/api/billing/deposit", {
+        amount: 100.00,
+        currency: "USD"
+      });
       const data = await response.json();
       return data.id;
     } catch (error) {
