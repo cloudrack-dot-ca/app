@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import { sql } from 'drizzle-orm';
 
 const PostgresSessionStore = connectPg(session);
 
@@ -58,7 +59,7 @@ export class DatabaseStorage implements IStorage {
   async updateUserBalance(userId: number, amount: number): Promise<User> {
     const [user] = await db
       .update(users)
-      .set({ balance: db.raw(`balance + ${amount}`) })
+      .set({ balance: sql`balance + ${amount}` })
       .where(eq(users.id, userId))
       .returning();
     return user;
