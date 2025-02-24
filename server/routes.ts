@@ -148,6 +148,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(201).json(volume);
   });
 
+  app.delete("/api/servers/:id/volumes/:volumeId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const server = await storage.getServer(parseInt(req.params.id));
+    if (!server || server.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    const volume = await storage.getVolume(parseInt(req.params.volumeId));
+    if (!volume || volume.serverId !== server.id) {
+      return res.sendStatus(404);
+    }
+
+    await digitalOcean.deleteVolume(volume.volumeId);
+    await storage.deleteVolume(volume.id);
+    res.sendStatus(204);
+  });
+
+  app.patch("/api/servers/:id/volumes/:volumeId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const server = await storage.getServer(parseInt(req.params.id));
+    if (!server || server.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    const volume = await storage.getVolume(parseInt(req.params.volumeId));
+    if (!volume || volume.serverId !== server.id) {
+      return res.sendStatus(404);
+    }
+
+    const { size } = req.body;
+    if (!size || size <= volume.size) {
+      return res.status(400).json({ message: "New size must be greater than current size" });
+    }
+
+    // In production, you would resize the DO volume here
+    volume.size = size;
+    await storage.updateVolume(volume);
+    res.json(volume);
+  });
+
   app.post("/api/billing/deposit", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertVolumeSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,6 +47,40 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
     }
   }
 
+  async function onDeleteVolume(volumeId: number) {
+    try {
+      await apiRequest("DELETE", `/api/servers/${serverId}/volumes/${volumeId}`);
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/volumes`] });
+      toast({
+        title: "Volume deleted",
+        description: "Your volume has been successfully deleted",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function onResizeVolume(volumeId: number, newSize: number) {
+    try {
+      await apiRequest("PATCH", `/api/servers/${serverId}/volumes/${volumeId}`, { size: newSize });
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/volumes`] });
+      toast({
+        title: "Volume resized",
+        description: "Your volume is being resized",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-32">
@@ -64,11 +99,43 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
           >
             <div>
               <h4 className="font-medium">{volume.name}</h4>
-              <p className="text-sm text-muted-foreground">{volume.size}GB</p>
+              <p className="text-sm text-muted-foreground">
+                {volume.size}GB (${(volume.size * 0.00014).toFixed(5)}/hour)
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => {
+                  const newSize = window.prompt(`Enter new size (must be greater than ${volume.size}GB):`, volume.size.toString());
+                  const size = parseInt(newSize || "");
+                  if (size && size > volume.size) {
+                    onResizeVolume(volume.id, size);
+                  }
+                }}
+              >
+                Resize
+              </Button>
             </div>
-            <Button variant="destructive" size="icon">
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Volume</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this volume? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDeleteVolume(volume.id)}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         ))}
         {volumes.length === 0 && (

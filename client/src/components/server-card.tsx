@@ -84,9 +84,25 @@ export default function ServerCard({ server }: ServerCardProps) {
                 <VolumeManager serverId={server.id} />
               </DialogContent>
             </Dialog>
-            <Button variant="destructive" onClick={deleteServer}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Server</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this server? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={deleteServer}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </CardContent>
