@@ -76,20 +76,15 @@ export default function BillingPage() {
             <p className="text-3xl font-bold mb-4">
               ${((user?.balance || 0) / 100).toFixed(2)}
             </p>
-            <p className="text-muted-foreground mb-6">Add funds to your account to pay for servers and storage</p>
-            <div className="p-6 bg-primary/5 rounded-lg mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="h-5 w-5 text-primary" />
-                <p className="font-medium">Add $100.00 to your balance</p>
-              </div>
+            <p className="text-muted-foreground">Add funds to your account to pay for servers and storage</p>
+            <div className="mt-4">
+              <p className="font-medium mb-2">Add $100.00 to your balance</p>
               <p className="text-sm text-muted-foreground mb-4">Quick and secure payment with PayPal</p>
-              <div className="bg-white rounded-md p-4">
-                <PayPalButtons
-                  style={{ layout: "vertical", label: "pay" }}
-                  createOrder={createOrder}
-                  onApprove={onApprove}
-                />
-              </div>
+              <PayPalButtons
+                style={{ layout: "vertical" }}
+                createOrder={createOrder}
+                onApprove={onApprove}
+              />
             </div>
           </CardContent>
         </Card>
