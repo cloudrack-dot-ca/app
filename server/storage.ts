@@ -1,4 +1,4 @@
-import { users, servers, volumes, billingTransactions, type User, type Server, type Volume, type InsertUser, type BillingTransaction } from "@shared/schema";
+import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import session from "express-session";
@@ -27,6 +27,16 @@ export interface IStorage {
 
   createTransaction(transaction: Omit<BillingTransaction, "id">): Promise<BillingTransaction>;
   getTransactionsByUser(userId: number): Promise<BillingTransaction[]>;
+
+  createTicket(ticket: Omit<SupportTicket, "id" | "createdAt" | "updatedAt">): Promise<SupportTicket>;
+  getTicket(id: number): Promise<SupportTicket | undefined>;
+  getTicketsByUser(userId: number): Promise<SupportTicket[]>;
+  getAllTickets(): Promise<SupportTicket[]>; 
+  updateTicketStatus(id: number, status: string): Promise<SupportTicket>;
+  updateTicketPriority(id: number, priority: string): Promise<SupportTicket>;
+
+  createMessage(message: Omit<SupportMessage, "id" | "createdAt">): Promise<SupportMessage>;
+  getMessagesByTicket(ticketId: number): Promise<SupportMessage[]>;
 
   sessionStore: session.Store;
 }
@@ -79,11 +89,9 @@ export class DatabaseStorage implements IStorage {
     return newServer;
   }
 
-
   async getAllServers(): Promise<Server[]> {
     return await db.select().from(servers);
   }
-
 
   async updateServer(id: number, updates: Partial<Server>): Promise<Server> {
     const [updatedServer] = await db
@@ -127,6 +135,70 @@ export class DatabaseStorage implements IStorage {
       .from(billingTransactions)
       .where(eq(billingTransactions.userId, userId))
       .orderBy(billingTransactions.createdAt);
+  }
+
+  async createTicket(ticket: Omit<SupportTicket, "id" | "createdAt" | "updatedAt">): Promise<SupportTicket> {
+    const [newTicket] = await db.insert(supportTickets)
+      .values({
+        ...ticket,
+        status: 'open', 
+      })
+      .returning();
+    return newTicket;
+  }
+
+  async getTicket(id: number): Promise<SupportTicket | undefined> {
+    const [ticket] = await db.select().from(supportTickets).where(eq(supportTickets.id, id));
+    return ticket;
+  }
+
+  async getTicketsByUser(userId: number): Promise<SupportTicket[]> {
+    return await db.select()
+      .from(supportTickets)
+      .where(eq(supportTickets.userId, userId))
+      .orderBy(sql`${supportTickets.updatedAt} DESC`);
+  }
+
+  async getAllTickets(): Promise<SupportTicket[]> {
+    return await db.select()
+      .from(supportTickets)
+      .orderBy(sql`${supportTickets.updatedAt} DESC`);
+  }
+
+  async updateTicketStatus(id: number, status: string): Promise<SupportTicket> {
+    const [updatedTicket] = await db.update(supportTickets)
+      .set({ 
+        status,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .where(eq(supportTickets.id, id))
+      .returning();
+    return updatedTicket;
+  }
+
+  async updateTicketPriority(id: number, priority: string): Promise<SupportTicket> {
+    const [updatedTicket] = await db.update(supportTickets)
+      .set({ 
+        priority,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .where(eq(supportTickets.id, id))
+      .returning();
+    return updatedTicket;
+  }
+
+  async createMessage(message: Omit<SupportMessage, "id" | "createdAt">): Promise<SupportMessage> {
+    const [newMessage] = await db.insert(supportMessages)
+      .values(message)
+      .returning();
+    return newMessage;
+  }
+
+  async getMessagesByTicket(ticketId: number): Promise<SupportMessage[]> {
+    return await db.select()
+      .from(supportMessages)
+      .where(eq(supportMessages.ticketId, ticketId))
+      .orderBy(sql`${supportMessages.createdAt} ASC`);
   }
 }
 
