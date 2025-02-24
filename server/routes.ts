@@ -4,39 +4,23 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
 import { insertServerSchema, insertVolumeSchema } from "@shared/schema";
-import { createSubscription, capturePayment, plans } from "./paypal";
+import { createSubscription, capturePayment } from "./paypal";
 
-async function checkSubscriptionLimits(userId: number) {
-  // Get user's active subscription
-  const subscriptions = await storage.getSubscriptionsByUser(userId);
-  const activeSubscription = subscriptions.find(sub => sub.status === "active");
+// Cost constants
+const COSTS = {
+  servers: {
+    "s-1vcpu-1gb": 500, // $5.00
+    "s-1vcpu-2gb": 1000, // $10.00
+    "s-2vcpu-4gb": 2000, // $20.00
+  },
+  storage: 10, // $0.10 per GB
+};
 
-  if (!activeSubscription) {
-    throw new Error("No active subscription found. Please subscribe to a plan.");
+async function checkBalance(userId: number, cost: number) {
+  const user = await storage.getUser(userId);
+  if (!user || user.balance < cost) {
+    throw new Error("Insufficient balance. Please add funds to your account.");
   }
-
-  const plan = plans[activeSubscription.planId as keyof typeof plans];
-  if (!plan) {
-    throw new Error("Invalid subscription plan");
-  }
-
-  // Check server limits
-  const userServers = await storage.getServersByUser(userId);
-  if (userServers.length >= plan.limits.maxServers) {
-    throw new Error(`Server limit reached. Your ${plan.name} allows up to ${plan.limits.maxServers} servers.`);
-  }
-
-  // Check storage limits
-  const userVolumes = await Promise.all(
-    userServers.map(server => storage.getVolumesByServer(server.id))
-  );
-  const totalStorage = userVolumes.flat().reduce((sum, vol) => sum + vol.size, 0);
-
-  if (totalStorage >= plan.limits.maxStorageGB) {
-    throw new Error(`Storage limit reached. Your ${plan.name} allows up to ${plan.limits.maxStorageGB}GB of storage.`);
-  }
-
-  return plan;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -62,13 +46,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.user) return res.sendStatus(401);
 
     try {
-      // Check subscription limits before creating server
-      await checkSubscriptionLimits(req.user.id);
-
       const parsed = insertServerSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json(parsed.error);
       }
+
+      // Check if user has enough balance
+      const monthlyCost = COSTS.servers[parsed.data.size as keyof typeof COSTS.servers];
+      await checkBalance(req.user.id, monthlyCost);
 
       const droplet = await digitalOcean.createDroplet({
         name: parsed.data.name,
@@ -87,6 +72,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vcpus: 1,
           disk: 25,
         },
+      });
+
+      // Deduct balance and create transaction
+      await storage.updateUserBalance(req.user.id, -monthlyCost);
+      await storage.createTransaction({
+        userId: req.user.id,
+        amount: monthlyCost,
+        currency: "USD",
+        status: "completed",
+        type: "server_charge",
+        createdAt: new Date(),
       });
 
       res.status(201).json(server);
@@ -168,37 +164,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/billing/deposit", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const order = await createSubscription("deposit");
+      res.json(order);
+    } catch (error) {
+      res.status(400).json({ message: (error as Error).message });
+    }
+  });
+
   app.post("/api/billing/capture/:orderId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const { orderId } = req.params;
-    const { planId } = req.body;
 
     try {
       const payment = await capturePayment(orderId);
+      const amount = 10000; // $100.00
 
-      // Create subscription record
-      const subscription = await storage.createSubscription({
-        userId: req.user.id,
-        planId,
-        status: "active",
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-        paypalSubscriptionId: payment.id,
-      });
+      // Add to user's balance
+      await storage.updateUserBalance(req.user.id, amount);
 
       // Create transaction record
       await storage.createTransaction({
         userId: req.user.id,
-        subscriptionId: subscription.id,
-        amount: Math.round(plans[planId as keyof typeof plans].price * 100),
+        amount,
         currency: "USD",
         status: "completed",
+        type: "deposit",
         paypalTransactionId: payment.id,
         createdAt: new Date(),
       });
 
-      res.json({ subscription, payment });
+      res.json({ payment });
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
     }

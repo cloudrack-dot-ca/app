@@ -6,42 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2 } from "lucide-react";
-import { Subscription, BillingTransaction } from "@shared/schema";
+import { Loader2, DollarSign } from "lucide-react";
+import { BillingTransaction } from "@shared/schema";
 import { Link } from "wouter";
-
-type Plan = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  limits: {
-    maxServers: number;
-    maxStorageGB: number;
-  };
-};
-
-type Plans = Record<string, Plan>;
 
 export default function BillingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const { data: plans = {} as Plans } = useQuery<Plans>({
-    queryKey: ["/api/billing/plans"],
-  });
-
-  const { data: subscriptions = [], isLoading: loadingSubscriptions } = useQuery<Subscription[]>({
-    queryKey: ["/api/billing/subscriptions"],
-  });
-
   const { data: transactions = [], isLoading: loadingTransactions } = useQuery<BillingTransaction[]>({
     queryKey: ["/api/billing/transactions"],
   });
 
-  async function createOrder(planId: string) {
+  async function createOrder() {
     try {
-      const response = await apiRequest("POST", "/api/billing/subscribe", { planId });
+      const response = await apiRequest("POST", "/api/billing/deposit", { amount: 10000 }); // $100.00
       const data = await response.json();
       return data.id;
     } catch (error) {
@@ -53,14 +32,14 @@ export default function BillingPage() {
     }
   }
 
-  const onApprove = (planId: string) => async (data: any) => {
+  const onApprove = async (data: any) => {
     try {
-      await apiRequest("POST", `/api/billing/capture/${data.orderID}`, { planId });
-      queryClient.invalidateQueries({ queryKey: ["/api/billing/subscriptions"] });
+      await apiRequest("POST", `/api/billing/capture/${data.orderID}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] }); // Refresh user to get updated balance
       queryClient.invalidateQueries({ queryKey: ["/api/billing/transactions"] });
       toast({
         title: "Success",
-        description: "Your subscription has been activated!",
+        description: "Funds have been added to your account!",
       });
     } catch (error) {
       toast({
@@ -71,7 +50,7 @@ export default function BillingPage() {
     }
   };
 
-  if (loadingSubscriptions || loadingTransactions) {
+  if (loadingTransactions) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -82,106 +61,101 @@ export default function BillingPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <nav className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Billing & Subscriptions</h1>
+        <h1 className="text-3xl font-bold">Billing</h1>
         <Button variant="outline" asChild>
           <Link href="/dashboard">Back to Dashboard</Link>
         </Button>
       </nav>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
-        {Object.entries(plans).map(([id, plan]) => (
-          <Card key={id}>
-            <CardHeader>
-              <CardTitle>{plan.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold mb-4">
-                ${plan.price}
-                <span className="text-lg text-muted-foreground font-normal"> /mo</span>
-              </p>
-              <p className="text-muted-foreground mb-6">{plan.description}</p>
-              <div className="mb-6">
-                <p className="text-sm text-muted-foreground mb-2">Plan Includes:</p>
-                <ul className="space-y-1 text-sm">
-                  <li>• Up to {plan.limits.maxServers} VPS Servers</li>
-                  <li>• {plan.limits.maxStorageGB}GB Total Storage</li>
-                  <li>• 24/7 Support</li>
-                </ul>
-              </div>
-              <PayPalButtons
-                style={{ layout: "vertical", label: "subscribe" }}
-                createOrder={() => createOrder(id)}
-                onApprove={onApprove(id)}
-              />
-            </CardContent>
-          </Card>
-        ))}
+        <Card>
+          <CardHeader>
+            <CardTitle>Current Balance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold mb-4">
+              ${((user?.balance || 0) / 100).toFixed(2)}
+            </p>
+            <p className="text-muted-foreground mb-6">Add funds to your account to pay for servers and storage</p>
+            <PayPalButtons
+              style={{ layout: "vertical" }}
+              createOrder={createOrder}
+              onApprove={onApprove}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Server Pricing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              <li className="flex justify-between">
+                <span>1GB RAM, 1 vCPU</span>
+                <span>$5/mo</span>
+              </li>
+              <li className="flex justify-between">
+                <span>2GB RAM, 1 vCPU</span>
+                <span>$10/mo</span>
+              </li>
+              <li className="flex justify-between">
+                <span>4GB RAM, 2 vCPU</span>
+                <span>$20/mo</span>
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Storage Pricing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold mb-2">$0.10/GB</p>
+            <p className="text-muted-foreground">Per month for block storage volumes</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="space-y-8">
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Active Subscriptions</h2>
-          {subscriptions.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                No active subscriptions
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {subscriptions.map((sub) => (
-                <Card key={sub.id}>
-                  <CardContent className="py-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">{plans[sub.planId]?.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Expires: {new Date(sub.endDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Badge variant={sub.status === "active" ? "default" : "secondary"}>
-                        {sub.status}
-                      </Badge>
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
+        {transactions.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No transactions yet
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {transactions.map((tx) => (
+              <Card key={tx.id}>
+                <CardContent className="py-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">
+                        {tx.type === 'deposit' ? 'Added Funds' : 
+                         tx.type === 'server_charge' ? 'Server Charge' : 
+                         'Volume Charge'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(tx.createdAt).toLocaleString()}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
-          {transactions.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                No transactions yet
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {transactions.map((tx) => (
-                <Card key={tx.id}>
-                  <CardContent className="py-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">
-                          ${(tx.amount / 100).toFixed(2)} {tx.currency}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(tx.createdAt).toLocaleString()}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-lg ${tx.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
+                        {tx.type === 'deposit' ? '+' : '-'}${(tx.amount / 100).toFixed(2)}
+                      </span>
                       <Badge variant={tx.status === "completed" ? "default" : "secondary"}>
                         {tx.status}
                       </Badge>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

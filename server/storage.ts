@@ -1,4 +1,4 @@
-import { users, servers, volumes, subscriptions, billingTransactions, type User, type Server, type Volume, type InsertUser, type Subscription, type BillingTransaction } from "@shared/schema";
+import { users, servers, volumes, billingTransactions, type User, type Server, type Volume, type InsertUser, type BillingTransaction } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import session from "express-session";
@@ -11,6 +11,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserBalance(userId: number, amount: number): Promise<User>;
 
   getServer(id: number): Promise<Server | undefined>;
   getServersByUser(userId: number): Promise<Server[]>;
@@ -23,16 +24,10 @@ export interface IStorage {
   createVolume(volume: Omit<Volume, "id">): Promise<Volume>;
   deleteVolume(id: number): Promise<void>;
 
-  sessionStore: session.Store;
-
-  // Subscription methods
-  createSubscription(subscription: Omit<Subscription, "id">): Promise<Subscription>;
-  getSubscriptionsByUser(userId: number): Promise<Subscription[]>;
-  updateSubscription(id: number, updates: Partial<Subscription>): Promise<Subscription>;
-
-  // Transaction methods
   createTransaction(transaction: Omit<BillingTransaction, "id">): Promise<BillingTransaction>;
   getTransactionsByUser(userId: number): Promise<BillingTransaction[]>;
+
+  sessionStore: session.Store;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -57,6 +52,15 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUserBalance(userId: number, amount: number): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ balance: db.raw(`balance + ${amount}`) })
+      .where(eq(users.id, userId))
+      .returning();
     return user;
   }
 
@@ -105,31 +109,17 @@ export class DatabaseStorage implements IStorage {
     await db.delete(volumes).where(eq(volumes.id, id));
   }
 
-  async createSubscription(subscription: Omit<Subscription, "id">): Promise<Subscription> {
-    const [newSubscription] = await db.insert(subscriptions).values(subscription).returning();
-    return newSubscription;
-  }
-
-  async getSubscriptionsByUser(userId: number): Promise<Subscription[]> {
-    return await db.select().from(subscriptions).where(eq(subscriptions.userId, userId));
-  }
-
-  async updateSubscription(id: number, updates: Partial<Subscription>): Promise<Subscription> {
-    const [updatedSubscription] = await db
-      .update(subscriptions)
-      .set(updates)
-      .where(eq(subscriptions.id, id))
-      .returning();
-    return updatedSubscription;
-  }
-
   async createTransaction(transaction: Omit<BillingTransaction, "id">): Promise<BillingTransaction> {
     const [newTransaction] = await db.insert(billingTransactions).values(transaction).returning();
     return newTransaction;
   }
 
   async getTransactionsByUser(userId: number): Promise<BillingTransaction[]> {
-    return await db.select().from(billingTransactions).where(eq(billingTransactions.userId, userId));
+    return await db
+      .select()
+      .from(billingTransactions)
+      .where(eq(billingTransactions.userId, userId))
+      .orderBy(billingTransactions.createdAt);
   }
 }
 
