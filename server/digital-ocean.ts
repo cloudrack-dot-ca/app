@@ -18,6 +18,14 @@ export interface Size {
 
 // Mock DigitalOcean API client for development
 export class DigitalOceanClient {
+  private apiKey: string;
+
+  constructor() {
+    this.apiKey = process.env.DIGITAL_OCEAN_API_KEY || '';
+    if (!this.apiKey) {
+      console.warn('DigitalOcean API key not found. Using mock data.');
+    }
+  }
   private regions: Region[] = [
     {
       slug: "nyc1",
