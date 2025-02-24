@@ -37,6 +37,12 @@ export class DigitalOceanClient {
       sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb"],
       available: true,
     },
+    {
+      slug: "tor1",
+      name: "Toronto 1",
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb"],
+      available: true,
+    },
   ];
 
   private sizes: Size[] = [

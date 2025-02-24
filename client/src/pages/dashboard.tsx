@@ -153,7 +153,7 @@ export default function Dashboard() {
                           <SelectContent>
                             {sizes.map((size: any) => (
                               <SelectItem key={size.slug} value={size.slug}>
-                                {size.memory / 1024}GB RAM, {size.vcpus} vCPUs
+                                {size.memory / 1024}GB RAM, {size.vcpus} vCPUs (${(size.price_monthly / (24 * 30)).toFixed(3)}/hr)
                               </SelectItem>
                             ))}
                           </SelectContent>
