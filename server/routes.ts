@@ -82,6 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currency: "USD",
         status: "completed",
         type: "server_charge",
+        paypalTransactionId: null,
         createdAt: new Date(),
       });
 
@@ -146,24 +147,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(201).json(volume);
   });
 
-  app.get("/api/billing/plans", (_req, res) => {
-    res.json(plans);
-  });
-
-  app.post("/api/billing/subscribe", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-
-    const { planId } = req.body;
-    if (!planId) return res.status(400).json({ message: "Plan ID is required" });
-
-    try {
-      const order = await createSubscription(planId);
-      res.json(order);
-    } catch (error) {
-      res.status(400).json({ message: (error as Error).message });
-    }
-  });
-
   app.post("/api/billing/deposit", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
@@ -202,13 +185,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
     }
-  });
-
-  app.get("/api/billing/subscriptions", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-
-    const subscriptions = await storage.getSubscriptionsByUser(req.user.id);
-    res.json(subscriptions);
   });
 
   app.get("/api/billing/transactions", async (req, res) => {
