@@ -7,9 +7,9 @@ if (!clientId || !clientSecret) {
   throw new Error("PayPal credentials not found");
 }
 
-const environment = () => {
-  return new paypal.core.SandboxEnvironment(clientId, clientSecret);
-};
+function environment() {
+  return new paypal.core.LiveEnvironment(clientId, clientSecret);
+}
 
 const client = new paypal.core.PayPalHttpClient(environment());
 
