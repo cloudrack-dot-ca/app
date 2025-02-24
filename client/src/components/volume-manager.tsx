@@ -13,6 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Map regions to flag emojis
 const regionFlags: { [key: string]: string } = {
@@ -25,6 +26,8 @@ const regionFlags: { [key: string]: string } = {
   'tor1': '🇨🇦 Toronto',
   'blr1': '🇮🇳 Bangalore',
 };
+
+const MAX_VOLUME_SIZE = 1000;
 
 interface VolumeManagerProps {
   serverId: number;
@@ -115,51 +118,70 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        {volumes.map((volume) => (
-          <div
-            key={volume.id}
-            className="flex items-center justify-between p-4 border rounded-lg"
-          >
-            <div className="space-y-2 flex-1">
-              <h4 className="font-medium">{volume.name}</h4>
-              <p className="text-sm text-muted-foreground">
-                {volume.size}GB in {regionFlags[volume.region] || volume.region}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Cost: ${(volume.size * 0.00014).toFixed(5)}/hour
-              </p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  setResizingVolume(volume);
-                  setNewSize(volume.size);
-                }}
-              >
-                Resize
-              </Button>
+        {volumes.map((volume) => {
+          const isMaxSize = volume.size >= MAX_VOLUME_SIZE;
+          return (
+            <div
+              key={volume.id}
+              className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg gap-4"
+            >
+              <div className="space-y-2 flex-1">
+                <h4 className="font-medium">{volume.name}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {volume.size}GB in {regionFlags[volume.region] || volume.region}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Cost: ${(volume.size * (0.00014 + 0.009)).toFixed(5)}/hour
+                </p>
+                <div className="flex gap-2 mt-4">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setResizingVolume(volume);
+                              setNewSize(volume.size);
+                            }}
+                            disabled={isMaxSize}
+                          >
+                            Resize
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isMaxSize 
+                          ? "This volume has reached the maximum size limit of 1000GB"
+                          : "Click to resize this volume"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Volume</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this volume? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onDeleteVolume(volume.id)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
             </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Volume</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this volume? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDeleteVolume(volume.id)}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        ))}
+          );
+        })}
         {volumes.length === 0 && (
           <p className="text-center text-muted-foreground">No volumes attached</p>
         )}
@@ -167,7 +189,7 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
 
       {resizingVolume && (
         <Dialog open={!!resizingVolume} onOpenChange={() => setResizingVolume(null)}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Resize Volume</DialogTitle>
               <DialogDescription>
@@ -175,34 +197,39 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="flex items-center gap-4">
-                <Slider
-                  value={[newSize]}
-                  min={resizingVolume.size}
-                  max={resizingVolume.size + 1000}
-                  step={10}
-                  onValueChange={(value) => setNewSize(value[0])}
-                />
-                <Input
-                  type="number"
-                  value={newSize}
-                  min={resizingVolume.size}
-                  step={10}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (value >= resizingVolume.size) {
-                      setNewSize(value);
-                    }
-                  }}
-                  className="w-24"
-                />
-                <span>GB</span>
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="w-full md:flex-1">
+                  <Slider
+                    value={[newSize]}
+                    min={resizingVolume.size}
+                    max={Math.min(resizingVolume.size + 100, MAX_VOLUME_SIZE)}
+                    step={10}
+                    onValueChange={(value) => setNewSize(value[0])}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={newSize}
+                    min={resizingVolume.size}
+                    max={MAX_VOLUME_SIZE}
+                    step={10}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (value >= resizingVolume.size && value <= MAX_VOLUME_SIZE) {
+                        setNewSize(value);
+                      }
+                    }}
+                    className="w-24"
+                  />
+                  <span>GB</span>
+                </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                New cost: ${(newSize * 0.00014).toFixed(5)}/hour
+                New cost: ${(newSize * (0.00014 + 0.009)).toFixed(5)}/hour
               </p>
               <p className="text-sm text-muted-foreground">
-                Difference: +${((newSize - resizingVolume.size) * 0.00014).toFixed(5)}/hour
+                Difference: +${((newSize - resizingVolume.size) * (0.00014 + 0.009)).toFixed(5)}/hour
               </p>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setResizingVolume(null)}>
@@ -245,15 +272,21 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
                       <Input
                         type="number"
                         min="10"
+                        max={MAX_VOLUME_SIZE}
                         step="10"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (value <= MAX_VOLUME_SIZE) {
+                            field.onChange(value);
+                          }
+                        }}
                       />
                       <span>GB</span>
                     </div>
                   </FormControl>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Cost: ${(field.value * 0.00014).toFixed(5)}/hour
+                    Cost: ${(field.value * (0.00014 + 0.009)).toFixed(5)}/hour
                   </p>
                   <FormMessage />
                 </FormItem>
