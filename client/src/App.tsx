@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
+import AccountPage from "@/pages/account-page";
 
 function Nav() {
   const { user } = useAuth();
@@ -47,6 +48,7 @@ function Router() {
         <ProtectedRoute path="/billing" component={BillingPage} />
         <ProtectedRoute path="/support" component={SupportPage} />
         <ProtectedRoute path="/ssh-keys" component={SSHKeysPage} />
+        <ProtectedRoute path="/account" component={AccountPage} />
         <Route component={NotFound} />
       </Switch>
     </>

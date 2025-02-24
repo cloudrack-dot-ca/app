@@ -11,6 +11,15 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false), // Admin flag
 });
 
+// Add new table for SSH keys
+export const sshKeys = pgTable("ssh_keys", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  name: text("name").notNull().unique(), // Added unique constraint
+  publicKey: text("public_key").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const servers = pgTable("servers", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -25,6 +34,7 @@ export const servers = pgTable("servers", {
     vcpus: number;
     disk: number;
   }>(),
+  sshKeyId: integer("ssh_key_id"), // Add reference to SSH key if used
 });
 
 export const volumes = pgTable("volumes", {
@@ -48,7 +58,6 @@ export const billingTransactions = pgTable("billing_transactions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Updated: Support Tickets with server relation
 export const supportTickets = pgTable("support_tickets", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -61,7 +70,6 @@ export const supportTickets = pgTable("support_tickets", {
   originalDropletId: text("original_droplet_id"), // Store the original droplet ID for reference
 });
 
-// Support Messages with real-time chat support
 export const supportMessages = pgTable("support_messages", {
   id: serial("id").primaryKey(),
   ticketId: integer("ticket_id").notNull(),
@@ -87,7 +95,6 @@ export const insertVolumeSchema = createInsertSchema(volumes).pick({
   size: true,
 });
 
-// Updated: Support Ticket Schema with server relation
 export const insertTicketSchema = createInsertSchema(supportTickets).pick({
   subject: true,
   priority: true,
@@ -100,6 +107,15 @@ export const insertMessageSchema = createInsertSchema(supportMessages).pick({
   message: true,
 });
 
+// Add schema for SSH keys
+export const insertSSHKeySchema = createInsertSchema(sshKeys).pick({
+  name: true,
+  publicKey: true,
+}).extend({
+  name: z.string().min(1, "Name is required").max(50, "Name too long"),
+  publicKey: z.string().min(1, "SSH public key is required"),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Server = typeof servers.$inferSelect;
@@ -107,3 +123,6 @@ export type Volume = typeof volumes.$inferSelect;
 export type BillingTransaction = typeof billingTransactions.$inferSelect;
 export type SupportTicket = typeof supportTickets.$inferSelect;
 export type SupportMessage = typeof supportMessages.$inferSelect;
+// Add type for SSH keys
+export type InsertSSHKey = z.infer<typeof insertSSHKeySchema>;
+export type SSHKey = typeof sshKeys.$inferSelect;
