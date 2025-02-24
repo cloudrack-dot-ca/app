@@ -71,6 +71,9 @@ export default function Dashboard() {
             <Button variant="outline" asChild>
               <Link href="/billing">Billing</Link>
             </Button>
+            <Button variant="outline" asChild>
+              <Link href="/support">Support</Link>
+            </Button>
             <span className="text-muted-foreground">Welcome, {user?.username}</span>
             <Button variant="outline" onClick={() => logoutMutation.mutate()}>
               Logout
