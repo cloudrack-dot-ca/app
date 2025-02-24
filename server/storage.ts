@@ -79,6 +79,12 @@ export class DatabaseStorage implements IStorage {
     return newServer;
   }
 
+
+  async getAllServers(): Promise<Server[]> {
+    return await db.select().from(servers);
+  }
+
+
   async updateServer(id: number, updates: Partial<Server>): Promise<Server> {
     const [updatedServer] = await db
       .update(servers)

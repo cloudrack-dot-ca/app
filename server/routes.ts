@@ -12,6 +12,36 @@ const COSTS = {
     "s-1vcpu-1gb": 7, // $0.007 per hour (~$5/mo)
     "s-1vcpu-2gb": 14, // $0.014 per hour (~$10/mo)
     "s-2vcpu-4gb": 28, // $0.028 per hour (~$20/mo)
+
+// Hourly billing
+async function deductHourlyServerCosts() {
+  const allServers = await storage.getAllServers();
+  for (const server of allServers) {
+    const user = await storage.getUser(server.userId);
+    if (!user || user.balance < 1) {
+      // If user can't pay, delete the server
+      await digitalOcean.deleteDroplet(server.dropletId);
+      await storage.deleteServer(server.id);
+      continue;
+    }
+    
+    // Deduct $1 per hour
+    await storage.updateUserBalance(server.userId, -1);
+    await storage.createTransaction({
+      userId: server.userId,
+      amount: -1,
+      currency: "USD",
+      status: "completed",
+      type: "hourly_server_charge",
+      paypalTransactionId: null,
+      createdAt: new Date(),
+    });
+  }
+}
+
+// Run billing every hour
+setInterval(deductHourlyServerCosts, 60 * 60 * 1000);
+
   },
   storage: 0.14, // $0.00014 per GB per hour (~$0.10/mo)
 };
@@ -51,9 +81,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json(parsed.error);
       }
 
-      // Check if user has enough balance (require minimum 24h worth)
-      const hourlyCost = COSTS.servers[parsed.data.size as keyof typeof COSTS.servers];
-      const minimumBalance = hourlyCost * 24; // Require 24h worth of balance
+      // Check if user has enough balance (require minimum 1h worth)
+      const hourlyCost = 1; // $1 per hour
+      const minimumBalance = hourlyCost; // Require 1h worth of balance
       await checkBalance(req.user.id, minimumBalance);
 
       const droplet = await digitalOcean.createDroplet({
