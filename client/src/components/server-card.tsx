@@ -2,11 +2,9 @@ import { Server } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { HardDrive, Power, Trash2 } from "lucide-react";
-import { useState } from "react";
-import VolumeManager from "./volume-manager";
+import { HardDrive, Trash2 } from "lucide-react";
+import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,7 +13,6 @@ interface ServerCardProps {
 }
 
 export default function ServerCard({ server }: ServerCardProps) {
-  const [volumeOpen, setVolumeOpen] = useState(false);
   const { toast } = useToast();
 
   async function deleteServer() {
@@ -78,20 +75,16 @@ export default function ServerCard({ server }: ServerCardProps) {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2">
-            <Dialog open={volumeOpen} onOpenChange={setVolumeOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="flex-1">
-                  <HardDrive className="h-4 w-4 mr-2" />
-                  Volumes
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Manage Volumes</DialogTitle>
-                </DialogHeader>
-                <VolumeManager serverId={server.id} />
-              </DialogContent>
-            </Dialog>
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              asChild
+            >
+              <Link href={`/volumes?serverId=${server.id}`}>
+                <HardDrive className="h-4 w-4 mr-2" />
+                View Volumes
+              </Link>
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="w-full sm:w-auto">

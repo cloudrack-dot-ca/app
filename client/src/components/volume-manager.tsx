@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Volume } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
 
 // Map regions to flag emojis
 const regionFlags: { [key: string]: string } = {
