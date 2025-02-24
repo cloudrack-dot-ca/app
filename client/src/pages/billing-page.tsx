@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { Subscription, BillingTransaction } from "@shared/schema";
 import { Link } from "wouter";
@@ -15,6 +15,10 @@ type Plan = {
   name: string;
   description: string;
   price: number;
+  limits: {
+    maxServers: number;
+    maxStorageGB: number;
+  };
 };
 
 type Plans = Record<string, Plan>;
@@ -35,7 +39,7 @@ export default function BillingPage() {
     queryKey: ["/api/billing/transactions"],
   });
 
-  const createOrder = async (planId: string) => {
+  async function createOrder(planId: string) {
     try {
       const response = await apiRequest("POST", "/api/billing/subscribe", { planId });
       const data = await response.json();
@@ -47,11 +51,13 @@ export default function BillingPage() {
         variant: "destructive",
       });
     }
-  };
+  }
 
   const onApprove = (planId: string) => async (data: any) => {
     try {
       await apiRequest("POST", `/api/billing/capture/${data.orderID}`, { planId });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/transactions"] });
       toast({
         title: "Success",
         description: "Your subscription has been activated!",
@@ -94,10 +100,18 @@ export default function BillingPage() {
                 <span className="text-lg text-muted-foreground font-normal"> /mo</span>
               </p>
               <p className="text-muted-foreground mb-6">{plan.description}</p>
+              <div className="mb-6">
+                <p className="text-sm text-muted-foreground mb-2">Plan Includes:</p>
+                <ul className="space-y-1 text-sm">
+                  <li>• Up to {plan.limits.maxServers} VPS Servers</li>
+                  <li>• {plan.limits.maxStorageGB}GB Total Storage</li>
+                  <li>• 24/7 Support</li>
+                </ul>
+              </div>
               <PayPalButtons
+                style={{ layout: "vertical", label: "subscribe" }}
                 createOrder={() => createOrder(id)}
                 onApprove={onApprove(id)}
-                style={{ layout: "horizontal" }}
               />
             </CardContent>
           </Card>
