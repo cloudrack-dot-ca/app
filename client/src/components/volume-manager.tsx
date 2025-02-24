@@ -43,12 +43,13 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
     queryKey: [`/api/servers/${serverId}/volumes`],
   });
 
-  const { data: server } = useQuery({
-    queryKey: [`/api/servers/${serverId}`],
-  });
-
   const form = useForm({
-    resolver: zodResolver(insertVolumeSchema),
+    resolver: zodResolver(insertVolumeSchema.extend({
+      name: insertVolumeSchema.shape.name.refine(
+        (name) => !volumes.some(v => v.name === name),
+        "A volume with this name already exists on this server"
+      )
+    })),
     defaultValues: {
       name: "",
       size: 10,
@@ -69,12 +70,12 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
     }
   };
 
-
   async function onSubmit(values: any) {
     try {
       await apiRequest("POST", `/api/servers/${serverId}/volumes`, values);
       queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/volumes`] });
       form.reset();
+      setVolumeSize(10);
       toast({
         title: "Volume created",
         description: "Your new volume is being provisioned",
@@ -269,9 +270,9 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Volume Name</FormLabel>
+                  <FormLabel>Volume Name <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} placeholder="Enter a unique volume name" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
