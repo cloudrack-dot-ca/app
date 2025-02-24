@@ -4,11 +4,11 @@ const clientId = process.env.PAYPAL_CLIENT_ID;
 const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 
 if (!clientId || !clientSecret) {
-  console.error("PayPal credentials not found");
+  throw new Error("PayPal credentials not found");
 }
 
 function environment() {
-  return new paypal.core.SandboxEnvironment(clientId || '', clientSecret || '');
+  return new paypal.core.SandboxEnvironment(clientId, clientSecret);
 }
 
 const client = new paypal.core.PayPalHttpClient(environment());
