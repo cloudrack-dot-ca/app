@@ -76,10 +76,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Deduct balance and create transaction
-      await storage.updateUserBalance(req.user.id, -monthlyCost);
+      await storage.updateUserBalance(req.user.id, -minimumBalance);
       await storage.createTransaction({
         userId: req.user.id,
-        amount: monthlyCost,
+        amount: minimumBalance,
         currency: "USD",
         status: "completed",
         type: "server_charge",
