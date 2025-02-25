@@ -101,11 +101,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const minimumBalance = toCents(hourlyCost); // Require 1h worth of balance in cents
       await checkBalance(req.user.id, hourlyCost);
 
+      const auth = req.body.auth || {};
+
       const droplet = await digitalOcean.createDroplet({
         name: parsed.data.name,
         region: parsed.data.region,
         size: parsed.data.size,
         application: parsed.data.application,
+        // Pass authentication details to DigitalOcean
+        ssh_keys: auth.type === "ssh" ? [auth.value] : undefined,
+        password: auth.type === "password" ? auth.value : undefined,
       });
 
       const server = await storage.createServer({

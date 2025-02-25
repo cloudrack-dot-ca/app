@@ -164,6 +164,8 @@ export class DigitalOceanClient {
     region: string;
     size: string;
     application?: string;
+    ssh_keys?: string[];
+    password?: string;
   }): Promise<{ id: string; ip_address: string }> {
     // Mock droplet creation
     return {

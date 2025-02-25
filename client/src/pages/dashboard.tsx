@@ -42,6 +42,13 @@ interface Application {
   type: string;
 }
 
+interface SSHKey {
+  id: number;
+  name: string;
+  publicKey: string;
+  createdAt: string;
+}
+
 function calculatePasswordStrength(password: string): number {
   if (!password) return 0;
   let strength = 0;
@@ -62,6 +69,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [authType, setAuthType] = useState<"password" | "ssh">("password");
   const [sshKey, setSshKey] = useState("");
+  const [selectedSSHKeyId, setSelectedSSHKeyId] = useState<number | null>(null);
 
   const { data: servers = [], isLoading } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
@@ -77,6 +85,10 @@ export default function Dashboard() {
 
   const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
+  });
+
+  const { data: sshKeys = [] } = useQuery<SSHKey[]>({
+    queryKey: ["/api/ssh-keys"],
   });
 
   const form = useForm({
@@ -117,10 +129,18 @@ export default function Dashboard() {
   async function onSubmit(values: any) {
     try {
       const serverData = {
-        ...values,
-        authType,
-        sshKey: authType === "ssh" ? sshKey : undefined,
+        name: values.name,
+        region: values.region,
+        size: values.size,
+        application: values.application,
+        auth: {
+          type: authType,
+          value: authType === "password" ? values.auth : selectedSSHKeyId 
+            ? sshKeys.find(key => key.id === selectedSSHKeyId)?.publicKey 
+            : sshKey
+        }
       };
+
       await apiRequest("POST", "/api/servers", serverData);
       queryClient.invalidateQueries({ queryKey: ["/api/servers"] });
       setCreateOpen(false);
@@ -299,7 +319,11 @@ export default function Dashboard() {
                       <Label>Authentication Method</Label>
                       <RadioGroup
                         defaultValue="password"
-                        onValueChange={(value) => setAuthType(value as "password" | "ssh")}
+                        onValueChange={(value) => {
+                          setAuthType(value as "password" | "ssh");
+                          setSelectedSSHKeyId(null);
+                          setSshKey("");
+                        }}
                         className="grid grid-cols-2 gap-4"
                       >
                         <div>
@@ -341,17 +365,53 @@ export default function Dashboard() {
                         )}
                       />
                     ) : (
-                      <FormItem>
-                        <FormLabel>SSH Public Key</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            value={sshKey}
-                            onChange={(e) => setSshKey(e.target.value)}
-                            className="font-mono text-sm"
-                            placeholder="Paste your SSH public key here"
-                          />
-                        </FormControl>
-                      </FormItem>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <FormLabel>SSH Keys</FormLabel>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href="/ssh-keys">Manage SSH Keys</Link>
+                          </Button>
+                        </div>
+                        {sshKeys.length > 0 ? (
+                          <Select
+                            value={selectedSSHKeyId?.toString() || ""}
+                            onValueChange={(value) => {
+                              setSelectedSSHKeyId(parseInt(value));
+                              setSshKey("");
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an existing SSH key" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {sshKeys.map((key) => (
+                                <SelectItem key={key.id} value={key.id.toString()}>
+                                  {key.name}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="new">Use a new SSH key</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="text-sm text-muted-foreground">
+                            No SSH keys found. Add one below or manage your keys in the <Link href="/ssh-keys" className="text-primary hover:underline">SSH Keys page</Link>.
+                          </div>
+                        )}
+
+                        {(!selectedSSHKeyId || selectedSSHKeyId === "new") && (
+                          <FormItem>
+                            <FormLabel>SSH Public Key</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                value={sshKey}
+                                onChange={(e) => setSshKey(e.target.value)}
+                                className="font-mono text-sm"
+                                placeholder="Paste your SSH public key here"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      </div>
                     )}
                     <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                       {form.formState.isSubmitting ? (
