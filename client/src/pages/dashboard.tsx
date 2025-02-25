@@ -70,6 +70,8 @@ export default function Dashboard() {
   const [authType, setAuthType] = useState<"password" | "ssh">("password");
   const [sshKey, setSshKey] = useState("");
   const [selectedSSHKeyId, setSelectedSSHKeyId] = useState<number | null>(null);
+  const [newKeyName, setNewKeyName] = useState(""); 
+  
 
   const { data: servers = [], isLoading } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
@@ -128,6 +130,38 @@ export default function Dashboard() {
 
   async function onSubmit(values: any) {
     try {
+      // If adding a new SSH key, save it first
+      let sshKeyToUse = selectedSSHKeyId && selectedSSHKeyId !== "new" 
+        ? sshKeys.find(key => key.id === selectedSSHKeyId)?.publicKey 
+        : undefined;
+
+      if (authType === "ssh" && sshKey && !selectedSSHKeyId) {
+        if (!newKeyName) {
+          toast({
+            title: "Error",
+            description: "Please provide a name for your SSH key",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        try {
+          const response = await apiRequest("POST", "/api/ssh-keys", {
+            name: newKeyName,
+            publicKey: sshKey,
+          });
+          sshKeyToUse = response.publicKey;
+          queryClient.invalidateQueries({ queryKey: ["/api/ssh-keys"] });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to save SSH key: " + (error as Error).message,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const serverData = {
         name: values.name,
         region: values.region,
@@ -135,9 +169,7 @@ export default function Dashboard() {
         application: values.application,
         auth: {
           type: authType,
-          value: authType === "password" ? values.auth : selectedSSHKeyId 
-            ? sshKeys.find(key => key.id === selectedSSHKeyId)?.publicKey 
-            : sshKey
+          value: authType === "password" ? values.auth : sshKeyToUse || sshKey
         }
       };
 
@@ -145,6 +177,9 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/servers"] });
       setCreateOpen(false);
       form.reset();
+      setNewKeyName("");
+      setSshKey("");
+      setSelectedSSHKeyId(null);
       toast({
         title: "Server created",
         description: "Your new server is being provisioned",
@@ -323,6 +358,7 @@ export default function Dashboard() {
                           setAuthType(value as "password" | "ssh");
                           setSelectedSSHKeyId(null);
                           setSshKey("");
+                          setNewKeyName(""); 
                         }}
                         className="grid grid-cols-2 gap-4"
                       >
@@ -378,6 +414,7 @@ export default function Dashboard() {
                             onValueChange={(value) => {
                               setSelectedSSHKeyId(parseInt(value));
                               setSshKey("");
+                              setNewKeyName(""); 
                             }}
                           >
                             <SelectTrigger>
@@ -399,17 +436,29 @@ export default function Dashboard() {
                         )}
 
                         {(!selectedSSHKeyId || selectedSSHKeyId === "new") && (
-                          <FormItem>
-                            <FormLabel>SSH Public Key</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                value={sshKey}
-                                onChange={(e) => setSshKey(e.target.value)}
-                                className="font-mono text-sm"
-                                placeholder="Paste your SSH public key here"
-                              />
-                            </FormControl>
-                          </FormItem>
+                          <div className="space-y-4">
+                            <FormItem>
+                              <FormLabel>SSH Key Name</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="e.g., My Work Laptop"
+                                  value={newKeyName}
+                                  onChange={(e) => setNewKeyName(e.target.value)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                            <FormItem>
+                              <FormLabel>SSH Public Key</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  value={sshKey}
+                                  onChange={(e) => setSshKey(e.target.value)}
+                                  className="font-mono text-sm"
+                                  placeholder="Paste your SSH public key here"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          </div>
                         )}
                       </div>
                     )}
