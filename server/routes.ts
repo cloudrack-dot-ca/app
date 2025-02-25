@@ -76,6 +76,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(sizes);
   });
 
+  app.get("/api/applications", async (_req, res) => {
+    const applications = await digitalOcean.getApplications();
+    res.json(applications);
+  });
+
   app.get("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const servers = await storage.getServersByUser(req.user.id);
@@ -100,6 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: parsed.data.name,
         region: parsed.data.region,
         size: parsed.data.size,
+        application: parsed.data.application,
       });
 
       const server = await storage.createServer({
@@ -520,6 +526,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const updatedMessage = await storage.updateMessage(message.id, { message: newMessage });
     res.json(updatedMessage);
+  });
+
+
+  // SSH Key Routes
+  app.get("/api/ssh-keys", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const keys = await storage.getSSHKeysByUser(req.user.id);
+    res.json(keys);
+  });
+
+  app.post("/api/ssh-keys", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const { name, publicKey } = req.body;
+    if (!name || !publicKey) {
+      return res.status(400).json({ message: "Name and public key are required" });
+    }
+
+    try {
+      const key = await storage.createSSHKey({
+        userId: req.user.id,
+        name,
+        publicKey,
+        createdAt: new Date(),
+      });
+      res.status(201).json(key);
+    } catch (error) {
+      res.status(400).json({ message: (error as Error).message });
+    }
+  });
+
+  app.delete("/api/ssh-keys/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const keyId = parseInt(req.params.id);
+    const key = await storage.getSSHKey(keyId);
+
+    if (!key || key.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    await storage.deleteSSHKey(keyId);
+    res.sendStatus(204);
+  });
+
+  // Account Update Route
+  app.patch("/api/account", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const { username, currentPassword, newPassword } = req.body;
+    if (!username || !currentPassword) {
+      return res.status(400).json({ message: "Username and current password are required" });
+    }
+
+    try {
+      const user = await storage.updateUser(req.user.id, {
+        username,
+        password: newPassword || currentPassword,
+      });
+      res.json({ username: user.username });
+    } catch (error) {
+      res.status(400).json({ message: (error as Error).message });
+    }
   });
 
   const httpServer = createServer(app);

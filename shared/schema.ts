@@ -25,6 +25,7 @@ export const servers = pgTable("servers", {
     vcpus: number;
     disk: number;
   }>(),
+  application: text("application"), // Added application field
 });
 
 export const volumes = pgTable("volumes", {
@@ -71,6 +72,14 @@ export const supportMessages = pgTable("support_messages", {
   isRead: boolean("is_read").notNull().default(false), // For real-time chat notifications
 });
 
+export const sshKeys = pgTable("ssh_keys", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  name: text("name").notNull(),
+  publicKey: text("public_key").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -80,6 +89,8 @@ export const insertServerSchema = createInsertSchema(servers).pick({
   name: true,
   region: true,
   size: true,
+}).extend({
+  application: z.string().optional(),
 });
 
 export const insertVolumeSchema = createInsertSchema(volumes).pick({
@@ -102,6 +113,11 @@ export const insertMessageSchema = createInsertSchema(supportMessages).pick({
   message: true,
 });
 
+export const insertSSHKeySchema = createInsertSchema(sshKeys).pick({
+  name: true,
+  publicKey: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Server = typeof servers.$inferSelect;
@@ -109,3 +125,5 @@ export type Volume = typeof volumes.$inferSelect;
 export type BillingTransaction = typeof billingTransactions.$inferSelect;
 export type SupportTicket = typeof supportTickets.$inferSelect;
 export type SupportMessage = typeof supportMessages.$inferSelect;
+export type InsertSSHKey = z.infer<typeof insertSSHKeySchema>;
+export type SSHKey = typeof sshKeys.$inferSelect;

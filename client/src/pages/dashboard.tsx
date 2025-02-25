@@ -21,6 +21,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+import * as z from 'zod';
 
 interface Region {
   slug: string;
@@ -32,6 +33,13 @@ interface Size {
   memory: number;
   vcpus: number;
   price_monthly: number;
+}
+
+interface Application {
+  slug: string;
+  name: string;
+  description: string;
+  type: string;
 }
 
 function calculatePasswordStrength(password: string): number {
@@ -67,6 +75,10 @@ export default function Dashboard() {
     queryKey: ["/api/sizes"],
   });
 
+  const { data: applications = [] } = useQuery<Application[]>({
+    queryKey: ["/api/applications"],
+  });
+
   const form = useForm({
     resolver: zodResolver(
       insertServerSchema.extend({
@@ -79,6 +91,7 @@ export default function Dashboard() {
           },
           "Password must be at least 8 characters and not end with a special character"
         ),
+        application: z.string().optional(),
       })
     ),
     defaultValues: {
@@ -86,6 +99,7 @@ export default function Dashboard() {
       region: "",
       size: "",
       auth: "",
+      application: "",
     },
   });
 
@@ -216,6 +230,36 @@ export default function Dashboard() {
                               {regions.map((region) => (
                                 <SelectItem key={region.slug} value={region.slug}>
                                   {region.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="application"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Application</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an application" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {applications.map((app) => (
+                                <SelectItem key={app.slug} value={app.slug}>
+                                  {app.name}
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    {app.description}
+                                  </span>
                                 </SelectItem>
                               ))}
                             </SelectContent>

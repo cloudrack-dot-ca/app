@@ -10,29 +10,78 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
-// This will be replaced with actual data from the API
 interface SSHKey {
   id: number;
   name: string;
-  key: string;
+  publicKey: string;
   createdAt: string;
 }
 
 export default function SSHKeysPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [keys, setKeys] = useState<SSHKey[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const [isAddingKey, setIsAddingKey] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyContent, setNewKeyContent] = useState("");
 
-  // Placeholder function for adding new SSH key
+  const { data: keys = [], isLoading } = useQuery<SSHKey[]>({
+    queryKey: ["/api/ssh-keys"],
+  });
+
   const addKey = async () => {
-    toast({
-      title: "Coming Soon",
-      description: "SSH key management will be implemented soon",
-    });
+    if (!newKeyName.trim() || !newKeyContent.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Both name and public key are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsAddingKey(true);
+      await apiRequest("POST", "/api/ssh-keys", {
+        name: newKeyName.trim(),
+        publicKey: newKeyContent.trim(),
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/ssh-keys"] });
+      setNewKeyName("");
+      setNewKeyContent("");
+      toast({
+        title: "Success",
+        description: "SSH key has been added successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingKey(false);
+    }
+  };
+
+  const deleteKey = async (id: number) => {
+    try {
+      await apiRequest("DELETE", `/api/ssh-keys/${id}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/ssh-keys"] });
+      toast({
+        title: "Success",
+        description: "SSH key has been deleted",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -78,7 +127,14 @@ export default function SSHKeysPage() {
                     className="font-mono text-sm h-32"
                   />
                 </div>
-                <Button className="w-full" onClick={addKey}>
+                <Button 
+                  className="w-full" 
+                  onClick={addKey}
+                  disabled={isAddingKey}
+                >
+                  {isAddingKey ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
                   Add Key
                 </Button>
               </div>
@@ -121,13 +177,15 @@ export default function SSHKeysPage() {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction>Delete</AlertDialogAction>
+                        <AlertDialogAction onClick={() => deleteKey(key.id)}>
+                          Delete
+                        </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 </CardHeader>
                 <CardContent>
-                  <p className="font-mono text-sm break-all">{key.key}</p>
+                  <p className="font-mono text-sm break-all">{key.publicKey}</p>
                   <p className="text-sm text-muted-foreground mt-2">
                     Added on {new Date(key.createdAt).toLocaleDateString()}
                   </p>

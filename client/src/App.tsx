@@ -11,6 +11,7 @@ import BillingPage from "@/pages/billing-page";
 import SupportPage from "@/pages/support-page";
 import VolumesPage from "@/pages/volumes-page";
 import SSHKeysPage from "@/pages/ssh-keys";
+import AccountPage from "@/pages/account-page";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ function Router() {
         <ProtectedRoute path="/billing" component={BillingPage} />
         <ProtectedRoute path="/support" component={SupportPage} />
         <ProtectedRoute path="/ssh-keys" component={SSHKeysPage} />
+        <ProtectedRoute path="/account" component={AccountPage} />
         <Route component={NotFound} />
       </Switch>
     </>

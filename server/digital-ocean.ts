@@ -16,6 +16,13 @@ export interface Size {
   price_monthly: number;
 }
 
+export interface Application {
+  slug: string;
+  name: string;
+  description: string;
+  type: string;
+}
+
 // Mock DigitalOcean API client for development
 export class DigitalOceanClient {
   private apiKey: string;
@@ -26,29 +33,54 @@ export class DigitalOceanClient {
       console.warn('DigitalOcean API key not found. Using mock data.');
     }
   }
+
   private regions: Region[] = [
     {
       slug: "nyc1",
       name: "New York 1",
-      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb"],
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
       available: true,
     },
     {
       slug: "sfo1",
       name: "San Francisco 1",
-      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb"],
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
       available: true,
     },
     {
       slug: "ams3",
       name: "Amsterdam 3",
-      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb"],
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
+      available: true,
+    },
+    {
+      slug: "sgp1",
+      name: "Singapore 1",
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
+      available: true,
+    },
+    {
+      slug: "lon1",
+      name: "London 1",
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
+      available: true,
+    },
+    {
+      slug: "fra1",
+      name: "Frankfurt 1",
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
+      available: true,
+    },
+    {
+      slug: "blr1",
+      name: "Bangalore 1",
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
       available: true,
     },
     {
       slug: "tor1",
       name: "Toronto 1",
-      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb"],
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
       available: true,
     },
   ];
@@ -78,6 +110,41 @@ export class DigitalOceanClient {
       transfer: 4000,
       price_monthly: 20,
     },
+    {
+      slug: "s-4vcpu-8gb",
+      memory: 8192,
+      vcpus: 4,
+      disk: 160,
+      transfer: 5000,
+      price_monthly: 40,
+    },
+  ];
+
+  private applications: Application[] = [
+    {
+      slug: "nodejs",
+      name: "Node.js",
+      description: "Node.js on Ubuntu 20.04",
+      type: "application",
+    },
+    {
+      slug: "python",
+      name: "Python",
+      description: "Python 3 on Ubuntu 20.04",
+      type: "application",
+    },
+    {
+      slug: "docker",
+      name: "Docker",
+      description: "Docker on Ubuntu 20.04",
+      type: "application",
+    },
+    {
+      slug: "lamp",
+      name: "LAMP",
+      description: "LAMP on Ubuntu 20.04",
+      type: "application",
+    },
   ];
 
   async getRegions(): Promise<Region[]> {
@@ -88,10 +155,15 @@ export class DigitalOceanClient {
     return this.sizes;
   }
 
+  async getApplications(): Promise<Application[]> {
+    return this.applications;
+  }
+
   async createDroplet(options: {
     name: string;
     region: string;
     size: string;
+    application?: string;
   }): Promise<{ id: string; ip_address: string }> {
     // Mock droplet creation
     return {
