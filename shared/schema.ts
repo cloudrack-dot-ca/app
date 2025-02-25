@@ -94,6 +94,8 @@ export const insertTicketSchema = createInsertSchema(supportTickets).pick({
   serverId: true,
 }).extend({
   message: z.string().min(1, "Initial message is required"),
+  priority: z.string().default("normal"),
+  serverId: z.number().optional(),
 });
 
 export const insertMessageSchema = createInsertSchema(supportMessages).pick({

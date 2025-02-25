@@ -398,8 +398,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: req.user.id,
           serverId: parsed.data.serverId,
           subject: parsed.data.subject,
-          priority: parsed.data.priority,
+          priority: parsed.data.priority, // Now guaranteed to be string due to schema default
           originalDropletId: server.dropletId,
+          status: 'open'
         });
 
         // Create initial message
@@ -415,7 +416,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const ticket = await storage.createTicket({
           userId: req.user.id,
           subject: parsed.data.subject,
-          priority: parsed.data.priority,
+          priority: parsed.data.priority, // Now guaranteed to be string due to schema default
+          status: 'open'
         });
 
         await storage.createMessage({
