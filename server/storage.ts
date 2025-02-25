@@ -1,4 +1,4 @@
-import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage } from "@shared/schema";
+import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import session from "express-session";
@@ -13,6 +13,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserBalance(userId: number, amount: number): Promise<User>;
+  updateUser(id: number, updates: Partial<User>): Promise<User>;
 
   getServer(id: number): Promise<Server | undefined>;
   getServersByUser(userId: number): Promise<Server[]>;
@@ -42,6 +43,11 @@ export interface IStorage {
   getMessagesByTicket(ticketId: number): Promise<SupportMessage[]>;
   updateMessage(id: number, updates: Partial<SupportMessage>): Promise<SupportMessage>;
 
+  getSSHKeysByUser(userId: number): Promise<SSHKey[]>;
+  createSSHKey(key: Omit<SSHKey, "id">): Promise<SSHKey>;
+  getSSHKey(id: number): Promise<SSHKey | undefined>;
+  deleteSSHKey(id: number): Promise<void>;
+
   sessionStore: session.Store;
 }
 
@@ -67,6 +73,15 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
     return user;
   }
 
@@ -241,6 +256,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(supportMessages.id, id))
       .returning();
     return updatedMessage;
+  }
+
+  async getSSHKeysByUser(userId: number): Promise<SSHKey[]> {
+    return await db.select().from(sshKeys).where(eq(sshKeys.userId, userId));
+  }
+
+  async createSSHKey(key: Omit<SSHKey, "id">): Promise<SSHKey> {
+    const [newKey] = await db.insert(sshKeys).values(key).returning();
+    return newKey;
+  }
+
+  async getSSHKey(id: number): Promise<SSHKey | undefined> {
+    const [key] = await db.select().from(sshKeys).where(eq(sshKeys.id, id));
+    return key;
+  }
+
+  async deleteSSHKey(id: number): Promise<void> {
+    await db.delete(sshKeys).where(eq(sshKeys.id, id));
   }
 }
 
