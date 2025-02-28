@@ -83,6 +83,9 @@ export const sshKeys = pgTable("ssh_keys", {
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  isAdmin: true,
+  balance: true,
+  apiKey: true,
 });
 
 export const insertServerSchema = createInsertSchema(servers).pick({
