@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import { db } from "./db";
 import { users } from "@shared/schema";
+import { setupAuth } from "./auth";
 import { eq } from "drizzle-orm";
 
 const app = express();
