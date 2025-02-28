@@ -422,45 +422,22 @@ export default function SupportPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Conversation</h2>
-            <div className="flex gap-2">
-              {selectedTicketData?.ticket?.status === "open" && (
-                <Button
-                  variant="outline"
-                  onClick={() => selectedTicketData?.ticket && closeTicketMutation.mutate(selectedTicketData.ticket.id)}
-                  disabled={closeTicketMutation.isPending}
-                >
-                  {closeTicketMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Close Ticket
-                    </>
-                  )}
-                </Button>
-              )}
-              {selectedTicketData?.ticket && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    if (confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) {
-                      deleteTicketMutation.mutate(selectedTicketData.ticket.id);
-                    }
-                  }}
-                  disabled={deleteTicketMutation.isPending}
-                >
-                  {deleteTicketMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Ticket
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+            {selectedTicketData?.ticket?.status === "open" && (
+              <Button
+                variant="outline"
+                onClick={() => selectedTicketData?.ticket && closeTicketMutation.mutate(selectedTicketData.ticket.id)}
+                disabled={closeTicketMutation.isPending}
+              >
+                {closeTicketMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Close Ticket
+                  </>
+                )}
+              </Button>
+            )}
           </div>
           {selectedTicket ? (
             loadingTicketDetails ? (
