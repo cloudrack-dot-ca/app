@@ -417,85 +417,135 @@ export default function SupportPage() {
                   <Loader2 className="h-8 w-8 animate-spin mx-auto" />
                 </CardContent>
               </Card>
-            ) : selectedTicketData ? (
+            ) : selectedTicketData && selectedTicketData.ticket ? (
               <div className="space-y-4">
+                {/* Server information if available */}
+                {selectedTicketData.ticket.serverId && (
+                  <Card className="bg-muted/30">
+                    <CardContent className="py-4">
+                      <h3 className="text-sm font-medium mb-2">Related Server</h3>
+                      {servers.filter(s => s.id === selectedTicketData.ticket.serverId).map(server => (
+                        <div key={server.id} className="space-y-1">
+                          <div className="font-medium">{server.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {regionFlags[server.region] || server.region} - {server.ipAddress || 'No IP'}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {server.specs ? (
+                              <>
+                                {server.specs.memory && `${server.specs.memory / 1024}GB RAM`}
+                                {server.specs.vcpus && `, ${server.specs.vcpus} vCPUs`}
+                                {server.specs.disk && `, ${server.specs.disk}GB Disk`}
+                              </>
+                            ) : (
+                              `${server.size}`
+                            )}
+                          </div>
+                          {volumesMap[server.id]?.length > 0 && (
+                            <div className="text-sm text-muted-foreground mt-1">
+                              <div className="flex items-center gap-1">
+                                <HardDrive className="h-3 w-3" />
+                                Attached Volumes:
+                              </div>
+                              {volumesMap[server.id].map((volume) => (
+                                <div key={volume.id} className="ml-4">
+                                  • {volume.name}: {volume.size}GB ({regionFlags[volume.region] || volume.region})
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* Conversation history */}
                 <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border rounded-lg">
-                  {selectedTicketData?.messages?.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex flex-col ${
-                        message.userId === selectedTicketData?.ticket?.userId
-                          ? "items-end"
-                          : "items-start"
-                      }`}
-                    >
+                  {selectedTicketData.messages && selectedTicketData.messages.length > 0 ? (
+                    selectedTicketData.messages.map((message) => (
                       <div
-                        className={`max-w-[80%] rounded-lg p-3 ${
-                          message.userId === selectedTicketData?.ticket?.userId
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted"
+                        key={message.id}
+                        className={`flex flex-col ${
+                          message.userId === selectedTicketData.ticket.userId
+                            ? "items-end"
+                            : "items-start"
                         }`}
                       >
-                        {editingMessage === message.id ? (
-                          <div className="space-y-2">
-                            <Input
-                              value={editText}
-                              onChange={(e) => setEditText(e.target.value)}
-                              className="bg-background"
-                            />
-                            <div className="flex gap-2 justify-end">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setEditingMessage(null);
-                                  setEditText("");
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  editMessageMutation.mutate({
-                                    messageId: message.id,
-                                    message: editText,
-                                  })
-                                }
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
+                        <div
+                          className={`max-w-[80%] rounded-lg p-3 ${
+                            message.userId === selectedTicketData.ticket.userId
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted"
+                          }`}
+                        >
+                          {editingMessage === message.id ? (
+                            <div className="space-y-2">
+                              <Input
+                                value={editText}
+                                onChange={(e) => setEditText(e.target.value)}
+                                className="bg-background"
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingMessage(null);
+                                    setEditText("");
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    editMessageMutation.mutate({
+                                      messageId: message.id,
+                                      message: editText,
+                                    })
+                                  }
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <>
-                            <p>{message.message}</p>
-                            <div className="flex items-center justify-between mt-1">
-                              <p className="text-xs opacity-70">
-                                {new Date(message.createdAt).toLocaleString()}
-                              </p>
-                              {message.userId === selectedTicketData?.ticket?.userId &&
-                                canEditMessage(message) && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() => {
-                                      setEditingMessage(message.id);
-                                      setEditText(message.message);
-                                    }}
-                                  >
-                                    <Edit2 className="h-3 w-3" />
-                                  </Button>
-                                )}
-                            </div>
-                          </>
-                        )}
+                          ) : (
+                            <>
+                              <p>{message.message}</p>
+                              <div className="flex items-center justify-between mt-1">
+                                <p className="text-xs opacity-70">
+                                  {new Date(message.createdAt).toLocaleString()}
+                                </p>
+                                {message.userId === selectedTicketData.ticket.userId &&
+                                  canEditMessage(message) && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => {
+                                        setEditingMessage(message.id);
+                                        setEditText(message.message);
+                                      }}
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-muted-foreground py-4">
+                      No messages in this conversation
                     </div>
-                  ))}
+                  )}
                 </div>
-                {selectedTicketData?.ticket?.status === "open" && (
+                
+                {/* Reply form */}
+                {selectedTicketData.ticket.status === "open" && (
                   <form
                     onSubmit={replyForm.handleSubmit((data) =>
                       replyMutation.mutate(data)
@@ -520,7 +570,13 @@ export default function SupportPage() {
                   </form>
                 )}
               </div>
-            ) : null
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Could not load ticket details
+                </CardContent>
+              </Card>
+            )
           ) : (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
