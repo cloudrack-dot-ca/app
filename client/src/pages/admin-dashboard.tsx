@@ -63,7 +63,6 @@ interface AdminServer {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [ticketSearchTerm, setTicketSearchTerm] = useState("");
   const [serverSearchTerm, setServerSearchTerm] = useState("");
