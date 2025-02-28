@@ -730,7 +730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.user) return res.sendStatus(401);
 
     const server = await storage.getServer(parseInt(req.params.id));
-    if (!server || server.userId !== req.user.id) {
+    if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
       return res.sendStatus(404);
     }
 
@@ -826,7 +826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const serverId = parseInt(req.params.id);
       const server = await storage.getServer(serverId);
       
-      if (!server || server.userId !== req.user.id) {
+      if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
         return res.sendStatus(404);
       }
 
@@ -906,7 +906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const serverId = parseInt(req.params.id);
       const server = await storage.getServer(serverId);
       
-      if (!server || server.userId !== req.user.id) {
+      if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
         return res.sendStatus(404);
       }
 
@@ -930,7 +930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const serverId = parseInt(req.params.id);
       const server = await storage.getServer(serverId);
       
-      if (!server || server.userId !== req.user.id) {
+      if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
         return res.sendStatus(404);
       }
 
