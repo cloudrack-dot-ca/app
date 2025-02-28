@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
+import * as schema from "@shared/schema";
 import { insertServerSchema, insertVolumeSchema, users, servers } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema } from "@shared/schema";
@@ -1003,7 +1004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update server with latest IP information if available
         if (dropletDetails?.droplet && dropletDetails.droplet.networks) {
           // Create server update data object with type from our schema
-          const updateData: Partial<typeof schema.servers.$inferSelect> = { 
+          const updateData: Partial<Server> = { 
             lastMonitored: new Date() 
           };
           
