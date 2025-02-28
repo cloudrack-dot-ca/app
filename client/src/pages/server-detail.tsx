@@ -568,6 +568,21 @@ export default function ServerDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        {/* Metrics Tab */}
+        <TabsContent value="metrics">
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Metrics</CardTitle>
+              <CardDescription>
+                Monitor your server's resource usage and performance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ServerMonitoring serverId={serverId} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Console Tab */}
         <TabsContent value="console">
