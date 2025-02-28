@@ -396,10 +396,10 @@ export default function SupportPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Conversation</h2>
-            {selectedTicketData?.ticket.status === "open" && (
+            {selectedTicketData?.ticket?.status === "open" && (
               <Button
                 variant="outline"
-                onClick={() => closeTicketMutation.mutate(selectedTicketData.ticket.id)}
+                onClick={() => selectedTicketData?.ticket && closeTicketMutation.mutate(selectedTicketData.ticket.id)}
                 disabled={closeTicketMutation.isPending}
               >
                 {closeTicketMutation.isPending ? (
@@ -424,14 +424,14 @@ export default function SupportPage() {
                     <div
                       key={message.id}
                       className={`flex flex-col ${
-                        message.userId === selectedTicketData.ticket.userId
+                        message.userId === selectedTicketData?.ticket?.userId
                           ? "items-end"
                           : "items-start"
                       }`}
                     >
                       <div
                         className={`max-w-[80%] rounded-lg p-3 ${
-                          message.userId === selectedTicketData.ticket.userId
+                          message.userId === selectedTicketData?.ticket?.userId
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted"
                         }`}
@@ -474,7 +474,7 @@ export default function SupportPage() {
                               <p className="text-xs opacity-70">
                                 {new Date(message.createdAt).toLocaleString()}
                               </p>
-                              {message.userId === selectedTicketData.ticket.userId &&
+                              {message.userId === selectedTicketData?.ticket?.userId &&
                                 canEditMessage(message) && (
                                   <Button
                                     size="sm"
