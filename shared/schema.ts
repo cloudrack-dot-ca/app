@@ -140,6 +140,7 @@ export const insertSSHKeySchema = createInsertSchema(sshKeys).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Server = typeof servers.$inferSelect;
+export type ServerMetric = typeof serverMetrics.$inferSelect;
 export type Volume = typeof volumes.$inferSelect;
 export type BillingTransaction = typeof billingTransactions.$inferSelect;
 export type SupportTicket = typeof supportTickets.$inferSelect;

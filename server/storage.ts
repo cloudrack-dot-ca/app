@@ -1,6 +1,6 @@
-import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey } from "@shared/schema";
+import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, serverMetrics, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey, type ServerMetric } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -27,6 +27,11 @@ export interface IStorage {
   deleteVolume(id: number): Promise<void>;
   updateVolume(volume: Volume): Promise<Volume>;
 
+  // Server metrics methods
+  createServerMetric(metric: Omit<ServerMetric, "id">): Promise<ServerMetric>;
+  getLatestServerMetric(serverId: number): Promise<ServerMetric | undefined>;
+  getServerMetricHistory(serverId: number, limit?: number): Promise<ServerMetric[]>;
+  
   createTransaction(transaction: Omit<BillingTransaction, "id">): Promise<BillingTransaction>;
   getTransactionsByUser(userId: number): Promise<BillingTransaction[]>;
 
@@ -293,6 +298,31 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSSHKey(id: number): Promise<void> {
     await db.delete(sshKeys).where(eq(sshKeys.id, id));
+  }
+
+  // Server metrics implementation
+  async createServerMetric(metric: Omit<ServerMetric, "id">): Promise<ServerMetric> {
+    const [newMetric] = await db.insert(serverMetrics).values(metric).returning();
+    return newMetric;
+  }
+
+  async getLatestServerMetric(serverId: number): Promise<ServerMetric | undefined> {
+    const [metric] = await db
+      .select()
+      .from(serverMetrics)
+      .where(eq(serverMetrics.serverId, serverId))
+      .orderBy(desc(serverMetrics.timestamp))
+      .limit(1);
+    return metric;
+  }
+
+  async getServerMetricHistory(serverId: number, limit: number = 24): Promise<ServerMetric[]> {
+    return await db
+      .select()
+      .from(serverMetrics)
+      .where(eq(serverMetrics.serverId, serverId))
+      .orderBy(desc(serverMetrics.timestamp))
+      .limit(limit);
   }
 }
 

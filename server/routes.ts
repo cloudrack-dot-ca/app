@@ -781,6 +781,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Server Metrics Routes
+  // Get the latest metrics for a server
+  app.get("/api/servers/:id/metrics/latest", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const serverId = parseInt(req.params.id);
+      const server = await storage.getServer(serverId);
+      
+      if (!server || server.userId !== req.user.id) {
+        return res.sendStatus(404);
+      }
+
+      // Get the latest metric from the database
+      const latestMetric = await storage.getLatestServerMetric(serverId);
+
+      if (!latestMetric) {
+        // If no metrics exist, fetch from DigitalOcean and create a new one
+        const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
+        
+        // Convert to our metric format
+        const newMetric = {
+          serverId,
+          cpuUsage: Math.round(doMetrics.cpu),
+          memoryUsage: Math.round(doMetrics.memory),
+          diskUsage: Math.round(doMetrics.disk),
+          networkIn: doMetrics.network_in,
+          networkOut: doMetrics.network_out,
+          loadAverage: doMetrics.load_average,
+          uptimeSeconds: doMetrics.uptime_seconds,
+          timestamp: new Date()
+        };
+        
+        // Store the metric
+        const savedMetric = await storage.createServerMetric(newMetric);
+        
+        // Update the server's last monitored timestamp
+        await storage.updateServer(serverId, { 
+          lastMonitored: savedMetric.timestamp 
+        });
+        
+        return res.json(savedMetric);
+      }
+      
+      // Check if we need to refresh the metrics (if older than 5 minutes)
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      if (latestMetric.timestamp < fiveMinutesAgo) {
+        // Fetch fresh metrics from DigitalOcean
+        const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
+        
+        // Convert to our metric format and save
+        const newMetric = {
+          serverId,
+          cpuUsage: Math.round(doMetrics.cpu),
+          memoryUsage: Math.round(doMetrics.memory),
+          diskUsage: Math.round(doMetrics.disk),
+          networkIn: doMetrics.network_in,
+          networkOut: doMetrics.network_out,
+          loadAverage: doMetrics.load_average,
+          uptimeSeconds: doMetrics.uptime_seconds,
+          timestamp: new Date()
+        };
+        
+        // Store the metric
+        const savedMetric = await storage.createServerMetric(newMetric);
+        
+        // Update the server's last monitored timestamp
+        await storage.updateServer(serverId, { 
+          lastMonitored: savedMetric.timestamp 
+        });
+        
+        return res.json(savedMetric);
+      }
+      
+      // Return the latest metric
+      return res.json(latestMetric);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  // Get historical metrics for a server
+  app.get("/api/servers/:id/metrics/history", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const serverId = parseInt(req.params.id);
+      const server = await storage.getServer(serverId);
+      
+      if (!server || server.userId !== req.user.id) {
+        return res.sendStatus(404);
+      }
+
+      // Get limit from query parameters, default to 24
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 24;
+      
+      // Get metrics history
+      const metrics = await storage.getServerMetricHistory(serverId, limit);
+      
+      return res.json(metrics);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  // Force refresh metrics for a server
+  app.post("/api/servers/:id/metrics/refresh", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const serverId = parseInt(req.params.id);
+      const server = await storage.getServer(serverId);
+      
+      if (!server || server.userId !== req.user.id) {
+        return res.sendStatus(404);
+      }
+
+      // Fetch fresh metrics from DigitalOcean
+      const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
+      
+      // Convert to our metric format and save
+      const newMetric = {
+        serverId,
+        cpuUsage: Math.round(doMetrics.cpu),
+        memoryUsage: Math.round(doMetrics.memory),
+        diskUsage: Math.round(doMetrics.disk),
+        networkIn: doMetrics.network_in,
+        networkOut: doMetrics.network_out,
+        loadAverage: doMetrics.load_average,
+        uptimeSeconds: doMetrics.uptime_seconds,
+        timestamp: new Date()
+      };
+      
+      // Store the metric
+      const savedMetric = await storage.createServerMetric(newMetric);
+      
+      // Update the server's last monitored timestamp
+      await storage.updateServer(serverId, { 
+        lastMonitored: savedMetric.timestamp 
+      });
+      
+      return res.json(savedMetric);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
