@@ -153,6 +153,26 @@ export class DigitalOceanClient {
     },
   ];
 
+  // Helper method to map application slugs to valid image IDs
+  private getImageForApplication(appSlug?: string): string {
+    if (!appSlug) return 'ubuntu-20-04-x64';
+    
+    const appMap: Record<string, string> = {
+      'nodejs': 'ubuntu-20-04-x64', // In real implementation, these would be actual DO application images
+      'python': 'ubuntu-20-04-x64',
+      'docker': 'ubuntu-20-04-x64',
+      'lamp': 'ubuntu-20-04-x64',
+      'wordpress': 'ubuntu-20-04-x64',
+      'lemp': 'ubuntu-20-04-x64',
+      'mean': 'ubuntu-20-04-x64',
+      'django': 'ubuntu-20-04-x64',
+      'rails': 'ubuntu-20-04-x64',
+      'ghost': 'ubuntu-20-04-x64',
+    };
+    
+    return appMap[appSlug] || 'ubuntu-20-04-x64';
+  }
+
   // Helper method for API requests
   private async apiRequest<T>(
     endpoint: string, 
@@ -267,7 +287,7 @@ export class DigitalOceanClient {
         name: options.name,
         region: options.region,
         size: options.size,
-        image: options.application || 'ubuntu-20-04-x64', // Default to Ubuntu if no app specified
+        image: this.getImageForApplication(options.application) || 'ubuntu-20-04-x64', // Default to Ubuntu if no app specified
         ssh_keys: options.ssh_keys || [],
         ipv6: !!options.ipv6,
         monitoring: true, // Enable monitoring by default
