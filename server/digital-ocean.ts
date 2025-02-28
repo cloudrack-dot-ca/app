@@ -16,6 +16,7 @@ export interface Size {
   transfer: number;
   price_monthly: number;
   available?: boolean;
+  processor_type?: 'regular' | 'intel' | 'amd' | 'gpu';
 }
 
 export interface Application {
@@ -92,6 +93,7 @@ export class DigitalOceanClient {
   ];
 
   private mockSizes: Size[] = [
+    // Regular droplets (Standard)
     {
       slug: "s-1vcpu-1gb",
       memory: 1024,
@@ -99,6 +101,7 @@ export class DigitalOceanClient {
       disk: 25,
       transfer: 1000,
       price_monthly: 5,
+      processor_type: 'regular'
     },
     {
       slug: "s-1vcpu-2gb",
@@ -107,6 +110,7 @@ export class DigitalOceanClient {
       disk: 50,
       transfer: 2000,
       price_monthly: 10,
+      processor_type: 'regular'
     },
     {
       slug: "s-2vcpu-4gb",
@@ -115,6 +119,7 @@ export class DigitalOceanClient {
       disk: 80,
       transfer: 4000,
       price_monthly: 20,
+      processor_type: 'regular'
     },
     {
       slug: "s-4vcpu-8gb",
@@ -123,10 +128,90 @@ export class DigitalOceanClient {
       disk: 160,
       transfer: 5000,
       price_monthly: 40,
+      processor_type: 'regular'
+    },
+    
+    // Intel Optimized droplets
+    {
+      slug: "c-2-intel",
+      memory: 4096,
+      vcpus: 2,
+      disk: 80,
+      transfer: 4000,
+      price_monthly: 26,
+      processor_type: 'intel'
+    },
+    {
+      slug: "c-4-intel",
+      memory: 8192,
+      vcpus: 4,
+      disk: 160,
+      transfer: 5000,
+      price_monthly: 52,
+      processor_type: 'intel'
+    },
+    {
+      slug: "c-8-intel",
+      memory: 16384,
+      vcpus: 8,
+      disk: 320,
+      transfer: 6000,
+      price_monthly: 104,
+      processor_type: 'intel'
+    },
+    
+    // AMD droplets
+    {
+      slug: "c-2-amd",
+      memory: 4096,
+      vcpus: 2,
+      disk: 80,
+      transfer: 4000,
+      price_monthly: 24,
+      processor_type: 'amd'
+    },
+    {
+      slug: "c-4-amd",
+      memory: 8192,
+      vcpus: 4,
+      disk: 160,
+      transfer: 5000,
+      price_monthly: 48,
+      processor_type: 'amd'
+    },
+    {
+      slug: "c-8-amd",
+      memory: 16384,
+      vcpus: 8,
+      disk: 320,
+      transfer: 6000,
+      price_monthly: 96,
+      processor_type: 'amd'
+    },
+    
+    // GPU droplets
+    {
+      slug: "g-2core-gpu",
+      memory: 32768,
+      vcpus: 8,
+      disk: 400,
+      transfer: 10000,
+      price_monthly: 520,
+      processor_type: 'gpu'
+    },
+    {
+      slug: "g-4core-gpu",
+      memory: 65536,
+      vcpus: 16,
+      disk: 800,
+      transfer: 15000,
+      price_monthly: 1040,
+      processor_type: 'gpu'
     },
   ];
 
   private mockApplications: Application[] = [
+    // Web Development
     {
       slug: "nodejs",
       name: "Node.js",
@@ -151,26 +236,159 @@ export class DigitalOceanClient {
       description: "LAMP on Ubuntu 20.04",
       type: "application",
     },
+    {
+      slug: "lemp",
+      name: "LEMP",
+      description: "Nginx, MySQL, PHP on Ubuntu 20.04",
+      type: "application",
+    },
+    {
+      slug: "mean",
+      name: "MEAN",
+      description: "MongoDB, Express, Angular, Node.js",
+      type: "application",
+    },
+    {
+      slug: "mern",
+      name: "MERN",
+      description: "MongoDB, Express, React, Node.js",
+      type: "application",
+    },
+    
+    // CMS Systems
+    {
+      slug: "wordpress",
+      name: "WordPress",
+      description: "WordPress with LAMP stack",
+      type: "cms",
+    },
+    {
+      slug: "ghost",
+      name: "Ghost",
+      description: "Ghost blogging platform",
+      type: "cms",
+    },
+    {
+      slug: "drupal",
+      name: "Drupal",
+      description: "Drupal CMS on LAMP stack",
+      type: "cms",
+    },
+    
+    // E-commerce
+    {
+      slug: "woocommerce",
+      name: "WooCommerce",
+      description: "WordPress with WooCommerce",
+      type: "ecommerce",
+    },
+    {
+      slug: "magento",
+      name: "Magento",
+      description: "Magento e-commerce platform",
+      type: "ecommerce",
+    },
+    
+    // Data Science
+    {
+      slug: "jupyter",
+      name: "Jupyter Notebook",
+      description: "Python with Jupyter for data science",
+      type: "data-science",
+    },
+    {
+      slug: "rstudio",
+      name: "R Studio Server",
+      description: "R Studio for statistical computing",
+      type: "data-science",
+    },
+    
+    // Databases
+    {
+      slug: "mongodb",
+      name: "MongoDB",
+      description: "MongoDB NoSQL database",
+      type: "database",
+    },
+    {
+      slug: "postgres",
+      name: "PostgreSQL",
+      description: "PostgreSQL database server",
+      type: "database",
+    },
+    {
+      slug: "mysql",
+      name: "MySQL",
+      description: "MySQL database server",
+      type: "database",
+    },
+    {
+      slug: "redis",
+      name: "Redis",
+      description: "Redis in-memory data store",
+      type: "database",
+    },
+    
+    // CI/CD and DevOps
+    {
+      slug: "jenkins",
+      name: "Jenkins",
+      description: "Jenkins CI/CD server",
+      type: "devops",
+    },
+    {
+      slug: "gitlab",
+      name: "GitLab CE",
+      description: "GitLab Community Edition",
+      type: "devops",
+    },
   ];
 
   // Helper method to map application slugs to valid image IDs
   private getImageForApplication(appSlug?: string): string {
     if (!appSlug) return 'ubuntu-20-04-x64';
     
+    // In a real implementation, these would be actual DO application images
+    // For our mock implementation, we'll just default to Ubuntu 20.04
+    const baseImage = 'ubuntu-20-04-x64';
+    
+    // For demonstration purposes, we'll maintain this map to show how
+    // different applications would map to different base images in a real implementation
     const appMap: Record<string, string> = {
-      'nodejs': 'ubuntu-20-04-x64', // In real implementation, these would be actual DO application images
-      'python': 'ubuntu-20-04-x64',
-      'docker': 'ubuntu-20-04-x64',
-      'lamp': 'ubuntu-20-04-x64',
-      'wordpress': 'ubuntu-20-04-x64',
-      'lemp': 'ubuntu-20-04-x64',
-      'mean': 'ubuntu-20-04-x64',
-      'django': 'ubuntu-20-04-x64',
-      'rails': 'ubuntu-20-04-x64',
-      'ghost': 'ubuntu-20-04-x64',
+      // Web Development
+      'nodejs': baseImage,
+      'python': baseImage,
+      'docker': baseImage,
+      'lamp': baseImage,
+      'lemp': baseImage,
+      'mean': baseImage,
+      'mern': baseImage,
+      
+      // CMS
+      'wordpress': baseImage,
+      'ghost': baseImage, 
+      'drupal': baseImage,
+      
+      // E-commerce
+      'woocommerce': baseImage,
+      'magento': baseImage,
+      
+      // Data Science
+      'jupyter': baseImage,
+      'rstudio': baseImage,
+      
+      // Databases
+      'mongodb': baseImage,
+      'postgres': baseImage,
+      'mysql': baseImage,
+      'redis': baseImage,
+      
+      // CI/CD and DevOps
+      'jenkins': baseImage,
+      'gitlab': baseImage,
     };
     
-    return appMap[appSlug] || 'ubuntu-20-04-x64';
+    return appMap[appSlug] || baseImage;
   }
 
   // Helper method for API requests
