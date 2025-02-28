@@ -69,14 +69,8 @@ export default function ServerDetailPage() {
   const { data: server, isLoading: serverLoading } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
     enabled: !isNaN(serverId),
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Unable to load server details",
-        variant: "destructive",
-      });
-      navigate("/dashboard");
-    }
+    retry: 1,
+    staleTime: 30000
   });
 
   // Fetch volumes attached to this server
