@@ -35,9 +35,11 @@ import {
   Save,
   Globe,
   Wifi,
-  Shield
+  Shield,
+  BarChart
 } from "lucide-react";
 import VolumeManager from "@/components/volume-manager";
+import ServerMonitoring from "@/components/server-monitoring";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 

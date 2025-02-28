@@ -27,6 +27,21 @@ export const servers = pgTable("servers", {
     disk: number;
   }>(),
   application: text("application"), // Added application field
+  lastMonitored: timestamp("last_monitored"),
+});
+
+// Server metrics table for monitoring
+export const serverMetrics = pgTable("server_metrics", {
+  id: serial("id").primaryKey(),
+  serverId: integer("server_id").notNull(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  cpuUsage: integer("cpu_usage").notNull(), // Percentage: 0-100
+  memoryUsage: integer("memory_usage").notNull(), // Percentage: 0-100
+  diskUsage: integer("disk_usage").notNull(), // Percentage: 0-100
+  networkIn: integer("network_in").notNull(), // Bytes
+  networkOut: integer("network_out").notNull(), // Bytes
+  loadAverage: jsonb("load_average").$type<number[]>().notNull(),
+  uptimeSeconds: integer("uptime_seconds").notNull(),
 });
 
 export const volumes = pgTable("volumes", {
