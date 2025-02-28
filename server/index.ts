@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import { db } from "./db";
 import { users } from "@shared/schema";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import { eq } from "drizzle-orm";
 
 const app = express();
@@ -51,7 +51,7 @@ async function createTestData() {
       // Create default admin user
       const admin = await storage.createUser({
         username: "admin",
-        password: "admin123", // This should be changed in production
+        password: await hashPassword("admin123"), // Properly hashed password
         isAdmin: true,
         balance: 10000, // $100.00 starting balance
         apiKey: null
@@ -61,7 +61,7 @@ async function createTestData() {
       // Create a regular user
       const user = await storage.createUser({
         username: "user",
-        password: "user123", 
+        password: await hashPassword("user123"), // Properly hashed password
         isAdmin: false,
         balance: 5000, // $50.00 starting balance
         apiKey: null
@@ -112,6 +112,9 @@ async function createTestData() {
 (async () => {
   // Create test data including admin user
   await createTestData();
+  
+  // Set up authentication before routes
+  setupAuth(app);
   
   const server = await registerRoutes(app);
 
