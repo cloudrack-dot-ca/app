@@ -3,9 +3,10 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
-import { insertServerSchema, insertVolumeSchema } from "@shared/schema";
+import { insertServerSchema, insertVolumeSchema, users, servers } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema } from "@shared/schema";
+import { db } from "./db";
 
 // Cost constants
 const COSTS = {
@@ -63,6 +64,19 @@ async function checkBalance(userId: number, costInDollars: number) {
   }
 }
 
+// Admin middleware to check if the user is an admin
+function adminMiddleware(req: any, res: any, next: any) {
+  if (!req.user) {
+    return res.sendStatus(401);
+  }
+
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: "Access denied. Admin privileges required." });
+  }
+
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
@@ -79,6 +93,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/applications", async (_req, res) => {
     const applications = await digitalOcean.getApplications();
     res.json(applications);
+  });
+  
+  // Admin API routes
+  app.get("/api/admin/users", adminMiddleware, async (_req, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      res.json(allUsers);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/admin/tickets", adminMiddleware, async (_req, res) => {
+    try {
+      const allTickets = await storage.getAllTickets();
+      res.json(allTickets);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/admin/servers", adminMiddleware, async (_req, res) => {
+    try {
+      const allServers = await storage.getAllServers();
+      res.json(allServers);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/admin/tickets/:id", adminMiddleware, async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.id);
+      const { status, priority } = req.body;
+      
+      let updatedTicket;
+      
+      if (status) {
+        updatedTicket = await storage.updateTicketStatus(ticketId, status);
+      }
+      
+      if (priority) {
+        updatedTicket = await storage.updateTicketPriority(ticketId, priority);
+      }
+      
+      res.json(updatedTicket);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
   });
 
   app.get("/api/servers", async (req, res) => {
