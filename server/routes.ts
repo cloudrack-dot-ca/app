@@ -680,9 +680,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // In a real implementation, this would call digitalOcean.rebootDroplet
-      // For now we'll just simulate success
-      res.json({ success: true });
+      // Call the DigitalOcean client to reboot the droplet
+      await digitalOcean.performDropletAction(server.dropletId, "reboot");
+      
+      // Update server status
+      const updatedServer = await storage.updateServer(server.id, { status: "rebooting" });
+      
+      // After a short delay, set the status back to active
+      setTimeout(async () => {
+        try {
+          await storage.updateServer(server.id, { status: "active" });
+        } catch (error) {
+          console.error("Failed to update server status after reboot:", error);
+        }
+      }, 5000);
+      
+      res.json(updatedServer);
     } catch (error) {
       res.status(500).json({ message: (error as Error).message });
     }
@@ -702,10 +715,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // In a real implementation, this would call digitalOcean.powerOnDroplet or digitalOcean.powerOffDroplet
-      // For now we'll just update the status
+      // Determine the DO API action and new status
+      const doAction = action === "start" ? "power_on" : "power_off";
       const newStatus = action === "start" ? "active" : "off";
-      const updatedServer = await storage.updateServer(server.id, { status: newStatus });
+      const transitionStatus = action === "start" ? "starting" : "stopping";
+      
+      // Call DigitalOcean API
+      await digitalOcean.performDropletAction(server.dropletId, doAction as any);
+      
+      // Update server status to transition state first
+      let updatedServer = await storage.updateServer(server.id, { status: transitionStatus });
+      
+      // After a short delay, update to final state
+      setTimeout(async () => {
+        try {
+          await storage.updateServer(server.id, { status: newStatus });
+        } catch (error) {
+          console.error(`Failed to update server status after ${action}:`, error);
+        }
+      }, 5000);
+      
       res.json(updatedServer);
     } catch (error) {
       res.status(500).json({ message: (error as Error).message });
@@ -748,14 +777,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // In a real implementation, this would enable or disable IPv6 on the droplet
-      // For now we'll just update the database
       let ipv6Address = null;
+      
+      // Only need to call the API if enabling IPv6
       if (enabled) {
-        // Generate a fake IPv6 address
+        // Call DigitalOcean API to enable IPv6
+        await digitalOcean.performDropletAction(server.dropletId, "enable_ipv6");
+        
+        // Generate a fake IPv6 address - in a real implementation this would be retrieved from the API
         ipv6Address = "2001:db8:85a3:8d3:1319:8a2e:370:7348";
       }
-
+      
+      // Update the server record with the new IPv6 address (or null)
       const updatedServer = await storage.updateServer(server.id, { ipv6Address });
       res.json(updatedServer);
     } catch (error) {
