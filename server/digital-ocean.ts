@@ -461,11 +461,32 @@ export class DigitalOceanClient {
     
     try {
       const response = await this.apiRequest<{ sizes: Size[] }>('/sizes');
-      return response.sizes.filter(size => 
-        size.available && 
-        size.price_monthly > 0 && 
-        size.slug.startsWith('s-')
-      );
+      
+      // Filter and add processor_type property to each size object
+      const filteredSizes = response.sizes
+        .filter(size => 
+          size.available && 
+          size.price_monthly > 0
+        )
+        .map(size => {
+          // Determine processor type based on slug pattern
+          let processor_type: 'regular' | 'intel' | 'amd' | 'gpu' = 'regular';
+          
+          if (size.slug.includes('-intel')) {
+            processor_type = 'intel';
+          } else if (size.slug.includes('-amd')) {
+            processor_type = 'amd';
+          } else if (size.slug.includes('-gpu') || size.slug.startsWith('g-')) {
+            processor_type = 'gpu';
+          }
+          
+          return {
+            ...size,
+            processor_type
+          };
+        });
+      
+      return filteredSizes;
     } catch (error) {
       console.error('Error fetching sizes, falling back to mock data:', error);
       return this.mockSizes;

@@ -480,10 +480,14 @@ export default function Dashboard() {
                             </FormControl>
                             <SelectContent>
                               {sizes
-                                .filter(size => 
-                                  processorFilter === "all" || 
-                                  (size.processor_type === processorFilter)
-                                )
+                                .filter(size => {
+                                  if (processorFilter === "all") return true;
+                                  // Handle regular which includes undefined
+                                  if (processorFilter === "regular") {
+                                    return !size.processor_type || size.processor_type === "regular";
+                                  }
+                                  return size.processor_type === processorFilter;
+                                })
                                 .map((size) => (
                                   <SelectItem key={size.slug} value={size.slug}>
                                     {size.processor_type === 'intel' && '🔷 '}
