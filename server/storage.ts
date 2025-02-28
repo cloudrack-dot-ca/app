@@ -55,9 +55,18 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
+    // Configure session store with more robust settings
     this.sessionStore = new PostgresSessionStore({
       pool,
       createTableIfMissing: true,
+      tableName: 'session', // Specify the table name explicitly
+      schemaName: 'public', // Specify the schema name
+      ttl: 86400, // Session time-to-live in seconds (24 hours)
+      disableTouch: false, // Update expiration on session reads
+      // Error handler for the session store
+      errorLog: (error) => {
+        console.error('Session store error:', error.message);
+      }
     });
   }
 
