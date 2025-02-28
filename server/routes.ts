@@ -977,18 +977,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch fresh server details from DigitalOcean to update IP addresses
       try {
-        const dropletDetails = await digitalOcean.apiRequest(`/droplets/${server.dropletId}`);
+        // Define the type for DigitalOcean droplet response
+        interface DigitalOceanDropletResponse {
+          droplet: {
+            id: number;
+            status: string;
+            networks: {
+              v4?: Array<{
+                ip_address: string;
+                type: string; // 'public' or 'private'
+              }>;
+              v6?: Array<{
+                ip_address: string;
+                type: string;
+              }>;
+            };
+          };
+        }
+
+        // Fetch droplet details with proper typing
+        const dropletDetails = await digitalOcean.apiRequest<DigitalOceanDropletResponse>(
+          `/droplets/${server.dropletId}`
+        );
         
         // Update server with latest IP information if available
-        if (dropletDetails.droplet && dropletDetails.droplet.networks) {
-          const updateData: Partial<Server> = { 
+        if (dropletDetails?.droplet && dropletDetails.droplet.networks) {
+          // Create server update data object with type from our schema
+          const updateData: Partial<typeof schema.servers.$inferSelect> = { 
             lastMonitored: new Date() 
           };
           
           // Update IPv4 address
           if (dropletDetails.droplet.networks.v4 && dropletDetails.droplet.networks.v4.length > 0) {
             const publicIp = dropletDetails.droplet.networks.v4.find(
-              (network: any) => network.type === 'public'
+              (network) => network.type === 'public'
             );
             if (publicIp) {
               updateData.ipAddress = publicIp.ip_address;

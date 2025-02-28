@@ -374,7 +374,8 @@ export class DigitalOceanClient {
   }
 
   // Helper method for API requests
-  private async apiRequest<T>(
+  // Public method to allow direct API requests when needed
+  async apiRequest<T>(
     endpoint: string, 
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET', 
     data?: any
