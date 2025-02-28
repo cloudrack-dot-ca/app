@@ -10,7 +10,39 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, RefreshCcw, UserCircle, ServerCrash, MessageCircle } from "lucide-react";
+import { Search, RefreshCcw, User as UserIcon, Server as ServerIcon, MessageCircle } from "lucide-react";
+
+// Define interfaces for our data
+interface AdminUser {
+  id: number;
+  username: string;
+  balance: number;
+  isAdmin: boolean;
+  apiKey: string | null;
+}
+
+interface AdminTicket {
+  id: number;
+  userId: number;
+  serverId: number | null;
+  subject: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+  updatedAt: string;
+  originalDropletId: string | null;
+}
+
+interface AdminServer {
+  id: number;
+  userId: number;
+  name: string;
+  dropletId: string;
+  region: string;
+  size: string;
+  status: string;
+  ipAddress: string | null;
+}
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -28,29 +60,38 @@ export default function AdminDashboard() {
   // Fetch all users
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
-    queryFn: () => apiRequest<User[]>("/api/admin/users"),
+    queryFn: async () => {
+      const response = await apiRequest<AdminUser[]>("/api/admin/users");
+      return response || [];
+    }
   });
 
   // Fetch all tickets
   const { data: tickets = [], isLoading: ticketsLoading } = useQuery({
     queryKey: ["/api/admin/tickets"],
-    queryFn: () => apiRequest<SupportTicket[]>("/api/admin/tickets"),
+    queryFn: async () => {
+      const response = await apiRequest<AdminTicket[]>("/api/admin/tickets");
+      return response || [];
+    }
   });
 
   // Fetch all servers
   const { data: servers = [], isLoading: serversLoading } = useQuery({
     queryKey: ["/api/admin/servers"],
-    queryFn: () => apiRequest<Server[]>("/api/admin/servers"),
+    queryFn: async () => {
+      const response = await apiRequest<AdminServer[]>("/api/admin/servers");
+      return response || [];
+    }
   });
 
   // Update ticket status mutation
   const updateTicketMutation = useMutation({
     mutationFn: async ({ id, status, priority }: { id: number; status?: string; priority?: string }) => {
-      return apiRequest(`/api/admin/tickets/${id}`, {
+      return await apiRequest(`/api/admin/tickets/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status, priority }),
-      });
+      } as RequestInit);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/tickets"] });
@@ -69,17 +110,17 @@ export default function AdminDashboard() {
   });
 
   // Filter users by search term
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = users.filter((user: AdminUser) => 
     user.username.toLowerCase().includes(userSearchTerm.toLowerCase())
   );
 
   // Filter tickets by search term
-  const filteredTickets = tickets.filter(ticket => 
+  const filteredTickets = tickets.filter((ticket: AdminTicket) => 
     ticket.subject.toLowerCase().includes(ticketSearchTerm.toLowerCase())
   );
 
   // Filter servers by search term
-  const filteredServers = servers.filter(server => 
+  const filteredServers = servers.filter((server: AdminServer) => 
     server.name.toLowerCase().includes(serverSearchTerm.toLowerCase())
   );
 
@@ -148,7 +189,7 @@ export default function AdminDashboard() {
                         <TableCell colSpan={5} className="text-center">No users found</TableCell>
                       </TableRow>
                     ) : (
-                      filteredUsers.map((user) => (
+                      filteredUsers.map((user: AdminUser) => (
                         <TableRow key={user.id}>
                           <TableCell>{user.id}</TableCell>
                           <TableCell>{user.username}</TableCell>
@@ -221,7 +262,7 @@ export default function AdminDashboard() {
                         <TableCell colSpan={6} className="text-center">No tickets found</TableCell>
                       </TableRow>
                     ) : (
-                      filteredTickets.map((ticket) => (
+                      filteredTickets.map((ticket: AdminTicket) => (
                         <TableRow key={ticket.id}>
                           <TableCell>{ticket.id}</TableCell>
                           <TableCell>{ticket.subject}</TableCell>
@@ -324,7 +365,7 @@ export default function AdminDashboard() {
                         <TableCell colSpan={7} className="text-center">No servers found</TableCell>
                       </TableRow>
                     ) : (
-                      filteredServers.map((server) => (
+                      filteredServers.map((server: AdminServer) => (
                         <TableRow key={server.id}>
                           <TableCell>{server.id}</TableCell>
                           <TableCell>{server.name}</TableCell>

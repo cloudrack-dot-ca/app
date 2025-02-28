@@ -12,10 +12,11 @@ import SupportPage from "@/pages/support-page";
 import VolumesPage from "@/pages/volumes-page";
 import SSHKeysPage from "@/pages/ssh-keys";
 import AccountPage from "@/pages/account-page";
+import AdminDashboard from "@/pages/admin-dashboard";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
-import { Home } from "lucide-react";
+import { Home, ShieldAlert } from "lucide-react";
 
 function Nav() {
   const { user } = useAuth();
@@ -30,6 +31,17 @@ function Nav() {
               Home
             </Button>
           </Link>
+        )}
+
+        {user?.isAdmin && (
+          <div className="flex items-center">
+            <Link href="/admin">
+              <Button variant="outline" size="sm" className="ml-2">
+                <ShieldAlert className="h-4 w-4 mr-2" />
+                Admin Panel
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
     </nav>
@@ -49,6 +61,7 @@ function Router() {
         <ProtectedRoute path="/support" component={SupportPage} />
         <ProtectedRoute path="/ssh-keys" component={SSHKeysPage} />
         <ProtectedRoute path="/account" component={AccountPage} />
+        <ProtectedRoute path="/admin" component={AdminDashboard} />
         <Route component={NotFound} />
       </Switch>
     </>
