@@ -236,13 +236,20 @@ export default function AdminDashboard() {
         <div className="flex items-center space-x-2">
           <Timer className="h-4 w-4 text-muted-foreground" />
           <Select
-            value={autoRefreshInterval?.toString() || ""}
+            value={autoRefreshInterval?.toString() || "0"}
             onValueChange={(value) => {
-              setAutoRefreshInterval(value ? parseInt(value, 10) : null);
-              if (value) {
+              const interval = parseInt(value, 10);
+              setAutoRefreshInterval(interval > 0 ? interval : null);
+              if (interval > 0) {
                 toast({
                   title: "Auto-refresh enabled",
                   description: `Data will refresh every ${value} minutes`,
+                });
+              } else {
+                setAutoRefreshInterval(null);
+                toast({
+                  title: "Auto-refresh disabled",
+                  description: "Data will not refresh automatically",
                 });
               }
             }}
@@ -251,7 +258,7 @@ export default function AdminDashboard() {
               <SelectValue placeholder="Auto-refresh..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Disabled</SelectItem>
+              <SelectItem value="0">Disabled</SelectItem>
               <SelectItem value="1">Every 1 minute</SelectItem>
               <SelectItem value="5">Every 5 minutes</SelectItem>
               <SelectItem value="10">Every 10 minutes</SelectItem>

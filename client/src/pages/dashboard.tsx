@@ -69,7 +69,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [authType, setAuthType] = useState<"password" | "ssh">("password");
   const [sshKey, setSshKey] = useState("");
-  const [selectedSSHKeyId, setSelectedSSHKeyId] = useState<number | null>(null);
+  const [selectedSSHKeyId, setSelectedSSHKeyId] = useState<number | string | null>(null);
   const [newKeyName, setNewKeyName] = useState(""); 
   
 
@@ -131,7 +131,7 @@ export default function Dashboard() {
   async function onSubmit(values: any) {
     try {
       // If adding a new SSH key, save it first
-      let sshKeyToUse = selectedSSHKeyId && selectedSSHKeyId !== "new" 
+      let sshKeyToUse = selectedSSHKeyId && typeof selectedSSHKeyId === "number" 
         ? sshKeys.find(key => key.id === selectedSSHKeyId)?.publicKey 
         : undefined;
 
@@ -150,7 +150,7 @@ export default function Dashboard() {
             name: newKeyName,
             publicKey: sshKey,
           });
-          sshKeyToUse = response.publicKey;
+          sshKeyToUse = (response as any).publicKey;
           queryClient.invalidateQueries({ queryKey: ["/api/ssh-keys"] });
         } catch (error) {
           toast({
@@ -226,6 +226,16 @@ export default function Dashboard() {
                     SSH Keys
                   </Link>
                 </DropdownMenuItem>
+                {user?.isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => logoutMutation.mutate()}>
                   Logout
@@ -412,7 +422,11 @@ export default function Dashboard() {
                           <Select
                             value={selectedSSHKeyId?.toString() || ""}
                             onValueChange={(value) => {
-                              setSelectedSSHKeyId(parseInt(value));
+                              if (value === "new") {
+                                setSelectedSSHKeyId("new" as any);
+                              } else {
+                                setSelectedSSHKeyId(parseInt(value));
+                              }
                               setSshKey("");
                               setNewKeyName(""); 
                             }}
@@ -435,7 +449,7 @@ export default function Dashboard() {
                           </div>
                         )}
 
-                        {(!selectedSSHKeyId || selectedSSHKeyId === "new") && (
+                        {(!selectedSSHKeyId || selectedSSHKeyId === "new" as string) && (
                           <div className="space-y-4">
                             <FormItem>
                               <FormLabel>SSH Key Name</FormLabel>

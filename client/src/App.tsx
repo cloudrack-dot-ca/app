@@ -32,17 +32,6 @@ function Nav() {
             </Button>
           </Link>
         )}
-
-        {user?.isAdmin && (
-          <div className="flex items-center">
-            <Link href="/admin">
-              <Button variant="outline" size="sm" className="ml-2">
-                <ShieldAlert className="h-4 w-4 mr-2" />
-                Admin Panel
-              </Button>
-            </Link>
-          </div>
-        )}
       </div>
     </nav>
   );
