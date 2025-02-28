@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// We're not using apiRequest directly since we need more control over the fetch calls
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Redirect, Link } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -208,14 +208,7 @@ export default function AdminDashboard() {
   // Delete ticket mutation (admin only)
   const deleteTicketMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/tickets/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to delete ticket");
-      }
+      await apiRequest("DELETE", `/api/tickets/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/tickets"] });
@@ -227,7 +220,7 @@ export default function AdminDashboard() {
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to delete ticket",
         variant: "destructive",
       });
     },
