@@ -33,6 +33,7 @@ interface Size {
   memory: number;
   vcpus: number;
   price_monthly: number;
+  processor_type?: 'regular' | 'intel' | 'amd' | 'gpu';
 }
 
 interface Application {
@@ -70,7 +71,9 @@ export default function Dashboard() {
   const [authType, setAuthType] = useState<"password" | "ssh">("password");
   const [sshKey, setSshKey] = useState("");
   const [selectedSSHKeyId, setSelectedSSHKeyId] = useState<number | string | null>(null);
-  const [newKeyName, setNewKeyName] = useState(""); 
+  const [newKeyName, setNewKeyName] = useState("");
+  const [processorFilter, setProcessorFilter] = useState<string>("all");
+  const [applicationTypeFilter, setApplicationTypeFilter] = useState<string>("all");
   
 
   const { data: servers = [], isLoading } = useQuery<Server[]>({
@@ -305,11 +308,80 @@ export default function Dashboard() {
                         </FormItem>
                       )}
                     />
+                    <div className="col-span-2 mb-1">
+                      <Label className="text-sm">Application Type</Label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={applicationTypeFilter === "all" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("all")}
+                          className="text-xs h-8"
+                        >
+                          All
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={applicationTypeFilter === "application" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("application")}
+                          className="text-xs h-8"
+                        >
+                          Web Dev
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={applicationTypeFilter === "cms" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("cms")}
+                          className="text-xs h-8"
+                        >
+                          CMS
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={applicationTypeFilter === "ecommerce" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("ecommerce")}
+                          className="text-xs h-8"
+                        >
+                          E-commerce
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={applicationTypeFilter === "database" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("database")}
+                          className="text-xs h-8"
+                        >
+                          Database
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={applicationTypeFilter === "data-science" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("data-science")}
+                          className="text-xs h-8"
+                        >
+                          Data Science
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={applicationTypeFilter === "devops" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("devops")}
+                          className="text-xs h-8"
+                        >
+                          DevOps
+                        </Button>
+                      </div>
+                    </div>
+                    
                     <FormField
                       control={form.control}
                       name="application"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-2">
                           <FormLabel className="text-sm">Application</FormLabel>
                           <Select
                             onValueChange={field.onChange}
@@ -322,10 +394,17 @@ export default function Dashboard() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="none">No Application (Clean OS)</SelectItem>
-                              {applications.map((app) => (
-                                <SelectItem key={app.slug} value={app.slug}>
-                                  {app.name}
-                                </SelectItem>
+                              
+                              {/* Filter applications by type */}
+                              {applications
+                                .filter(app => 
+                                  applicationTypeFilter === "all" || 
+                                  app.type === applicationTypeFilter
+                                )
+                                .map((app) => (
+                                  <SelectItem key={app.slug} value={app.slug}>
+                                    {app.name} - {app.description}
+                                  </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -333,11 +412,62 @@ export default function Dashboard() {
                         </FormItem>
                       )}
                     />
+                    <div className="col-span-2 mb-1">
+                      <Label className="text-sm">Processor Type</Label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "all" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("all")}
+                          className="text-xs h-8"
+                        >
+                          All
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "regular" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("regular")}
+                          className="text-xs h-8"
+                        >
+                          Regular
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "intel" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("intel")}
+                          className="text-xs h-8"
+                        >
+                          Intel Optimized
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "amd" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("amd")}
+                          className="text-xs h-8"
+                        >
+                          AMD
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "gpu" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("gpu")}
+                          className="text-xs h-8"
+                        >
+                          GPU
+                        </Button>
+                      </div>
+                    </div>
+                    
                     <FormField
                       control={form.control}
                       name="size"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-2">
                           <FormLabel className="text-sm">Size</FormLabel>
                           <Select
                             onValueChange={field.onChange}
@@ -349,10 +479,18 @@ export default function Dashboard() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {sizes.map((size) => (
-                                <SelectItem key={size.slug} value={size.slug}>
-                                  {size.memory / 1024}GB RAM, {size.vcpus} vCPUs (${(size.price_monthly / (24 * 30)).toFixed(3)}/hr)
-                                </SelectItem>
+                              {sizes
+                                .filter(size => 
+                                  processorFilter === "all" || 
+                                  (size.processor_type === processorFilter)
+                                )
+                                .map((size) => (
+                                  <SelectItem key={size.slug} value={size.slug}>
+                                    {size.processor_type === 'intel' && '🔷 '}
+                                    {size.processor_type === 'amd' && '🔶 '}
+                                    {size.processor_type === 'gpu' && '⚡ '}
+                                    {size.memory / 1024}GB RAM, {size.vcpus} vCPUs (${(size.price_monthly / (24 * 30)).toFixed(3)}/hr)
+                                  </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
