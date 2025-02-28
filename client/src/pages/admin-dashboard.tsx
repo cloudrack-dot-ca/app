@@ -1,16 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // We're not using apiRequest directly since we need more control over the fetch calls
-import { Redirect } from "wouter";
+import { Redirect, Link } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, RefreshCcw, User as UserIcon, Server as ServerIcon, MessageCircle } from "lucide-react";
+import { 
+  Search, 
+  RefreshCcw, 
+  User as UserIcon, 
+  Server as ServerIcon, 
+  MessageCircle, 
+  ArrowLeft, 
+  Timer,
+  RotateCcw 
+} from "lucide-react";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 // Define interfaces for our data types
 interface AdminUser {
@@ -51,6 +67,47 @@ export default function AdminDashboard() {
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [ticketSearchTerm, setTicketSearchTerm] = useState("");
   const [serverSearchTerm, setServerSearchTerm] = useState("");
+  
+  // Auto-refresh functionality
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState("users");
+  const intervalRef = useRef<number | null>(null);
+
+  // Clear interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  // Set up auto-refresh based on interval selection
+  useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    if (autoRefreshInterval) {
+      const interval = window.setInterval(() => {
+        if (activeTab === "users") {
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+        } else if (activeTab === "tickets") {
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/tickets"] });
+        } else if (activeTab === "servers") {
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/servers"] });
+        }
+      }, autoRefreshInterval * 60 * 1000); // Convert minutes to milliseconds
+      
+      intervalRef.current = interval;
+    }
+  }, [autoRefreshInterval, activeTab, queryClient]);
+
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
 
   // Redirect if not admin
   if (!user?.isAdmin) {
@@ -165,9 +222,62 @@ export default function AdminDashboard() {
 
   return (
     <div className="container py-6">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-4">
+          <Link href="/dashboard">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Timer className="h-4 w-4 text-muted-foreground" />
+          <Select
+            value={autoRefreshInterval?.toString() || ""}
+            onValueChange={(value) => {
+              setAutoRefreshInterval(value ? parseInt(value, 10) : null);
+              if (value) {
+                toast({
+                  title: "Auto-refresh enabled",
+                  description: `Data will refresh every ${value} minutes`,
+                });
+              }
+            }}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Auto-refresh..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Disabled</SelectItem>
+              <SelectItem value="1">Every 1 minute</SelectItem>
+              <SelectItem value="5">Every 5 minutes</SelectItem>
+              <SelectItem value="10">Every 10 minutes</SelectItem>
+              <SelectItem value="15">Every 15 minutes</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {autoRefreshInterval && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                setAutoRefreshInterval(null);
+                toast({
+                  title: "Auto-refresh disabled",
+                  description: "Data will no longer refresh automatically",
+                });
+              }}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
       
-      <Tabs defaultValue="users" className="w-full">
+      <Tabs defaultValue="users" className="w-full" onValueChange={handleTabChange}>
         <TabsList className="mb-4">
           <TabsTrigger value="users">
             <UserIcon className="h-4 w-4 mr-2" />
