@@ -639,7 +639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const messages = await storage.getMessagesByTicket(ticket.id);
     const message = messages.find(m => m.id === parseInt(req.params.messageId));
 
-    if (!message || message.userId !== req.user.id) {
+    if (!message || (message.userId !== req.user.id && !req.user.isAdmin)) {
       return res.sendStatus(404);
     }
 
