@@ -511,7 +511,7 @@ export default function ServerDetailPage() {
                       <div>
                         <span className="text-sm font-medium">IPv6 Address</span>
                         <div>
-                          {server.ipv6Address ? (
+                          {ipv6Enabled && server.ipv6Address ? (
                             <div className="flex items-center gap-2">
                               <code className="bg-muted px-2 py-1 rounded text-sm">{server.ipv6Address}</code>
                               <Button 

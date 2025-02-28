@@ -77,6 +77,7 @@ async function createTestData() {
         dropletId: "12345",
         status: "active",
         ipAddress: "192.168.1.1",
+        ipv6Address: null,
         specs: {
           memory: 1024,
           vcpus: 1,

@@ -181,6 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user.id,
         dropletId: droplet.id,
         ipAddress: droplet.ip_address,
+        ipv6Address: null,
         status: "new",
         specs: {
           memory: 1024,
@@ -624,6 +625,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(updatedMessage);
   });
 
+
+  // Server Action Routes
+  app.post("/api/servers/:id/actions/reboot", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const server = await storage.getServer(parseInt(req.params.id));
+    if (!server || server.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    try {
+      // In a real implementation, this would call digitalOcean.rebootDroplet
+      // For now we'll just simulate success
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  app.post("/api/servers/:id/actions/:action", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const server = await storage.getServer(parseInt(req.params.id));
+    if (!server || server.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    const action = req.params.action;
+    if (action !== "start" && action !== "stop") {
+      return res.status(400).json({ message: "Invalid action" });
+    }
+
+    try {
+      // In a real implementation, this would call digitalOcean.powerOnDroplet or digitalOcean.powerOffDroplet
+      // For now we'll just update the status
+      const newStatus = action === "start" ? "active" : "off";
+      const updatedServer = await storage.updateServer(server.id, { status: newStatus });
+      res.json(updatedServer);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/servers/:id/password", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const server = await storage.getServer(parseInt(req.params.id));
+    if (!server || server.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
+
+    try {
+      // In a real implementation, this would reset the server's root password
+      // For now we'll just simulate success
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/servers/:id/ipv6", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const server = await storage.getServer(parseInt(req.params.id));
+    if (!server || server.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    const { enabled } = req.body;
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ message: "Enabled status must be a boolean" });
+    }
+
+    try {
+      // In a real implementation, this would enable or disable IPv6 on the droplet
+      // For now we'll just update the database
+      let ipv6Address = null;
+      if (enabled) {
+        // Generate a fake IPv6 address
+        ipv6Address = "2001:db8:85a3:8d3:1319:8a2e:370:7348";
+      }
+
+      const updatedServer = await storage.updateServer(server.id, { ipv6Address });
+      res.json(updatedServer);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
 
   // SSH Key Routes
   app.get("/api/ssh-keys", async (req, res) => {
