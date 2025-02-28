@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Server } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -24,7 +24,7 @@ interface ServerMetricsProps {
   serverId: number;
 }
 
-interface ServerMetric {
+interface MetricData {
   id: number;
   serverId: number;
   timestamp: string;
@@ -40,34 +40,86 @@ interface ServerMetric {
 export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
   const { toast } = useToast();
   const [activeMetric, setActiveMetric] = useState<string>("cpu");
-  const [refreshInterval, setRefreshInterval] = useState<number | null>(10000); // 10 seconds default
+  const [refreshInterval, setRefreshInterval] = useState<number>(30000); // 30 seconds default
 
-  // Mock data for now, in real implementation this would come from the API
-  const mockMetrics: ServerMetric[] = Array.from({ length: 24 }).map((_, i) => ({
-    id: i,
+  // Mock data for fallback when API is not available yet
+  const defaultMetric: MetricData = {
+    id: 0,
     serverId,
-    timestamp: new Date(Date.now() - (23 - i) * 3600000).toISOString(),
-    cpuUsage: Math.floor(Math.random() * 70) + 10, // 10-80%
-    memoryUsage: Math.floor(Math.random() * 60) + 20, // 20-80%
-    diskUsage: Math.floor(Math.random() * 30) + 20, // 20-50%
-    networkIn: Math.floor(Math.random() * 10000000), // 0-10MB
-    networkOut: Math.floor(Math.random() * 5000000), // 0-5MB
-    loadAverage: [
-      Math.random() * 2, 
-      Math.random() * 1.5, 
-      Math.random() * 1
-    ],
-    uptimeSeconds: 3600 * 24 * (i + 1), // Increasing uptime
-  }));
+    timestamp: new Date().toISOString(),
+    cpuUsage: 25,
+    memoryUsage: 40,
+    diskUsage: 30,
+    networkIn: 1024 * 500, // 500 KB
+    networkOut: 1024 * 200, // 200 KB
+    loadAverage: [0.5, 0.4, 0.3],
+    uptimeSeconds: 3600 * 24 // 1 day
+  };
 
-  // Current metrics (latest)
-  const currentMetrics = mockMetrics[mockMetrics.length - 1];
+  // Query for latest metrics
+  const { 
+    data: latestMetric,
+    isLoading: isLoadingLatest,
+    error: latestError
+  } = useQuery<MetricData>({
+    queryKey: [`/api/servers/${serverId}/metrics/latest`],
+    enabled: !isNaN(serverId),
+    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined
+  });
 
-  // Server Details Query - would be used to get the server specs for context
+  // Query for historical metrics
+  const { 
+    data: metricsHistoryData,
+    isLoading: isLoadingHistory,
+    error: historyError
+  } = useQuery<MetricData[]>({
+    queryKey: [`/api/servers/${serverId}/metrics/history`],
+    enabled: !isNaN(serverId),
+    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined
+  });
+
+  // Server Details Query - to get the server specs for context
   const { data: server } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
-    enabled: !isNaN(serverId),
+    enabled: !isNaN(serverId)
   });
+
+  // Safe access to metrics data with fallbacks
+  const currentMetrics = latestMetric || defaultMetric;
+  const metricsHistory = metricsHistoryData || [defaultMetric];
+
+  // Force refresh metrics
+  const { mutate: refreshServerMetrics, isPending: isRefreshing } = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/servers/${serverId}/metrics/refresh`, 'POST') as any;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Metrics refreshed",
+        description: "Server performance data has been updated.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/latest`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/history`] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error refreshing metrics",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Format data for charts
+  const chartData = [...metricsHistory].map((metric: MetricData) => ({
+    name: new Date(metric.timestamp).toLocaleTimeString(),
+    cpu: metric.cpuUsage,
+    memory: metric.memoryUsage,
+    disk: metric.diskUsage,
+    networkIn: metric.networkIn / 1024 / 1024, // Convert to MB
+    networkOut: metric.networkOut / 1024 / 1024, // Convert to MB
+    load: metric.loadAverage[0],
+  })).reverse(); // Reverse to get chronological order
 
   // Function to format bytes to a human-readable format
   const formatBytes = (bytes: number, decimals = 2) => {
@@ -91,45 +143,47 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
     return `${days}d ${hours}h ${minutes}m`;
   };
 
-  // Format data for charts
-  const chartData = mockMetrics.map(metric => ({
-    name: new Date(metric.timestamp).toLocaleTimeString(),
-    cpu: metric.cpuUsage,
-    memory: metric.memoryUsage,
-    disk: metric.diskUsage,
-    networkIn: metric.networkIn / 1024 / 1024, // Convert to MB
-    networkOut: metric.networkOut / 1024 / 1024, // Convert to MB
-    load: metric.loadAverage[0],
-  }));
-
-  // Mock refresh data - in a real app this would fetch from API
-  useEffect(() => {
-    if (!refreshInterval) return;
-    
-    const timer = setInterval(() => {
-      // In a real implementation, this would trigger a refresh of the metrics data
-      // queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics`] });
-    }, refreshInterval);
-    
-    return () => clearInterval(timer);
-  }, [refreshInterval, serverId]);
-
-  // Function to simulate refreshing metrics
-  const refreshMetrics = () => {
-    toast({
-      title: "Refreshing metrics",
-      description: "Fetching the latest server performance data.",
-    });
-    // In a real implementation, this would trigger a refresh
-    // queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics`] });
+  // Function to refresh metrics
+  const handleRefreshMetrics = () => {
+    refreshServerMetrics();
   };
 
   // Function to toggle auto-refresh
   const toggleAutoRefresh = () => {
-    setRefreshInterval(prev => prev ? null : 10000);
+    setRefreshInterval(prev => prev ? 0 : 30000);
   };
 
+  // Error handling
+  useEffect(() => {
+    if (latestError) {
+      toast({
+        title: "Error loading metrics",
+        description: (latestError as Error).message,
+        variant: "destructive",
+      });
+    }
+    if (historyError) {
+      toast({
+        title: "Error loading metrics history",
+        description: (historyError as Error).message,
+        variant: "destructive",
+      });
+    }
+  }, [latestError, historyError, toast]);
+
   const specs = server?.specs || { memory: 1024, vcpus: 1, disk: 25 };
+
+  // Loading state
+  if (isLoadingLatest && !currentMetrics) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+          <p className="mt-2">Loading server metrics...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -143,8 +197,12 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
           >
             {refreshInterval ? "Auto-refresh: On" : "Auto-refresh: Off"}
           </Button>
-          <Button size="sm" onClick={refreshMetrics}>
-            Refresh Now
+          <Button 
+            size="sm" 
+            onClick={handleRefreshMetrics} 
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? "Refreshing..." : "Refresh Now"}
           </Button>
         </div>
       </div>
@@ -162,7 +220,7 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
             <div className="text-2xl font-bold mb-2">{currentMetrics.cpuUsage}%</div>
             <Progress value={currentMetrics.cpuUsage} className="h-2" />
             <div className="text-xs text-muted-foreground mt-1">
-              Load Avg: {currentMetrics.loadAverage.map(l => l.toFixed(2)).join(', ')}
+              Load Avg: {currentMetrics.loadAverage.map((l: number) => l.toFixed(2)).join(', ')}
             </div>
           </CardContent>
         </Card>
