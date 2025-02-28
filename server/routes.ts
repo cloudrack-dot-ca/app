@@ -187,6 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vcpus: 1,
           disk: 25,
         },
+        application: parsed.data.application || null,
       });
 
       // Deduct balance and create transaction
@@ -491,7 +492,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: req.user.id,
           subject: parsed.data.subject,
           priority: parsed.data.priority, // Now guaranteed to be string due to schema default
-          status: 'open'
+          status: 'open',
+          serverId: null,
+          originalDropletId: null
         });
 
         await storage.createMessage({

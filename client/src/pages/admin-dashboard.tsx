@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+// We're not using apiRequest directly since we need more control over the fetch calls
 import { Redirect } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, RefreshCcw, User as UserIcon, Server as ServerIcon, MessageCircle } from "lucide-react";
 
-// Define interfaces for our data
+// Define interfaces for our data types
 interface AdminUser {
   id: number;
   username: string;
@@ -61,37 +61,76 @@ export default function AdminDashboard() {
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
-      const response = await apiRequest<AdminUser[]>("/api/admin/users");
-      return response || [];
-    }
+      const response = await fetch("/api/admin/users", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      
+      return response.json() as Promise<AdminUser[]>;
+    },
   });
 
   // Fetch all tickets
   const { data: tickets = [], isLoading: ticketsLoading } = useQuery({
     queryKey: ["/api/admin/tickets"],
     queryFn: async () => {
-      const response = await apiRequest<AdminTicket[]>("/api/admin/tickets");
-      return response || [];
-    }
+      const response = await fetch("/api/admin/tickets", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch tickets");
+      }
+      
+      return response.json() as Promise<AdminTicket[]>;
+    },
   });
 
   // Fetch all servers
   const { data: servers = [], isLoading: serversLoading } = useQuery({
     queryKey: ["/api/admin/servers"],
     queryFn: async () => {
-      const response = await apiRequest<AdminServer[]>("/api/admin/servers");
-      return response || [];
-    }
+      const response = await fetch("/api/admin/servers", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch servers");
+      }
+      
+      return response.json() as Promise<AdminServer[]>;
+    },
   });
 
   // Update ticket status mutation
   const updateTicketMutation = useMutation({
     mutationFn: async ({ id, status, priority }: { id: number; status?: string; priority?: string }) => {
-      return await apiRequest(`/api/admin/tickets/${id}`, {
+      const response = await fetch(`/api/admin/tickets/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
         body: JSON.stringify({ status, priority }),
-      } as RequestInit);
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to update ticket");
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/tickets"] });
@@ -110,17 +149,17 @@ export default function AdminDashboard() {
   });
 
   // Filter users by search term
-  const filteredUsers = users.filter((user: AdminUser) => 
+  const filteredUsers = users.filter((user) => 
     user.username.toLowerCase().includes(userSearchTerm.toLowerCase())
   );
 
   // Filter tickets by search term
-  const filteredTickets = tickets.filter((ticket: AdminTicket) => 
+  const filteredTickets = tickets.filter((ticket) => 
     ticket.subject.toLowerCase().includes(ticketSearchTerm.toLowerCase())
   );
 
   // Filter servers by search term
-  const filteredServers = servers.filter((server: AdminServer) => 
+  const filteredServers = servers.filter((server) => 
     server.name.toLowerCase().includes(serverSearchTerm.toLowerCase())
   );
 
@@ -189,7 +228,7 @@ export default function AdminDashboard() {
                         <TableCell colSpan={5} className="text-center">No users found</TableCell>
                       </TableRow>
                     ) : (
-                      filteredUsers.map((user: AdminUser) => (
+                      filteredUsers.map((user) => (
                         <TableRow key={user.id}>
                           <TableCell>{user.id}</TableCell>
                           <TableCell>{user.username}</TableCell>
@@ -262,7 +301,7 @@ export default function AdminDashboard() {
                         <TableCell colSpan={6} className="text-center">No tickets found</TableCell>
                       </TableRow>
                     ) : (
-                      filteredTickets.map((ticket: AdminTicket) => (
+                      filteredTickets.map((ticket) => (
                         <TableRow key={ticket.id}>
                           <TableCell>{ticket.id}</TableCell>
                           <TableCell>{ticket.subject}</TableCell>
@@ -365,7 +404,7 @@ export default function AdminDashboard() {
                         <TableCell colSpan={7} className="text-center">No servers found</TableCell>
                       </TableRow>
                     ) : (
-                      filteredServers.map((server: AdminServer) => (
+                      filteredServers.map((server) => (
                         <TableRow key={server.id}>
                           <TableCell>{server.id}</TableCell>
                           <TableCell>{server.name}</TableCell>
