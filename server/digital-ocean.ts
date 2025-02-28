@@ -189,25 +189,7 @@ export class DigitalOceanClient {
       processor_type: 'amd'
     },
     
-    // GPU droplets
-    {
-      slug: "g-2core-gpu",
-      memory: 32768,
-      vcpus: 8,
-      disk: 400,
-      transfer: 10000,
-      price_monthly: 520,
-      processor_type: 'gpu'
-    },
-    {
-      slug: "g-4core-gpu",
-      memory: 65536,
-      vcpus: 16,
-      disk: 800,
-      transfer: 15000,
-      price_monthly: 1040,
-      processor_type: 'gpu'
-    },
+
   ];
 
   private mockApplications: Application[] = [
@@ -470,14 +452,12 @@ export class DigitalOceanClient {
         )
         .map(size => {
           // Determine processor type based on slug pattern
-          let processor_type: 'regular' | 'intel' | 'amd' | 'gpu' = 'regular';
+          let processor_type: 'regular' | 'intel' | 'amd' = 'regular';
           
           if (size.slug.includes('-intel')) {
             processor_type = 'intel';
           } else if (size.slug.includes('-amd')) {
             processor_type = 'amd';
-          } else if (size.slug.includes('-gpu') || size.slug.startsWith('g-')) {
-            processor_type = 'gpu';
           }
           
           return {

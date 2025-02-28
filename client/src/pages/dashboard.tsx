@@ -33,7 +33,7 @@ interface Size {
   memory: number;
   vcpus: number;
   price_monthly: number;
-  processor_type?: 'regular' | 'intel' | 'amd' | 'gpu';
+  processor_type?: 'regular' | 'intel' | 'amd';
 }
 
 interface Application {
@@ -451,15 +451,6 @@ export default function Dashboard() {
                         >
                           AMD
                         </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant={processorFilter === "gpu" ? "default" : "outline"} 
-                          onClick={() => setProcessorFilter("gpu")}
-                          className="text-xs h-8"
-                        >
-                          GPU
-                        </Button>
                       </div>
                     </div>
                     
@@ -492,7 +483,6 @@ export default function Dashboard() {
                                   <SelectItem key={size.slug} value={size.slug}>
                                     {size.processor_type === 'intel' && '🔷 '}
                                     {size.processor_type === 'amd' && '🔶 '}
-                                    {size.processor_type === 'gpu' && '⚡ '}
                                     {size.memory / 1024}GB RAM, {size.vcpus} vCPUs (${(size.price_monthly / (24 * 30)).toFixed(3)}/hr)
                                   </SelectItem>
                               ))}
