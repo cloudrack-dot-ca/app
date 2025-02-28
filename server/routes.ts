@@ -1,10 +1,17 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { createServer } from "http";
+import type { Server as HttpServer } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
 import * as schema from "@shared/schema";
-import { insertServerSchema, insertVolumeSchema, users, servers } from "@shared/schema";
+import { 
+  insertServerSchema, 
+  insertVolumeSchema, 
+  users, 
+  servers,
+  type Server
+} from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema } from "@shared/schema";
 import { db } from "./db";
@@ -78,7 +85,7 @@ function adminMiddleware(req: any, res: any, next: any) {
   next();
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<HttpServer> {
   setupAuth(app);
 
   app.get("/api/regions", async (_req, res) => {
@@ -1003,9 +1010,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Update server with latest IP information if available
         if (dropletDetails?.droplet && dropletDetails.droplet.networks) {
-          // Create server update data object with type from our schema
-          const updateData: Partial<Server> = { 
+          // Create server update data object with proper typing to avoid confusion with Node's http.Server
+          const serverUpdateData = { 
             lastMonitored: new Date() 
+          } as {
+            lastMonitored: Date;
+            ipAddress?: string | null;
+            ipv6Address?: string | null;
+            status?: string;
           };
           
           // Update IPv4 address
@@ -1014,21 +1026,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               (network) => network.type === 'public'
             );
             if (publicIp) {
-              updateData.ipAddress = publicIp.ip_address;
+              serverUpdateData.ipAddress = publicIp.ip_address;
             }
           }
           
           // Update IPv6 address
           if (dropletDetails.droplet.networks.v6 && dropletDetails.droplet.networks.v6.length > 0) {
-            updateData.ipv6Address = dropletDetails.droplet.networks.v6[0].ip_address;
+            serverUpdateData.ipv6Address = dropletDetails.droplet.networks.v6[0].ip_address;
           }
           
           // Update server status
           if (dropletDetails.droplet.status) {
-            updateData.status = dropletDetails.droplet.status;
+            serverUpdateData.status = dropletDetails.droplet.status;
           }
           
-          await storage.updateServer(serverId, updateData);
+          await storage.updateServer(serverId, serverUpdateData);
         }
       } catch (ipError) {
         console.error("Failed to fetch IP information:", ipError);
