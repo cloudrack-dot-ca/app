@@ -146,8 +146,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
-    const servers = await storage.getServersByUser(req.user.id);
-    res.json(servers);
+    
+    // If the user is an admin and specifically requests all servers
+    if (req.user.isAdmin && req.query.all === 'true') {
+      const servers = await storage.getAllServers();
+      res.json(servers);
+    } else {
+      // Regular users or admins not requesting all servers only see their own
+      const servers = await storage.getServersByUser(req.user.id);
+      res.json(servers);
+    }
   });
 
   app.get("/api/servers/:id", async (req, res) => {
