@@ -189,6 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           disk: 25,
         },
         application: parsed.data.application || null,
+        lastMonitored: null,
       });
 
       // Deduct balance and create transaction

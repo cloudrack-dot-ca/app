@@ -88,13 +88,10 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
   const currentMetrics = latestMetric || defaultMetric;
   const metricsHistory = metricsHistoryData || [defaultMetric];
 
-  // Force refresh metrics
+  // Force refresh metrics 
   const { mutate: refreshServerMetrics, isPending: isRefreshing } = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/servers/${serverId}/metrics/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return await apiRequest(`/api/servers/${serverId}/metrics/refresh`, 'POST');
     },
     onSuccess: () => {
       toast({
