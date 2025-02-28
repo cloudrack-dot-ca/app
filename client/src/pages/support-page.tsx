@@ -420,7 +420,7 @@ export default function SupportPage() {
             ) : selectedTicketData ? (
               <div className="space-y-4">
                 <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border rounded-lg">
-                  {selectedTicketData.messages?.map((message) => (
+                  {selectedTicketData?.messages?.map((message) => (
                     <div
                       key={message.id}
                       className={`flex flex-col ${
@@ -495,7 +495,7 @@ export default function SupportPage() {
                     </div>
                   ))}
                 </div>
-                {selectedTicketData.ticket.status === "open" && (
+                {selectedTicketData?.ticket?.status === "open" && (
                   <form
                     onSubmit={replyForm.handleSubmit((data) =>
                       replyMutation.mutate(data)
