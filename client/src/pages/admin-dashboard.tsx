@@ -205,6 +205,34 @@ export default function AdminDashboard() {
     },
   });
 
+  // Delete ticket mutation (admin only)
+  const deleteTicketMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/tickets/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to delete ticket");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/tickets"] });
+      toast({
+        title: "Ticket deleted",
+        description: "The ticket has been permanently deleted",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Filter users by search term
   const filteredUsers = users.filter((user) => 
     user.username.toLowerCase().includes(userSearchTerm.toLowerCase())
