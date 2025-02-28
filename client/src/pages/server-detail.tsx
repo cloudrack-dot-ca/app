@@ -66,17 +66,30 @@ export default function ServerDetailPage() {
   const [ipv6Enabled, setIpv6Enabled] = useState(false);
   
   // Fetch server details
-  const { data: server, isLoading: serverLoading } = useQuery<Server>({
+  const { data: server, isLoading: serverLoading, error: serverError } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
-    enabled: !isNaN(serverId),
-    retry: 1,
-    staleTime: 30000
+    enabled: !isNaN(serverId) && !!user,
+    retry: 2,
+    staleTime: 30000,
+    refetchOnWindowFocus: true
   });
+  
+  // Log any server fetch errors to help debug
+  useEffect(() => {
+    if (serverError) {
+      console.error("Error fetching server:", serverError);
+      toast({
+        title: "Error loading server",
+        description: (serverError as Error).message,
+        variant: "destructive",
+      });
+    }
+  }, [serverError, toast]);
 
   // Fetch volumes attached to this server
   const { data: volumes = [], isLoading: volumesLoading } = useQuery<Volume[]>({
     queryKey: [`/api/servers/${serverId}/volumes`],
-    enabled: !isNaN(serverId),
+    enabled: !isNaN(serverId) && !!user && !!server,
   });
 
   // Server action mutations
