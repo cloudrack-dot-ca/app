@@ -566,12 +566,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(updatedTicket);
   });
   
-  // Add route to delete tickets
+  // Add route to delete tickets (admin only)
   app.delete("/api/tickets/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
+    
+    // Check if user is an admin
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: "Only administrators can delete tickets" });
+    }
 
     const ticket = await storage.getTicket(parseInt(req.params.id));
-    if (!ticket || ticket.userId !== req.user.id) {
+    if (!ticket) {
       return res.sendStatus(404);
     }
 

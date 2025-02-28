@@ -463,6 +463,17 @@ export default function AdminDashboard() {
                             <Button size="sm" variant="default">
                               View
                             </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete ticket #${ticket.id}? This action cannot be undone.`)) {
+                                  deleteTicketMutation.mutate(ticket.id);
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
