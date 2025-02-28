@@ -150,6 +150,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(servers);
   });
 
+  app.get("/api/servers/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    try {
+      const serverId = parseInt(req.params.id);
+      const server = await storage.getServer(serverId);
+      
+      if (!server || server.userId !== req.user.id) {
+        return res.sendStatus(404);
+      }
+      
+      res.json(server);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
   app.post("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
