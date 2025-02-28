@@ -69,19 +69,15 @@ export default function ServerDetailPage() {
   const { data: server, isLoading: serverLoading } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
     enabled: !isNaN(serverId),
-    queryFn: async () => {
-      const response = await apiRequest("GET", `/api/servers/${serverId}`);
-      return response.json();
-    },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: "Unable to load server details",
+        description: error instanceof Error ? error.message : "Unable to load server details",
         variant: "destructive",
       });
       navigate("/dashboard");
     }
-  } as any);
+  });
 
   // Fetch volumes attached to this server
   const { data: volumes = [], isLoading: volumesLoading } = useQuery<Volume[]>({
