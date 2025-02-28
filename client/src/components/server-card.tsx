@@ -76,13 +76,13 @@ export default function ServerCard({ server }: ServerCardProps) {
 
           <div className="flex flex-col sm:flex-row gap-2">
             <Button 
-              variant="outline" 
+              variant="default" 
               className="flex-1"
               asChild
             >
-              <Link href={`/volumes?serverId=${server.id}`}>
-                <HardDrive className="h-4 w-4 mr-2" />
-                View Volumes
+              <Link href={`/servers/${server.id}`}>
+                <ServerIcon className="h-4 w-4 mr-2" />
+                Manage Server
               </Link>
             </Button>
             <AlertDialog>

@@ -10,6 +10,7 @@ import AuthPage from "@/pages/auth-page";
 import BillingPage from "@/pages/billing-page";
 import SupportPage from "@/pages/support-page";
 import VolumesPage from "@/pages/volumes-page";
+import ServerDetailPage from "@/pages/server-detail";
 import SSHKeysPage from "@/pages/ssh-keys";
 import AccountPage from "@/pages/account-page";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -70,6 +71,7 @@ function Router() {
         <ProtectedRoute path="/ssh-keys" component={SSHKeysPage} />
         <ProtectedRoute path="/account" component={AccountPage} />
         <ProtectedRoute path="/admin" component={AdminDashboard} />
+        <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />
         <Route component={NotFound} />
       </Switch>
     </>
