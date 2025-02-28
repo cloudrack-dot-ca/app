@@ -20,6 +20,7 @@ export const servers = pgTable("servers", {
   size: text("size").notNull(),
   status: text("status").notNull(),
   ipAddress: text("ip_address"),
+  ipv6Address: text("ipv6_address"),
   specs: jsonb("specs").$type<{
     memory: number;
     vcpus: number;
