@@ -17,9 +17,25 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
 import { Home, ShieldAlert } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useEffect } from "react";
 
 function Nav() {
   const { user } = useAuth();
+
+  // Setup theme on initial load
+  useEffect(() => {
+    const theme = localStorage.getItem("theme") || "light";
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.documentElement.style.colorScheme = "dark";
+    } else if (theme === "system") {
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        document.documentElement.classList.add("dark");
+        document.documentElement.style.colorScheme = "dark";
+      }
+    }
+  }, []);
 
   return (
     <nav className="border-b">
@@ -32,6 +48,9 @@ function Nav() {
             </Button>
           </Link>
         )}
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+        </div>
       </div>
     </nav>
   );
