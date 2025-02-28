@@ -215,7 +215,7 @@ export default function ServerDetailPage() {
   }
 
   const specs = server.specs || { memory: 1024, vcpus: 1, disk: 25 };
-  const isRunning = server.status === "active";
+  const isRunning = server.status === "active" || server.status === "starting" || server.status === "rebooting";
 
   return (
     <div className="container py-8">
@@ -225,7 +225,13 @@ export default function ServerDetailPage() {
           Back to Dashboard
         </Button>
         <h1 className="text-3xl font-bold">{server.name}</h1>
-        <Badge variant={server.status === "active" ? "default" : "secondary"}>
+        <Badge variant={
+          server.status === "active" 
+            ? "default" 
+            : (server.status === "starting" || server.status === "rebooting" || server.status === "stopping")
+              ? "outline"
+              : "secondary"
+        }>
           {server.status}
         </Badge>
       </div>
@@ -243,6 +249,10 @@ export default function ServerDetailPage() {
           <TabsTrigger value="networking">
             <Globe className="h-4 w-4 mr-2" />
             Networking
+          </TabsTrigger>
+          <TabsTrigger value="metrics">
+            <BarChart className="h-4 w-4 mr-2" />
+            Metrics
           </TabsTrigger>
           <TabsTrigger value="console">
             <Terminal className="h-4 w-4 mr-2" />
