@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Plus, Send, Edit2, Check, X, HardDrive } from "lucide-react";
+import { Loader2, Plus, Send, Edit2, Check, X, HardDrive, Trash2, CheckCircle } from "lucide-react";
 import { SupportTicket, SupportMessage, Server, Volume } from "@shared/schema";
 import { Link } from "wouter";
 import {
@@ -147,6 +147,27 @@ export default function SupportPage() {
       toast({
         title: "Success",
         description: "Ticket closed successfully",
+      });
+    },
+  });
+  
+  const deleteTicketMutation = useMutation({
+    mutationFn: async (ticketId: number) => {
+      await apiRequest("DELETE", `/api/tickets/${ticketId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+      setSelectedTicket(null); // Reset selection after deletion
+      toast({
+        title: "Success",
+        description: "Ticket deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete ticket",
+        variant: "destructive",
       });
     },
   });
@@ -401,19 +422,45 @@ export default function SupportPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Conversation</h2>
-            {selectedTicketData?.ticket?.status === "open" && (
-              <Button
-                variant="outline"
-                onClick={() => selectedTicketData?.ticket && closeTicketMutation.mutate(selectedTicketData.ticket.id)}
-                disabled={closeTicketMutation.isPending}
-              >
-                {closeTicketMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Close Ticket"
-                )}
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {selectedTicketData?.ticket?.status === "open" && (
+                <Button
+                  variant="outline"
+                  onClick={() => selectedTicketData?.ticket && closeTicketMutation.mutate(selectedTicketData.ticket.id)}
+                  disabled={closeTicketMutation.isPending}
+                >
+                  {closeTicketMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Close Ticket
+                    </>
+                  )}
+                </Button>
+              )}
+              {selectedTicketData?.ticket && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) {
+                      deleteTicketMutation.mutate(selectedTicketData.ticket.id);
+                    }
+                  }}
+                  disabled={deleteTicketMutation.isPending}
+                >
+                  {deleteTicketMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Ticket
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
           {selectedTicket ? (
             loadingTicketDetails ? (
