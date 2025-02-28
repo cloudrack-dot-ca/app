@@ -223,6 +223,10 @@ export default function SupportPage() {
   });
 
   const canEditMessage = (message: SupportMessage) => {
+    // Admins can always edit messages
+    if (user?.isAdmin) return true;
+    
+    // Regular users can only edit within 10 minutes
     const createdAt = new Date(message.createdAt);
     const now = new Date();
     const diffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
@@ -571,8 +575,8 @@ export default function SupportPage() {
                                 <p className="text-xs opacity-70">
                                   {new Date(message.createdAt).toLocaleString()}
                                 </p>
-                                {message.userId === selectedTicketData.ticket.userId &&
-                                  canEditMessage(message) && (
+                                {((message.userId === selectedTicketData.ticket.userId || user?.isAdmin) &&
+                                  canEditMessage(message)) && (
                                     <Button
                                       size="sm"
                                       variant="ghost"
