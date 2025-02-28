@@ -12,7 +12,7 @@ import { insertServerSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Search, LockKeyhole, Key } from "lucide-react";
+import { Loader2, Plus, Search, LockKeyhole, Key, Server as ServerIcon } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -321,7 +321,7 @@ export default function Dashboard() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No Application (Clean OS)</SelectItem>
+                              <SelectItem value="none">No Application (Clean OS)</SelectItem>
                               {applications.map((app) => (
                                 <SelectItem key={app.slug} value={app.slug}>
                                   {app.name}
@@ -361,8 +361,8 @@ export default function Dashboard() {
                       )}
                     />
                     </div>
-                    <div className="space-y-4">
-                      <Label>Authentication Method</Label>
+                    <div className="space-y-2">
+                      <Label className="text-sm">Authentication Method</Label>
                       <RadioGroup
                         defaultValue="password"
                         onValueChange={(value) => {
@@ -371,26 +371,26 @@ export default function Dashboard() {
                           setSshKey("");
                           setNewKeyName(""); 
                         }}
-                        className="grid grid-cols-2 gap-4"
+                        className="grid grid-cols-2 gap-3"
                       >
                         <div>
                           <RadioGroupItem value="password" id="password" className="peer sr-only" />
                           <Label
                             htmlFor="password"
-                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
                           >
-                            <LockKeyhole className="mb-2" />
-                            Password
+                            <LockKeyhole className="h-4 w-4 mb-1" />
+                            <span className="text-sm">Password</span>
                           </Label>
                         </div>
                         <div>
                           <RadioGroupItem value="ssh" id="ssh" className="peer sr-only" />
                           <Label
                             htmlFor="ssh"
-                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
                           >
-                            <Key className="mb-2" />
-                            SSH Key
+                            <Key className="h-4 w-4 mb-1" />
+                            <span className="text-sm">SSH Key</span>
                           </Label>
                         </div>
                       </RadioGroup>
@@ -402,21 +402,27 @@ export default function Dashboard() {
                         name="auth"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Password</FormLabel>
+                            <FormLabel className="text-sm">Root Password</FormLabel>
                             <FormControl>
-                              <Input type="password" {...field} />
+                              <Input type="password" {...field} className="h-9" />
                             </FormControl>
-                            <Progress value={passwordStrength} className="h-2" />
-                            <FormMessage />
+                            <div className="mt-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs">Password Strength</span>
+                                <span className="text-xs">{passwordStrength}%</span>
+                              </div>
+                              <Progress value={passwordStrength} className="h-1.5" />
+                            </div>
+                            <FormMessage className="text-xs" />
                           </FormItem>
                         )}
                       />
                     ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <FormLabel>SSH Keys</FormLabel>
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href="/ssh-keys">Manage SSH Keys</Link>
+                          <FormLabel className="text-sm">SSH Keys</FormLabel>
+                          <Button variant="ghost" size="sm" className="h-6 text-xs" asChild>
+                            <Link href="/ssh-keys">Manage Keys</Link>
                           </Button>
                         </div>
                         {sshKeys.length > 0 ? (
@@ -432,8 +438,8 @@ export default function Dashboard() {
                               setNewKeyName(""); 
                             }}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select an existing SSH key" />
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Select a key" />
                             </SelectTrigger>
                             <SelectContent>
                               {sshKeys.map((key) => (
@@ -441,49 +447,55 @@ export default function Dashboard() {
                                   {key.name}
                                 </SelectItem>
                               ))}
-                              <SelectItem value="new">Use a new SSH key</SelectItem>
+                              <SelectItem value="new">Add a new key</SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
-                          <div className="text-sm text-muted-foreground">
-                            No SSH keys found. Add one below or manage your keys in the <Link href="/ssh-keys" className="text-primary hover:underline">SSH Keys page</Link>.
+                          <div className="text-xs text-muted-foreground mb-2">
+                            No SSH keys found. Add one below or in the <Link href="/ssh-keys" className="text-primary hover:underline">SSH Keys page</Link>.
                           </div>
                         )}
 
                         {(!selectedSSHKeyId || selectedSSHKeyId === "new" as string) && (
-                          <div className="space-y-4">
+                          <div className="space-y-3">
                             <FormItem>
-                              <FormLabel>SSH Key Name</FormLabel>
+                              <FormLabel className="text-sm">SSH Key Name</FormLabel>
                               <FormControl>
                                 <Input
                                   placeholder="e.g., My Work Laptop"
                                   value={newKeyName}
                                   onChange={(e) => setNewKeyName(e.target.value)}
+                                  className="h-9 text-sm"
                                 />
                               </FormControl>
+                              <FormMessage className="text-xs" />
                             </FormItem>
                             <FormItem>
-                              <FormLabel>SSH Public Key</FormLabel>
+                              <FormLabel className="text-sm">SSH Public Key</FormLabel>
                               <FormControl>
                                 <Textarea
                                   value={sshKey}
                                   onChange={(e) => setSshKey(e.target.value)}
-                                  className="font-mono text-sm"
+                                  className="font-mono text-xs h-24"
                                   placeholder="Paste your SSH public key here"
                                 />
                               </FormControl>
+                              <FormMessage className="text-xs" />
                             </FormItem>
                           </div>
                         )}
                       </div>
                     )}
-                    <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                      {form.formState.isSubmitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Create Server"
-                      )}
-                    </Button>
+                    <div className="pt-2">
+                      <Button type="submit" className="w-full h-9 text-sm" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                        ) : (
+                          <ServerIcon className="h-3 w-3 mr-2" />
+                        )}
+                        Create Server
+                      </Button>
+                    </div>
                   </form>
                 </Form>
               </DialogContent>
