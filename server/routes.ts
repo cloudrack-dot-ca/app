@@ -235,16 +235,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Delete the server from DigitalOcean
-    await digitalOcean.deleteDroplet(server.dropletId);
-
-    // Keep the tickets but remove the server association
-    const tickets = await storage.getTicketsByServer(server.id);
-    for (const ticket of tickets) {
-      if (ticket.status === 'open') {
-        await storage.updateTicket(ticket.id, { serverId: null });
-      }
+    try {
+      await digitalOcean.deleteDroplet(server.dropletId);
+    } catch (error) {
+      console.warn(`Failed to delete droplet ${server.dropletId} from DigitalOcean, but proceeding with local deletion:`, error);
+      // Continue with deletion even if the DigitalOcean API call fails
+      // This allows us to clean up orphaned records in our database
     }
 
+    // Keep the tickets but remove the server association
+    try {
+      const tickets = await storage.getTicketsByServer(server.id);
+      for (const ticket of tickets) {
+        if (ticket.status === 'open') {
+          await storage.updateTicket(ticket.id, { serverId: null });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating tickets:', error);
+      // Continue with deletion even if updating tickets fails
+    }
+
+    // Delete the server from our database
     await storage.deleteServer(server.id);
     res.sendStatus(204);
   });
@@ -336,7 +348,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.sendStatus(404);
     }
 
-    await digitalOcean.deleteVolume(volume.volumeId);
+    try {
+      await digitalOcean.deleteVolume(volume.volumeId);
+    } catch (error) {
+      console.warn(`Failed to delete volume ${volume.volumeId} from DigitalOcean, but proceeding with local deletion:`, error);
+      // Continue with deletion even if the DigitalOcean API call fails
+    }
+    
     await storage.deleteVolume(volume.id);
     res.sendStatus(204);
   });
