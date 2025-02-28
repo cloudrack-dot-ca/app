@@ -565,6 +565,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const updatedTicket = await storage.updateTicketStatus(ticket.id, status);
     res.json(updatedTicket);
   });
+  
+  // Add route to delete tickets
+  app.delete("/api/tickets/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const ticket = await storage.getTicket(parseInt(req.params.id));
+    if (!ticket || ticket.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+
+    // Delete all messages for the ticket first
+    const messages = await storage.getMessagesByTicket(ticket.id);
+    for (const message of messages) {
+      await storage.deleteMessage(message.id);
+    }
+
+    // Then delete the ticket
+    await storage.deleteTicket(ticket.id);
+    res.sendStatus(204);
+  });
 
   app.patch("/api/tickets/:id/messages/:messageId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);

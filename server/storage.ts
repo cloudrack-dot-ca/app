@@ -38,10 +38,12 @@ export interface IStorage {
   updateTicketStatus(id: number, status: string): Promise<SupportTicket>;
   updateTicketPriority(id: number, priority: string): Promise<SupportTicket>;
   updateTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket>;
+  deleteTicket(id: number): Promise<void>;
 
   createMessage(message: Omit<SupportMessage, "id" | "createdAt" | "isRead">): Promise<SupportMessage>;
   getMessagesByTicket(ticketId: number): Promise<SupportMessage[]>;
   updateMessage(id: number, updates: Partial<SupportMessage>): Promise<SupportMessage>;
+  deleteMessage(id: number): Promise<void>;
 
   getSSHKeysByUser(userId: number): Promise<SSHKey[]>;
   createSSHKey(key: Omit<SSHKey, "id">): Promise<SSHKey>;
@@ -265,6 +267,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(supportMessages.id, id))
       .returning();
     return updatedMessage;
+  }
+  
+  async deleteMessage(id: number): Promise<void> {
+    await db.delete(supportMessages).where(eq(supportMessages.id, id));
+  }
+  
+  async deleteTicket(id: number): Promise<void> {
+    await db.delete(supportTickets).where(eq(supportTickets.id, id));
   }
 
   async getSSHKeysByUser(userId: number): Promise<SSHKey[]> {

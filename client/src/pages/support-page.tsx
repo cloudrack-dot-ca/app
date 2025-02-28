@@ -67,6 +67,11 @@ export default function SupportPage() {
   const { data: selectedTicketData, isLoading: loadingTicketDetails } = useQuery<TicketDetails>({
     queryKey: ["/api/tickets", selectedTicket],
     enabled: selectedTicket !== null,
+    queryFn: async () => {
+      if (!selectedTicket) throw new Error("No ticket selected");
+      const response = await apiRequest("GET", `/api/tickets/${selectedTicket}`);
+      return response.json();
+    }
   });
 
   // Get user's servers for ticket creation
