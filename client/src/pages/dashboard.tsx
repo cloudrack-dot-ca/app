@@ -257,38 +257,40 @@ export default function Dashboard() {
                   New Server
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Server</DialogTitle>
                 </DialogHeader>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
                     <FormField
                       control={form.control}
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Server Name</FormLabel>
+                          <FormLabel className="text-sm">Server Name</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} className="h-9" />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-xs" />
                         </FormItem>
                       )}
                     />
+                    
+                    <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={form.control}
                       name="region"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Region</FormLabel>
+                          <FormLabel className="text-sm">Region</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             defaultValue={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a region" />
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Select region" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -299,7 +301,7 @@ export default function Dashboard() {
                               ))}
                             </SelectContent>
                           </Select>
-                          <FormMessage />
+                          <FormMessage className="text-xs" />
                         </FormItem>
                       )}
                     />
@@ -308,28 +310,26 @@ export default function Dashboard() {
                       name="application"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Application</FormLabel>
+                          <FormLabel className="text-sm">Application</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             defaultValue={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select an application" />
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Select application" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                              <SelectItem value="">No Application (Clean OS)</SelectItem>
                               {applications.map((app) => (
                                 <SelectItem key={app.slug} value={app.slug}>
                                   {app.name}
-                                  <span className="text-sm text-muted-foreground ml-2">
-                                    {app.description}
-                                  </span>
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <FormMessage />
+                          <FormMessage className="text-xs" />
                         </FormItem>
                       )}
                     />
@@ -338,14 +338,14 @@ export default function Dashboard() {
                       name="size"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Size</FormLabel>
+                          <FormLabel className="text-sm">Size</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             defaultValue={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a size" />
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Select size" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -356,10 +356,11 @@ export default function Dashboard() {
                               ))}
                             </SelectContent>
                           </Select>
-                          <FormMessage />
+                          <FormMessage className="text-xs" />
                         </FormItem>
                       )}
                     />
+                    </div>
                     <div className="space-y-4">
                       <Label>Authentication Method</Label>
                       <RadioGroup
