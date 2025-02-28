@@ -190,11 +190,31 @@ export class DigitalOceanClient {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`DigitalOcean API Error: ${JSON.stringify(error)}`);
+        // Try to parse error response as JSON, but handle case where it might not be JSON
+        try {
+          const errorText = await response.text();
+          const errorJson = errorText ? JSON.parse(errorText) : {};
+          throw new Error(`DigitalOcean API Error: ${JSON.stringify(errorJson)}`);
+        } catch (parseError) {
+          throw new Error(`DigitalOcean API Error: ${response.status} ${response.statusText}`);
+        }
       }
 
-      return await response.json() as T;
+      // For DELETE operations, the response might be empty
+      if (method === 'DELETE') {
+        if (response.status === 204 || response.headers.get('content-length') === '0') {
+          return {} as T;
+        }
+      }
+
+      // Try to parse JSON response, but handle case where it might be empty
+      try {
+        const text = await response.text();
+        return text ? JSON.parse(text) as T : {} as T;
+      } catch (parseError) {
+        console.warn(`Could not parse response as JSON: ${parseError}`);
+        return {} as T;
+      }
     } catch (error) {
       console.error(`Error in DigitalOcean API request to ${endpoint}:`, error);
       throw error;
