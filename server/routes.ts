@@ -975,6 +975,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.sendStatus(404);
       }
 
+      // Fetch fresh server details from DigitalOcean to update IP addresses
+      try {
+        const dropletDetails = await digitalOcean.apiRequest(`/droplets/${server.dropletId}`);
+        
+        // Update server with latest IP information if available
+        if (dropletDetails.droplet && dropletDetails.droplet.networks) {
+          const updateData: Partial<Server> = { 
+            lastMonitored: new Date() 
+          };
+          
+          // Update IPv4 address
+          if (dropletDetails.droplet.networks.v4 && dropletDetails.droplet.networks.v4.length > 0) {
+            const publicIp = dropletDetails.droplet.networks.v4.find(
+              (network: any) => network.type === 'public'
+            );
+            if (publicIp) {
+              updateData.ipAddress = publicIp.ip_address;
+            }
+          }
+          
+          // Update IPv6 address
+          if (dropletDetails.droplet.networks.v6 && dropletDetails.droplet.networks.v6.length > 0) {
+            updateData.ipv6Address = dropletDetails.droplet.networks.v6[0].ip_address;
+          }
+          
+          // Update server status
+          if (dropletDetails.droplet.status) {
+            updateData.status = dropletDetails.droplet.status;
+          }
+          
+          await storage.updateServer(serverId, updateData);
+        }
+      } catch (ipError) {
+        console.error("Failed to fetch IP information:", ipError);
+        // Continue with metrics even if IP update fails
+      }
+
       // Fetch fresh metrics from DigitalOcean
       const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
       
@@ -994,12 +1031,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store the metric
       const savedMetric = await storage.createServerMetric(newMetric);
       
-      // Update the server's last monitored timestamp
-      await storage.updateServer(serverId, { 
-        lastMonitored: savedMetric.timestamp 
-      });
+      // Fetch the updated server to return with the metrics
+      const updatedServer = await storage.getServer(serverId);
       
-      return res.json(savedMetric);
+      return res.json({
+        metric: savedMetric,
+        server: updatedServer
+      });
     } catch (error) {
       res.status(500).json({ message: (error as Error).message });
     }

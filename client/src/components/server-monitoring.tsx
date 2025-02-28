@@ -93,13 +93,16 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
     mutationFn: async () => {
       return await apiRequest(`/api/servers/${serverId}/metrics/refresh`, 'POST');
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Metrics refreshed",
-        description: "Server performance data has been updated.",
+        description: "Server performance data and IP information has been updated.",
       });
+      // Handle the updated response format with metric and server data
       queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/latest`] });
       queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/history`] });
+      // Also invalidate the server details since we've updated IP information
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
     },
     onError: (error: Error) => {
       toast({
