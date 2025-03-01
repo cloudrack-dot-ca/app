@@ -56,9 +56,14 @@ const regionFlags: { [key: string]: string } = {
 };
 
 export default function ServerDetailPage() {
-  // Extract and validate params
+  // Extract and validate params - simplified approach for better compatibility
   const params = useParams<{ id: string }>();
   const pathId = params?.id;
+  
+  // Debug info
+  console.log("ServerDetailPage Params:", params);
+  console.log("Path ID:", pathId);
+  console.log("URL Path:", window.location.pathname);
   
   // Parse the server ID from the URL
   let serverId: number = -1;
@@ -80,14 +85,19 @@ export default function ServerDetailPage() {
       serverId = -1;
     }
   } else {
-    console.error("No server ID provided in URL");
+    // As a fallback, try to extract ID from URL pathname
+    const pathMatch = window.location.pathname.match(/\/servers\/(\d+)/);
+    if (pathMatch && pathMatch[1]) {
+      try {
+        serverId = parseInt(pathMatch[1]);
+        console.log("Extracted server ID from URL path:", serverId);
+      } catch (e) {
+        console.error("Failed to parse ID from URL path");
+      }
+    } else {
+      console.error("No server ID provided in URL");
+    }
   }
-  
-  useEffect(() => {
-    // Log the current URL to help with debugging
-    console.log("Current URL:", window.location.pathname);
-    console.log("Params:", params);
-  }, [params]);
   const { user, refetchUser } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
