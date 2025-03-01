@@ -90,7 +90,6 @@ function Router() {
         <Route path="/auth" component={AuthPage} />
         <Route path="/docs" component={DocsPage} />
         <ProtectedRoute path="/dashboard" component={Dashboard} />
-        <ProtectedRoute path="/volumes" component={VolumesPage} />
         <ProtectedRoute path="/billing" component={BillingPage} />
         <ProtectedRoute path="/support" component={SupportPage} />
         <ProtectedRoute path="/support/:id" component={SupportPage} />

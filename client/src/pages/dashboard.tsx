@@ -203,9 +203,6 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <div className="flex items-center space-x-4">
             <Button variant="outline" asChild>
-              <Link href="/volumes">Volumes</Link>
-            </Button>
-            <Button variant="outline" asChild>
               <Link href="/billing">Billing</Link>
             </Button>
             <Button variant="outline" asChild>
