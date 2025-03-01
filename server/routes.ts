@@ -24,7 +24,16 @@ const COSTS = {
     "s-1vcpu-1gb": 7 + 100, // $0.007 per hour + $0.10 markup (~$5/mo + $1)
     "s-1vcpu-2gb": 14 + 100, // $0.014 per hour + $0.10 markup (~$10/mo + $1)
     "s-2vcpu-4gb": 28 + 100, // $0.028 per hour + $0.10 markup (~$20/mo + $1)
-  },
+    // Add other size options with default pricing + markup
+    "s-1vcpu-512mb-10gb": 3 + 100,
+    "s-1vcpu-1gb-25gb": 7 + 100,
+    "s-1vcpu-2gb-50gb": 14 + 100, 
+    "s-2vcpu-2gb": 18 + 100,
+    "s-2vcpu-4gb-80gb": 28 + 100,
+    "s-4vcpu-8gb": 56 + 100,
+    // Use a default fallback for any other sizes
+    "default": 7 + 100 // Default to cheapest plan + markup if not found
+  } as Record<string, number>,
   storage: {
     baseRate: 0.00014, // DO base rate per GB per hour
     markup: 0.04 / (30 * 24), // 4¢ per GB per month converted to hourly
@@ -149,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
       // Get the hourly cost for this server size including markup
       const sizeSlug = parsed.data.size;
-      const hourlyCost = (COSTS.servers[sizeSlug] || 107) / 100; // Default to cheapest plan + $1 markup if not found
+      const hourlyCost = (COSTS.servers[sizeSlug] || COSTS.servers.default) / 100; // Use our marked-up pricing
       const minimumBalance = toCents(hourlyCost); // Require 1h worth of balance in cents
       await checkBalance(req.user.id, hourlyCost);
 

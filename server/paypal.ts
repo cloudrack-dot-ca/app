@@ -1,5 +1,8 @@
 import paypal from "@paypal/checkout-server-sdk";
 
+// Add missing type declaration
+declare module '@paypal/checkout-server-sdk';
+
 const clientId = process.env.PAYPAL_CLIENT_ID;
 const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 
