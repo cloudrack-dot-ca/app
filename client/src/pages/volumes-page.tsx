@@ -74,7 +74,27 @@ export default function VolumesPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col space-y-4">
-          <h2 className="text-3xl font-bold">Your Volumes</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-3xl font-bold">Your Volumes</h2>
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={isLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button 
+                variant={autoRefresh ? "secondary" : "outline"}
+                size="sm" 
+                onClick={toggleAutoRefresh}
+              >
+                {autoRefresh ? "Auto-Refresh On" : "Auto-Refresh Off"}
+              </Button>
+            </div>
+          </div>
           <Input 
             placeholder="Search volumes by name or region..." 
             value={search}

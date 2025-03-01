@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Plus, Send, Edit2, Check, X, HardDrive, Trash2, CheckCircle } from "lucide-react";
+import { Loader2, Plus, Send, Edit2, Check, X, HardDrive, Trash2, CheckCircle, RefreshCw } from "lucide-react";
 import { SupportTicket, SupportMessage, Server, Volume } from "@shared/schema";
 import { Link, useLocation, useParams } from "wouter";
 import {
@@ -62,6 +62,7 @@ export default function SupportPage() {
   const [selectedTicket, setSelectedTicket] = React.useState<number | null>(null);
   const [editingMessage, setEditingMessage] = React.useState<number | null>(null);
   const [editText, setEditText] = React.useState("");
+  const [autoRefresh, setAutoRefresh] = React.useState<number | null>(null);
   
   // Handle the case when accessing via /support/:id directly
   React.useEffect(() => {
@@ -73,11 +74,58 @@ export default function SupportPage() {
     }
   }, [params]);
 
-  const { data: tickets = [], isLoading: loadingTickets } = useQuery<SupportTicket[]>({
+  // Setup auto-refresh if enabled
+  React.useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(() => {
+        // Refresh tickets list
+        queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+        
+        // Also refresh selected ticket if any
+        if (selectedTicket) {
+          queryClient.invalidateQueries({ queryKey: ["/api/tickets", selectedTicket] });
+        }
+      }, autoRefresh * 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh, selectedTicket]);
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+    if (selectedTicket) {
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets", selectedTicket] });
+    }
+    
+    toast({
+      title: "Refreshing data",
+      description: "Fetching the latest ticket information..."
+    });
+  };
+
+  // Handle toggling auto-refresh
+  const toggleAutoRefresh = () => {
+    if (autoRefresh) {
+      setAutoRefresh(null);
+      toast({
+        title: "Auto-refresh disabled",
+        description: "Ticket data will no longer refresh automatically"
+      });
+    } else {
+      setAutoRefresh(30); // Default to 30 seconds
+      toast({
+        title: "Auto-refresh enabled",
+        description: "Ticket data will refresh every 30 seconds"
+      });
+    }
+  };
+
+  const { data: tickets = [], isLoading: loadingTickets, refetch: refetchTickets } = useQuery<SupportTicket[]>({
     queryKey: ["/api/tickets"],
   });
 
-  const { data: selectedTicketData, isLoading: loadingTicketDetails } = useQuery<TicketDetails>({
+  const { data: selectedTicketData, isLoading: loadingTicketDetails, refetch: refetchTicketDetails } = useQuery<TicketDetails>({
     queryKey: ["/api/tickets", selectedTicket],
     enabled: selectedTicket !== null,
     queryFn: async () => {
@@ -440,6 +488,22 @@ export default function SupportPage() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Conversation</h2>
             <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={loadingTicketDetails}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loadingTicketDetails ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button 
+                variant={autoRefresh ? "secondary" : "outline"}
+                size="sm" 
+                onClick={toggleAutoRefresh}
+              >
+                {autoRefresh ? "Auto-Refresh On" : "Auto-Refresh Off"}
+              </Button>
               {selectedTicketData?.ticket?.status === "open" && (
                 <Button
                   variant="outline"
