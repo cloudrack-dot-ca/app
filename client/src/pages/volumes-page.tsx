@@ -3,19 +3,62 @@ import { Volume } from "@shared/schema";
 import VolumeManager from "@/components/volume-manager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function VolumesPage() {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const { data: volumes = [], isLoading } = useQuery<Volume[]>({
+  const [autoRefresh, setAutoRefresh] = useState<number | null>(null);
+  const { data: volumes = [], isLoading, refetch } = useQuery<Volume[]>({
     queryKey: ["/api/volumes"],
   });
 
-  const filteredVolumes = volumes.filter(volume => 
-    volume.name.toLowerCase().includes(search.toLowerCase()) ||
-    volume.region.toLowerCase().includes(search.toLowerCase())
+  // Setup auto-refresh if enabled
+  useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(() => {
+        refetch();
+      }, autoRefresh * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh, refetch]);
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    refetch();
+    toast({
+      title: "Refreshing data",
+      description: "Fetching the latest volume information..."
+    });
+  };
+
+  // Handle toggling auto-refresh
+  const toggleAutoRefresh = () => {
+    if (autoRefresh) {
+      setAutoRefresh(null);
+      toast({
+        title: "Auto-refresh disabled",
+        description: "Volume data will no longer refresh automatically"
+      });
+    } else {
+      setAutoRefresh(30); // Default to 30 seconds
+      toast({
+        title: "Auto-refresh enabled",
+        description: "Volume data will refresh every 30 seconds"
+      });
+    }
+  };
+
+  // Ensure volumes is an array before filtering
+  const volumesArray = Array.isArray(volumes) ? volumes : [];
+  
+  const filteredVolumes = volumesArray.filter(volume => 
+    volume.name?.toLowerCase().includes(search.toLowerCase()) ||
+    volume.region?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
