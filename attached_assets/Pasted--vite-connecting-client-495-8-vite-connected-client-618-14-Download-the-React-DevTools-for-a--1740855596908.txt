@@ -1,0 +1,56 @@
+[vite] connecting... client:495:8
+[vite] connected. client:618:14
+Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools react-dom.development.js:29895:16
+Fetching data for: /api/user queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "38", id: "38" }
+server-detail.tsx:302:10
+Path ID: 38 server-detail.tsx:303:10
+URL Path: /servers/38 server-detail.tsx:304:10
+Valid server ID found: 38 server-detail.tsx:319:16
+Fetching data for: /api/servers/38 queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "38", id: "38" }
+server-detail.tsx:302:10
+Path ID: 38 server-detail.tsx:303:10
+URL Path: /servers/38 server-detail.tsx:304:10
+Valid server ID found: 38 server-detail.tsx:319:16
+Fetching data for: /api/servers/38/volumes queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "38", id: "38" }
+server-detail.tsx:302:10
+Path ID: 38 server-detail.tsx:303:10
+URL Path: /servers/38 server-detail.tsx:304:10
+Valid server ID found: 38 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "38", id: "38" }
+server-detail.tsx:302:10
+Path ID: 38 server-detail.tsx:303:10
+URL Path: /servers/38 server-detail.tsx:304:10
+Valid server ID found: 38 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "38", id: "38" }
+server-detail.tsx:302:10
+Path ID: 38 server-detail.tsx:303:10
+URL Path: /servers/38 server-detail.tsx:304:10
+Valid server ID found: 38 server-detail.tsx:319:16
+XHRGET
+https://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/api/servers/38/firewall
+[HTTP/1.1 404 Not Found 403ms]
+
+XHRGET
+https://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/api/servers/38/firewall
+[HTTP/1.1 404 Not Found 398ms]
+
+XHRGET
+https://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/api/servers/38/firewall
+[HTTP/1.1 404 Not Found 466ms]
+
+ServerDetailPage Params: 
+Object { 0: "38", id: "38" }
+server-detail.tsx:302:10
+Path ID: 38 server-detail.tsx:303:10
+URL Path: /servers/38 server-detail.tsx:304:10
+Valid server ID found: 38 server-detail.tsx:319:16
+Fetching data for: /api/servers/38/metrics/latest queryClient.ts:59:14
+Fetching data for: /api/servers/38/metrics/history

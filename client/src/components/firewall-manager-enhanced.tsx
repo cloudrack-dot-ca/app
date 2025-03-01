@@ -120,7 +120,8 @@ interface FirewallManagerProps {
 export default function FirewallManager({ serverId }: FirewallManagerProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("inbound");
-  const [noFirewall, setNoFirewall] = useState(false);
+  // Start with assumption that no firewall exists, will be corrected if one is found
+  const [noFirewall, setNoFirewall] = useState(true);
   const [deleteRuleConfirmOpen, setDeleteRuleConfirmOpen] = useState(false);
   const [ruleToDelete, setRuleToDelete] = useState<{ rule_type: 'inbound' | 'outbound', rule: FirewallRule } | null>(null);
   const [newRule, setNewRule] = useState<{
@@ -151,12 +152,17 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
         if (!res.ok) {
           throw new Error(`Error ${res.status}: ${res.statusText}`);
         }
+        // We found a firewall, make sure to update the state
+        setNoFirewall(false);
         return res.json();
       }),
     refetchOnWindowFocus: true,
-    refetchInterval: 3000, // Refresh every 3 seconds to get updated status
-    staleTime: 2000,       // Consider data stale after 2 seconds
-    retry: false           // Don't retry on 404
+    // Only poll if a firewall exists, otherwise don't keep requesting
+    refetchInterval: noFirewall ? false : 5000, // Reduced polling from 3s to 5s
+    staleTime: 3000,       // Increased stale time from 2s to 3s
+    retry: false,          // Don't retry on 404
+    retryOnMount: false,   // Don't retry when component mounts
+    gcTime: 0              // Don't cache errors
   });
   
   // Effect to refetch when component mounts

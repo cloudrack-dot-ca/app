@@ -1225,16 +1225,25 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Check for existing firewall
       let firewall = await digitalOcean.getFirewallByDropletId(server.dropletId);
       
-      // If no firewall exists, return 404 - user needs to create one manually
+      // If no firewall exists, return 404 with a clear message
+      // This is handled by the client to display the "Enable Firewall" UI
       if (!firewall) {
         console.log(`No firewall found for server ${server.id}`);
-        return res.status(404).json({ message: "No firewall found for this server" });
+        return res.status(404).json({ 
+          message: "No firewall found for this server",
+          code: "FIREWALL_NOT_FOUND" 
+        });
       }
       
+      // Return the firewall configuration
       res.json(firewall);
     } catch (error) {
       console.error("Error fetching firewall:", error);
-      res.status(500).json({ message: "Failed to fetch firewall rules" });
+      res.status(500).json({ 
+        message: "Failed to fetch firewall rules", 
+        error: (error as Error).message,
+        code: "FIREWALL_FETCH_ERROR"
+      });
     }
   });
   
