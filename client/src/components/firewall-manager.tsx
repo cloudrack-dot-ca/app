@@ -147,8 +147,10 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
     }
   });
 
-  // Handle creating a firewall with default rules
+  // Handle creating a firewall with no rules
   const handleCreateFirewall = () => {
+    // Log the action for debugging
+    console.log("Creating new empty firewall");
     createFirewallMutation.mutate();
   };
 

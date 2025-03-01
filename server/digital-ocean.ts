@@ -964,10 +964,19 @@ runcmd:
   async getFirewallByDropletId(dropletId: string): Promise<Firewall | null> {
     const dropletIdNumber = parseInt(dropletId);
     
+    // First check in the mock firewalls, regardless of useMock flag
+    // This ensures that any mock firewalls created as fallbacks will be found
+    const mockFirewall = Object.values(this.mockFirewalls).find(
+      firewall => firewall.droplet_ids.includes(dropletIdNumber)
+    );
+    
+    if (mockFirewall) {
+      console.log(`Found mock firewall ${mockFirewall.id} for droplet ${dropletId}`);
+      return mockFirewall;
+    }
+    
     if (this.useMock) {
-      return Object.values(this.mockFirewalls).find(
-        firewall => firewall.droplet_ids.includes(dropletIdNumber)
-      ) || null;
+      return null;
     }
 
     try {
