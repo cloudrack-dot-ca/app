@@ -322,12 +322,14 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
     }
 
+    // Create the volume in DigitalOcean
     const doVolume = await digitalOcean.createVolume({
       name: parsed.data.name,
       region: server.region,
       size_gigabytes: parsed.data.size,
     });
 
+    // Create the volume in our database
     const volume = await storage.createVolume({
       ...parsed.data,
       userId: req.user.id,
@@ -335,6 +337,19 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       volumeId: doVolume.id,
       region: server.region,
     });
+    
+    // Attach the volume to the droplet
+    try {
+      await digitalOcean.attachVolumeToDroplet(
+        doVolume.id, 
+        server.dropletId,
+        server.region
+      );
+      console.log(`Volume ${doVolume.id} attached to droplet ${server.dropletId}`);
+    } catch (error) {
+      console.warn(`Failed to attach volume to droplet, but volume was created:`, error);
+      // We'll continue even if attachment fails - user can try again later
+    }
 
     // Deduct first hour's cost
     const costInCents = toCents(hourlyCost);

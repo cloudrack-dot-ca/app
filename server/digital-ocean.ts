@@ -533,8 +533,20 @@ export class DigitalOceanClient {
         monitoring: true, // Enable monitoring by default
       };
       
+      // Handle proper password setup with cloud-init user-data script
       if (options.password) {
-        dropletData.user_data = `#!/bin/bash\necho root:${options.password} | chpasswd`;
+        // This more comprehensive cloud-init script properly sets the password
+        // and ensures SSH password authentication is enabled
+        dropletData.user_data = `#cloud-config
+password: ${options.password}
+chpasswd: { expire: False }
+ssh_pwauth: True
+
+runcmd:
+  - echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+  - echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+  - systemctl restart ssh
+`;
       }
       
       const response = await this.apiRequest<{ droplet: any }>('/droplets', 'POST', dropletData);
@@ -655,6 +667,60 @@ export class DigitalOceanClient {
       );
     } catch (error) {
       console.error(`Error performing ${action} on droplet ${dropletId}:`, error);
+      throw error;
+    }
+  }
+  
+  // New method to attach volumes to droplets
+  async attachVolumeToDroplet(volumeId: string, dropletId: string, region: string): Promise<void> {
+    if (this.useMock) {
+      return; // Mock attachment just returns success
+    }
+    
+    try {
+      await this.apiRequest(
+        `/volumes/${volumeId}/actions`,
+        'POST',
+        {
+          type: 'attach',
+          droplet_id: parseInt(dropletId),
+          region
+        }
+      );
+      
+      // Wait for the attachment to complete (this would be async in real DO API)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      console.log(`Successfully attached volume ${volumeId} to droplet ${dropletId}`);
+    } catch (error) {
+      console.error(`Error attaching volume ${volumeId} to droplet ${dropletId}:`, error);
+      throw error;
+    }
+  }
+  
+  // New method to detach volumes from droplets
+  async detachVolumeFromDroplet(volumeId: string, dropletId: string, region: string): Promise<void> {
+    if (this.useMock) {
+      return; // Mock detachment just returns success
+    }
+    
+    try {
+      await this.apiRequest(
+        `/volumes/${volumeId}/actions`,
+        'POST',
+        {
+          type: 'detach',
+          droplet_id: parseInt(dropletId),
+          region
+        }
+      );
+      
+      // Wait for the detachment to complete (this would be async in real DO API)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      console.log(`Successfully detached volume ${volumeId} from droplet ${dropletId}`);
+    } catch (error) {
+      console.error(`Error detaching volume ${volumeId} from droplet ${dropletId}:`, error);
       throw error;
     }
   }
