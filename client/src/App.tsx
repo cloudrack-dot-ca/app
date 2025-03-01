@@ -15,6 +15,7 @@ import SSHKeysPage from "@/pages/ssh-keys";
 import AccountPage from "@/pages/account-page";
 import AdminDashboard from "@/pages/admin/dashboard";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { WebSocketProvider } from "@/hooks/use-websocket";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
 import { Home, ShieldCheck, Settings } from "lucide-react";
@@ -98,8 +99,10 @@ function App() {
         components: "buttons,marks",
       }}>
         <AuthProvider>
-          <Router />
-          <Toaster />
+          <WebSocketProvider>
+            <Router />
+            <Toaster />
+          </WebSocketProvider>
         </AuthProvider>
       </PayPalScriptProvider>
     </QueryClientProvider>

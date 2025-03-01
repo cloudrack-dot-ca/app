@@ -1108,13 +1108,15 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           userId = data.userId;
           
           // Add this client to the user's client set
-          if (!clients.has(userId)) {
-            clients.set(userId, new Set());
-          }
-          clients.get(userId)?.add(ws);
+          if (userId !== null) {
+            if (!clients.has(userId)) {
+              clients.set(userId, new Set());
+            }
+            clients.get(userId)?.add(ws);
           
-          // Send confirmation
-          ws.send(JSON.stringify({ type: 'auth_success' }));
+            // Send confirmation
+            ws.send(JSON.stringify({ type: 'auth_success' }));
+          }
         }
         
         // Handle ticket subscription
@@ -1149,12 +1151,12 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         }
         
         // Remove from all ticket subscriptions
-        for (const ticketId of subscribedTickets) {
+        Array.from(subscribedTickets).forEach(ticketId => {
           ticketClients.get(ticketId)?.delete(ws);
           if (ticketClients.get(ticketId)?.size === 0) {
             ticketClients.delete(ticketId);
           }
-        }
+        });
       }
     });
   });
