@@ -481,25 +481,28 @@ export default function ServerDetailPage() {
                 <CardDescription>Manage your server state</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    variant={isRunning ? "outline" : "default"} 
-                    onClick={() => powerActionMutation.mutate("start")}
-                    disabled={isRunning || powerActionMutation.isPending}
-                    className="w-full"
-                  >
-                    <Power className="h-4 w-4 mr-2" />
-                    Power On
-                  </Button>
-                  <Button 
-                    variant={!isRunning ? "outline" : "default"} 
-                    onClick={() => powerActionMutation.mutate("stop")}
-                    disabled={!isRunning || powerActionMutation.isPending}
-                    className="w-full"
-                  >
-                    <PowerOff className="h-4 w-4 mr-2" />
-                    Power Off
-                  </Button>
+                <div className="grid grid-cols-1 gap-2">
+                  {isRunning ? (
+                    <Button 
+                      variant="default" 
+                      onClick={() => powerActionMutation.mutate("stop")}
+                      disabled={powerActionMutation.isPending}
+                      className="w-full"
+                    >
+                      <PowerOff className="h-4 w-4 mr-2" />
+                      Power Off
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="default" 
+                      onClick={() => powerActionMutation.mutate("start")}
+                      disabled={powerActionMutation.isPending}
+                      className="w-full"
+                    >
+                      <Power className="h-4 w-4 mr-2" />
+                      Power On
+                    </Button>
+                  )}
                 </div>
                 
                 <Button 
