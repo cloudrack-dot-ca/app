@@ -6,6 +6,7 @@ import { log } from './vite';
 import { Request } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
+import { cloudRackKeyManager } from './cloudrack-key-manager';
 
 // Extend the Server type to include rootPassword
 interface ExtendedServer {
@@ -24,9 +25,6 @@ interface ExtendedServer {
   // Add rootPassword property that may be present
   rootPassword?: string;
 }
-
-// Path to CloudRack's SSH private key
-const CLOUDRACK_SSH_KEY_PATH = path.join(process.cwd(), '.ssh', 'cloudrack_terminal_key');
 
 export function setupTerminalSocket(server: HttpServer) {
   const io = new Server(server, {
@@ -113,7 +111,7 @@ export function setupTerminalSocket(server: HttpServer) {
       });
       
       // Handle connection to the server
-      const connectSSH = () => {
+      const connectSSH = async () => {
         try {
           if (!server.ipAddress) {
             throw new Error('Server IP address is not available');
@@ -122,13 +120,22 @@ export function setupTerminalSocket(server: HttpServer) {
           // Log connection attempt for debugging
           log(`Attempting SSH connection to ${server.ipAddress} for server ${server.id}`, 'terminal');
           
+          // Verify that user has CloudRack key
+          const hasKey = await cloudRackKeyManager.hasCloudRackKey(parseInt(userId));
+          if (!hasKey) {
+            throw new Error('CloudRack Terminal Key not found in your account. Please contact support.');
+          }
+          
+          // Get the CloudRack SSH private key path
+          const keyPath = cloudRackKeyManager.getCloudRackPrivateKeyPath();
+          
           // Check if the CloudRack SSH private key exists
-          if (!fs.existsSync(CLOUDRACK_SSH_KEY_PATH)) {
-            throw new Error('CloudRack SSH key not found. Terminal functionality is disabled.');
+          if (!fs.existsSync(keyPath)) {
+            throw new Error('CloudRack SSH key not found on server. Terminal functionality is disabled.');
           }
           
           // Read the CloudRack SSH private key
-          const privateKey = fs.readFileSync(CLOUDRACK_SSH_KEY_PATH, 'utf8');
+          const privateKey = fs.readFileSync(keyPath, 'utf8');
           
           // Use SSH key authentication instead of password
           sshClient.connect({
@@ -139,7 +146,10 @@ export function setupTerminalSocket(server: HttpServer) {
             readyTimeout: 15000,
             keepaliveInterval: 10000,
             debug: (message: string) => {
-              log(`SSH Debug: ${message}`, 'terminal');
+              // Only log in development environment
+              if (process.env.NODE_ENV === 'development') {
+                log(`SSH Debug: ${message}`, 'terminal');
+              }
             }
           });
         } catch (error: any) {
@@ -175,7 +185,11 @@ export function setupTerminalSocket(server: HttpServer) {
       });
       
       // Start connection process
-      connectSSH();
+      connectSSH().catch(err => {
+        log(`Terminal connection failed: ${err.message}`, 'terminal');
+        socket.emit('error', `Terminal connection failed: ${err.message}`);
+        socket.disconnect();
+      });
       
     } catch (error: any) {
       log(`Terminal error: ${error.message}`, 'terminal');
