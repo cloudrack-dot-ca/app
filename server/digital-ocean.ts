@@ -643,15 +643,23 @@ runcmd:
     }
   }
 
+  async deleteServer(id: string): Promise<void> {
+    if (this.useMock) {
+      return; // Mock deletion just returns
+    }
+    
+    return this.deleteDroplet(id); // Call the original method for backward compatibility
+  }
+
   async deleteDroplet(id: string): Promise<void> {
     if (this.useMock) {
       return; // Mock deletion just returns
     }
     
     try {
-      await this.apiRequest(`/droplets/${id}`, 'DELETE');
+      await this.apiRequest(`/servers/${id}`, 'DELETE');
     } catch (error) {
-      console.error(`Error deleting droplet ${id}:`, error);
+      console.error(`Error deleting server ${id}:`, error);
       throw error;
     }
   }
@@ -677,6 +685,13 @@ runcmd:
     }
   }
 
+  async performServerAction(
+    serverId: string, 
+    action: 'power_on' | 'power_off' | 'reboot' | 'enable_ipv6'
+  ): Promise<void> {
+    return this.performDropletAction(serverId, action); // For backward compatibility
+  }
+
   async performDropletAction(
     dropletId: string, 
     action: 'power_on' | 'power_off' | 'reboot' | 'enable_ipv6'
@@ -687,17 +702,22 @@ runcmd:
     
     try {
       await this.apiRequest(
-        `/droplets/${dropletId}/actions`, 
+        `/servers/${dropletId}/actions`, 
         'POST', 
         { type: action }
       );
     } catch (error) {
-      console.error(`Error performing ${action} on droplet ${dropletId}:`, error);
+      console.error(`Error performing ${action} on server ${dropletId}:`, error);
       throw error;
     }
   }
   
-  // New method to attach volumes to droplets
+  // Method to attach volumes to servers
+  async attachVolumeToServer(volumeId: string, serverId: string, region: string): Promise<void> {
+    return this.attachVolumeToDroplet(volumeId, serverId, region); // For backward compatibility
+  }
+
+  // Legacy method to attach volumes to droplets
   async attachVolumeToDroplet(volumeId: string, dropletId: string, region: string): Promise<void> {
     if (this.useMock) {
       return; // Mock attachment just returns success
@@ -709,22 +729,27 @@ runcmd:
         'POST',
         {
           type: 'attach',
-          droplet_id: parseInt(dropletId),
+          server_id: parseInt(dropletId), // Using server_id instead of droplet_id
           region
         }
       );
       
-      // Wait for the attachment to complete (this would be async in real DO API)
+      // Wait for the attachment to complete (this would be async in real API)
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      console.log(`Successfully attached volume ${volumeId} to droplet ${dropletId}`);
+      console.log(`Successfully attached volume ${volumeId} to server ${dropletId}`);
     } catch (error) {
-      console.error(`Error attaching volume ${volumeId} to droplet ${dropletId}:`, error);
+      console.error(`Error attaching volume ${volumeId} to server ${dropletId}:`, error);
       throw error;
     }
   }
   
-  // New method to detach volumes from droplets
+  // Method to detach volumes from servers
+  async detachVolumeFromServer(volumeId: string, serverId: string, region: string): Promise<void> {
+    return this.detachVolumeFromDroplet(volumeId, serverId, region); // For backward compatibility
+  }
+
+  // Legacy method to detach volumes from droplets
   async detachVolumeFromDroplet(volumeId: string, dropletId: string, region: string): Promise<void> {
     if (this.useMock) {
       return; // Mock detachment just returns success
@@ -736,17 +761,17 @@ runcmd:
         'POST',
         {
           type: 'detach',
-          droplet_id: parseInt(dropletId),
+          server_id: parseInt(dropletId), // Using server_id instead of droplet_id
           region
         }
       );
       
-      // Wait for the detachment to complete (this would be async in real DO API)
+      // Wait for the detachment to complete (this would be async in real API)
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      console.log(`Successfully detached volume ${volumeId} from droplet ${dropletId}`);
+      console.log(`Successfully detached volume ${volumeId} from server ${dropletId}`);
     } catch (error) {
-      console.error(`Error detaching volume ${volumeId} from droplet ${dropletId}:`, error);
+      console.error(`Error detaching volume ${volumeId} from server ${dropletId}:`, error);
       throw error;
     }
   }
