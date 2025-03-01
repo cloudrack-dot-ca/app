@@ -323,6 +323,24 @@ export default function Dashboard() {
                         <Button 
                           type="button"
                           size="sm" 
+                          variant={applicationTypeFilter === "game-server" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("game-server")}
+                          className="text-xs h-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:text-white"
+                        >
+                          Game Servers
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={applicationTypeFilter === "bot" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("bot")}
+                          className="text-xs h-8 bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 hover:text-white"
+                        >
+                          Discord Bots
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
                           variant={applicationTypeFilter === "application" ? "default" : "outline"} 
                           onClick={() => setApplicationTypeFilter("application")}
                           className="text-xs h-8"
