@@ -445,103 +445,15 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
       const auth = req.body.auth || {};
 
-      // Ensure user has the CloudRack SSH key for terminal access
-      try {
-        console.log(`[DEBUG] Ensuring CloudRack key for user ${req.user.id}`);
-        await cloudRackKeyManager.ensureCloudRackKey(req.user.id);
-        console.log(`[DEBUG] CloudRack key ensured for user ${req.user.id}`);
-      } catch (cloudRackError) {
-        console.error(`[ERROR] CloudRack key setup failed: ${cloudRackError}`);
-        // Continue without CloudRack key if it fails
-      }
-
-      // Get the SSH keys to add to the server
-      let sshKeys: string[] = [];
-      console.log(`[DEBUG] Initial sshKeys array: ${JSON.stringify(sshKeys)}`);
-
-      // Add user's SSH key if provided
-      if (auth.type === "ssh" && auth.value) {
-        console.log(`[DEBUG] Adding user SSH key: ${auth.value}`);
-        sshKeys.push(auth.value);
-      }
-
-      // Add CloudRack's SSH key (ENHANCED VERSION)
-      try {
-        // First make sure the user has a CloudRack key (this will create one if it doesn't exist)
-        await cloudRackKeyManager.ensureCloudRackKey(req.user.id);
-        
-        // Now get the CloudRack key for server creation
-        const cloudRackPublicKey = cloudRackKeyManager.getCloudRackPublicKey();
-        console.log(`[DEBUG] CloudRack public key exists: ${!!cloudRackPublicKey}`);
-        
-        if (cloudRackPublicKey) {
-          // Get all SSH keys for this user
-          const userKeys = await storage.getSSHKeysByUser(req.user.id);
-          console.log(`[DEBUG] User has ${userKeys.length} SSH keys`);
-          
-          // Find the CloudRack key to get its fingerprint/ID
-          const cloudRackKey = userKeys.find(key => key.isCloudRackKey);
-          console.log(`[DEBUG] CloudRack key found in user keys: ${!!cloudRackKey}`);
-          
-          if (cloudRackKey) {
-            console.log(`[DEBUG] Adding CloudRack key ID: ${cloudRackKey.id}`);
-            // Make sure not to add duplicate keys
-            if (!sshKeys.includes(cloudRackKey.id.toString())) {
-              sshKeys.push(cloudRackKey.id.toString());
-              console.log(`[DEBUG] CloudRack key added to server creation request`);
-            }
-          } else {
-            console.log(`[DEBUG] No CloudRack key found among user keys, creating one now`);
-            // Create the CloudRack key as a last resort
-            const newKey = await storage.createSSHKey({
-              userId: req.user.id,
-              name: 'CloudRack Terminal Key',
-              publicKey: cloudRackPublicKey,
-              createdAt: new Date(),
-              isCloudRackKey: true,
-              isSystemKey: false
-            });
-            console.log(`[DEBUG] Created new CloudRack key with ID: ${newKey.id}`);
-            sshKeys.push(newKey.id.toString());
-          }
-        }
-      } catch (sshKeyError) {
-        console.error(`[ERROR] Error adding CloudRack key: ${sshKeyError}`);
-        // Continue without CloudRack key if it fails - we'll add it later
-      }
+      // Generate a strong random password for the server if not provided
+      const rootPassword = auth.type === "password" && auth.value 
+        ? auth.value 
+        : Math.random().toString(36).slice(-10) + 
+          Math.random().toString(36).toUpperCase().slice(-2) + 
+          Math.random().toString(36).slice(-2) + '!@#$'[Math.floor(Math.random() * 4)];
       
-      // Add the system SSH key to ensure server access 
-      // This is CRITICAL for web terminal access
-      try {
-        console.log(`[KEY-MANAGER] Ensuring system SSH key exists for user ${req.user.id}`);
-        // Ensure the user has the system key (create if not exists)
-        const systemKeyId = await systemKeyManager.ensureSystemKey(req.user.id);
-        
-        if (systemKeyId) {
-          console.log(`[KEY-MANAGER] ✅ Adding system key ID: ${systemKeyId} to server creation`);
-          // Make sure not to add duplicate keys
-          if (!sshKeys.includes(systemKeyId)) {
-            sshKeys.push(systemKeyId);
-            console.log(`[KEY-MANAGER] ✅ System key added to server creation request - will be installed on the VPS`);
-          } else {
-            console.log(`[KEY-MANAGER] ⚠️ System key was already in the SSH keys list`);
-          }
-        } else {
-          console.log(`[KEY-MANAGER] ❌ Failed to add system key - terminal access may be limited`);
-        }
-      } catch (systemKeyError) {
-        console.error(`[KEY-MANAGER] ❌ Error adding system key: ${systemKeyError}`);
-        // Continue without system key if it fails
-      }
-      
-      console.log(`[DEBUG] Final sshKeys array: ${JSON.stringify(sshKeys)}`);
-
       // Create the actual droplet via DigitalOcean API
       let droplet;
-      
-      // Generate a random password for the server - define it outside try block so it's accessible in the response
-      const rootPassword = Math.random().toString(36).slice(-10) + 
-                           Math.random().toString(36).toUpperCase().slice(-2) + '!';
       
       try {
         console.log(`[DEBUG] Creating droplet with params:
@@ -549,33 +461,17 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           region: ${parsed.data.region},
           size: ${parsed.data.size},
           application: ${parsed.data.application},
-          ssh_keys: ${JSON.stringify(sshKeys.length > 0 ? sshKeys : undefined)},
-          has_password: ${auth.type === "password" ? "yes" : "no"}
+          password: ${rootPassword ? "Set (not shown)" : "Not set"}
         `);
         
-        // Try creating droplet without SSH keys if they're causing problems
+        // Create droplet with password authentication only
         let createOptions = {
           name: parsed.data.name,
           region: parsed.data.region,
           size: parsed.data.size,
           application: parsed.data.application,
+          password: rootPassword // Always use password authentication
         } as any;
-        
-        // Set the primary authentication method
-        if (auth.type === "password" && auth.value) {
-          // If password auth is explicitly chosen, use the provided password
-          console.log(`[DEBUG] Using provided password authentication`);
-          createOptions.password = auth.value;
-        } else if (sshKeys.length > 0) {
-          // Try to use SSH keys but also set a fallback password
-          console.log(`[DEBUG] Using SSH key authentication with fallback password`);
-          createOptions.ssh_keys = sshKeys;
-          createOptions.password = rootPassword;
-        } else {
-          // No auth provided, use the generated password
-          console.log(`[DEBUG] No authentication method provided, using generated password`);
-          createOptions.password = rootPassword;
-        }
         
         droplet = await digitalOcean.createDroplet(createOptions);
         console.log(`[DEBUG] Droplet created successfully with ID: ${droplet.id}`);
@@ -585,16 +481,10 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         // Extract and clean up the error message for the user
         let errorMessage = (error as Error).message;
         
-        // Look for specific error patterns related to SSH keys
-        if (errorMessage.includes("ssh_keys")) {
-          errorMessage = "SSH key validation failed. Please check if your SSH key is properly formatted and registered with DigitalOcean.";
-        }
-        
         throw new Error(`Failed to create server: ${errorMessage}`);
       }
 
-      // Create the server including rootPassword field (required by type)
-      // but we'll update it properly with db.update right after
+      // Create the server including rootPassword field
       const server = await storage.createServer({
         ...parsed.data,
         userId: req.user.id,
@@ -612,11 +502,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         rootPassword: "", // Include empty string to satisfy type, will update properly next
       });
       
-      // Then update the root password directly using the same approach as the password update endpoint
+      // Then update the root password directly
       await db.update(schema.servers)
-        .set({ 
-          rootPassword: auth.type === "password" && auth.value ? auth.value : rootPassword,
-        })
+        .set({ rootPassword: rootPassword })
         .where(eq(schema.servers.id, server.id));
         
       console.log(`Set initial root password for server ${server.id} (password length: ${(auth.type === "password" && auth.value ? auth.value : rootPassword).length})`);
