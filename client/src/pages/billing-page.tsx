@@ -362,7 +362,9 @@ export default function BillingPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-lg ${tx.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.type === 'deposit' ? '+' : '-'}${(tx.amount / 100).toFixed(2)} USD
+                          {tx.type === 'deposit' 
+                            ? `+$${(tx.amount / 100).toFixed(2)} USD` 
+                            : `-$${(tx.amount / 100).toFixed(2)} USD`}
                         </span>
                         <Badge variant={tx.status === "completed" ? "default" : "secondary"}>
                           {tx.status}
