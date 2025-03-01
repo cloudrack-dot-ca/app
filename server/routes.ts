@@ -1104,12 +1104,24 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       if (serverDetails.userId !== req.user.id && !req.user.isAdmin) {
         return res.status(403).json({ message: "Not authorized to access this server" });
       }
-
+      
+      // Get raw server details to ensure password format is preserved properly
+      const rawResult = await db.execute(
+        sql`SELECT * FROM servers WHERE id = ${serverId}`
+      );
+      
+      const rawServerDetails = rawResult.rows[0];
+      
+      // Use raw SQL results as a fallback if regular query doesn't work
+      const effectivePassword = serverDetails?.rootPassword || 
+                               (rawServerDetails as any)?.root_password;
+    
       // Return only the necessary secured details for terminal authentication
       return res.json({
         id: serverDetails.id,
-        rootPassword: serverDetails.rootPassword,
-        rootPassUpdated: !!serverDetails.rootPassword
+        rootPassword: effectivePassword,
+        rootPassUpdated: !!effectivePassword,
+        rawFormat: !!rawServerDetails ? 'ok' : 'missing'
       });
     } catch (error) {
       console.error('Error getting server details:', error);

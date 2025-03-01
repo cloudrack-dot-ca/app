@@ -98,8 +98,23 @@ export function setupTerminalSocket(server: HttpServer) {
                              !!(effectiveServerDetails as any)?.root_password;
       
       // Get the actual password value, preferring the schema version if available
-      const rootPasswordValue = effectiveServerDetails?.rootPassword || 
-                               (effectiveServerDetails as any)?.root_password;
+      let rootPasswordValue = effectiveServerDetails?.rootPassword || 
+                              (effectiveServerDetails as any)?.root_password;
+                              
+      // Try to clean the password - remove any unwanted characters or fix formatting
+      if (rootPasswordValue) {
+        // Trim any whitespace
+        rootPasswordValue = rootPasswordValue.trim();
+        
+        // Log the cleaned password details
+        log(`Original password: ${rootPasswordValue.substring(0, 3)}... (${rootPasswordValue.length} chars)`, 'terminal');
+        
+        // If the password looks like a hash (contains dots or $ signs) but is not properly formatted,
+        // we need to handle it differently
+        if (rootPasswordValue.includes('.') || (rootPasswordValue.includes('$') && !rootPasswordValue.startsWith('$'))) {
+          log(`Password appears to be in a hashed format, will use with caution`, 'terminal');
+        }
+      }
       
       // Debug log the password length if it exists
       if (hasRootPassword) {
@@ -188,14 +203,30 @@ export function setupTerminalSocket(server: HttpServer) {
       
       // Handle keyboard-interactive authentication
       sshClient.on('keyboard-interactive', (name, instructions, lang, prompts, finish) => {
+        log(`Keyboard-interactive auth initiated: name=${name}, prompts=${JSON.stringify(prompts)}`, 'terminal');
+        
         // If it's a password prompt and we have the root password, use it
         if (prompts.length > 0 && hasRootPassword) {
-          log(`Responding to keyboard-interactive with stored password`, 'terminal');
+          // Log detailed information about the prompt for debugging
+          for (let i = 0; i < prompts.length; i++) {
+            log(`Prompt ${i}: ${prompts[i].prompt}, echo: ${prompts[i].echo}`, 'terminal');
+          }
+          
+          log(`Responding to keyboard-interactive with stored password (${rootPasswordValue?.substring(0, 3)}...)`, 'terminal');
+          
           // Use the discovered password value from earlier
           finish([rootPasswordValue]);
+          
+          // Notify the client that we're trying keyboard-interactive authentication
+          socket.emit('status', { 
+            status: 'auth_in_progress',
+            message: 'Attempting keyboard-interactive authentication'
+          });
         } else {
           // Otherwise inform the user authentication failed
-          log(`Keyboard-interactive auth failed - no password available`, 'terminal');
+          log(`Keyboard-interactive auth failed - no password available or no prompts received`, 'terminal');
+          log(`Prompts received: ${prompts.length}`, 'terminal');
+          log(`Password available: ${hasRootPassword}`, 'terminal');
           socket.emit('error', 'Authentication failed - password required');
           sshClient.end();
         }
@@ -241,10 +272,12 @@ export function setupTerminalSocket(server: HttpServer) {
           }
         };
         
-        // If we have a root password, try keyboard-interactive auth first, but also set password
+        // If we have a root password, use it for authentication
         if (hasRootPassword) {
-          // Use the rootPasswordValue from earlier that handles both camelCase and snake_case
-          // We set password for both normal password auth and for use in keyboard-interactive
+          // Enable keyboard-interactive auth as a fallback
+          config.tryKeyboard = true;
+          
+          // Set the password for direct authentication
           config.password = rootPasswordValue;
           
           // Debug log the password details
