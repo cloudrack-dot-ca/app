@@ -4,15 +4,36 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Maximize2, Minimize2, Move } from 'lucide-react';
+import { RefreshCw, Maximize2, Minimize2, Move, Type } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import 'xterm/css/xterm.css';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ServerTerminalProps {
   serverId: number;
   serverName: string;
   ipAddress: string;
 }
+
+// Available terminal fonts
+const TERMINAL_FONTS = [
+  { 
+    name: "Default Monospace", 
+    value: 'Menlo, Monaco, "Courier New", "DejaVu Sans Mono", "Lucida Console", monospace'
+  },
+  { name: "Courier New", value: '"Courier New", monospace' },
+  { name: "DejaVu Sans Mono", value: '"DejaVu Sans Mono", monospace' },
+  { name: "Fira Code", value: '"Fira Code", monospace' },
+  { name: "Inconsolata", value: '"Inconsolata", monospace' },
+  { name: "JetBrains Mono", value: '"JetBrains Mono", monospace' },
+  { name: "Source Code Pro", value: '"Source Code Pro", monospace' },
+  { name: "Ubuntu Mono", value: '"Ubuntu Mono", monospace' },
+];
 
 export default function ServerTerminal({ serverId, serverName, ipAddress }: ServerTerminalProps) {
   const { user } = useAuth();
@@ -23,6 +44,24 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const socketRef = useRef<any>(null);
+  const [currentFont, setCurrentFont] = useState<string>(TERMINAL_FONTS[0].value);
+
+  // Function to change terminal font
+  const changeTerminalFont = (newFont: string) => {
+    setCurrentFont(newFont);
+    
+    // If terminal exists, update its font
+    if (terminal) {
+      terminal.options.fontFamily = newFont;
+      
+      // Force a redraw by updating the terminal size
+      if (fitAddon) {
+        setTimeout(() => {
+          fitAddon.fit();
+        }, 50);
+      }
+    }
+  };
 
   // Initialize terminal
   useEffect(() => {
@@ -35,7 +74,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     const term = new Terminal({
       cursorBlink: true,
       cursorStyle: 'block',
-      fontFamily: 'Menlo, Monaco, "Courier New", "DejaVu Sans Mono", "Lucida Console", monospace',
+      fontFamily: currentFont, // Use the selected font from state
       fontSize: 15,
       lineHeight: 1.2,
       letterSpacing: 0.2,
@@ -98,7 +137,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         socketRef.current.disconnect();
       }
     };
-  }, [serverId, user]);
+  }, [serverId, user, currentFont]); // Include currentFont in dependencies to recreate terminal when font changes
 
   // Handle full screen mode changes
   useEffect(() => {
@@ -412,7 +451,35 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
             <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
             {isConnected ? 'Connected' : 'Disconnected'} - {serverName} ({ipAddress})
           </div>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 items-center">
+            {/* Font selection dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={`h-6 w-6 ${isFullScreen ? 'hover:bg-gray-800' : ''}`}
+                  title="Change Font"
+                >
+                  <Type className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {TERMINAL_FONTS.map((font) => (
+                  <DropdownMenuItem 
+                    key={font.name}
+                    onClick={() => changeTerminalFont(font.value)}
+                    className={currentFont === font.value ? 'bg-gray-100 dark:bg-gray-800' : ''}
+                  >
+                    <span style={{ fontFamily: font.value }}>{font.name}</span>
+                    {currentFont === font.value && (
+                      <span className="ml-auto text-green-500">✓</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
             <Button 
               variant="ghost" 
               size="icon" 
@@ -422,6 +489,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
             >
               <RefreshCw className="h-3.5 w-3.5" />
             </Button>
+            
             <Button 
               variant="ghost" 
               size="icon" 
