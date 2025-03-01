@@ -119,7 +119,28 @@ export function setupTerminalSocket(server: HttpServer) {
       
       sshClient.on('error', (err) => {
         log(`SSH connection error: ${err.message}`, 'terminal');
-        socket.emit('error', `SSH connection error: ${err.message}`);
+        
+        // Provide more user-friendly error messages for common SSH errors
+        let userMessage = `SSH connection error: ${err.message}`;
+        
+        if (err.message.includes('All configured authentication methods failed')) {
+          userMessage = 'Authentication failed. Please ensure your root password is correct in server settings.';
+          
+          // Log detailed error information for debugging
+          log(`Authentication failed for server ${server.id}:
+            - Server IP: ${server.ipAddress}
+            - Authentication method: ${server.rootPassword ? 'Password' : 'SSH Key'}
+            - Error details: ${err.message}`, 'terminal');
+            
+        } else if (err.message.includes('connect ETIMEDOUT') || err.message.includes('Operation timed out')) {
+          userMessage = 'Connection timed out. The server may be starting up or behind a firewall.';
+        } else if (err.message.includes('connect ECONNREFUSED')) {
+          userMessage = 'Connection refused. SSH service may not be running on the server.';
+        } else if (err.message.includes('Host key verification failed')) {
+          userMessage = 'Host key verification failed. The server\'s SSH fingerprint has changed.';
+        }
+        
+        socket.emit('error', userMessage);
         socket.disconnect();
       });
       
@@ -231,30 +252,35 @@ export function setupTerminalSocket(server: HttpServer) {
             }
           };
           
-          // ULTRA SIMPLIFIED AUTHENTICATION - JUST PASSWORD, NO SSH KEYS
-          // After multiple iterations, we're simplifying to just password authentication
+          // IMPROVED AUTHENTICATION APPROACH
+          // First try password authentication if available, then fall back to SSH key
           
-          if (!server.rootPassword) {
-            log('No root password available for authentication', 'terminal');
-            socket.emit('error', 'No password is set for this server. Please set a root password to use the terminal.');
-            throw new Error('Root password required for terminal access');
+          // Configure connection options based on authentication method available
+          if (server.rootPassword) {
+            log(`Using password authentication for server ${server.id}`, 'terminal');
+            socket.emit('status', { 
+              status: 'connecting',
+              message: 'Connecting with password authentication...'
+            });
+            
+            // Configure for password auth
+            connectionConfig.password = server.rootPassword;
+            connectionConfig.tryKeyboard = true;     // Enable keyboard-interactive as backup
+          } else {
+            // If no password, attempt to use SSH key authentication with the CloudRack key
+            log(`Using CloudRack key authentication for server ${server.id}`, 'terminal');
+            socket.emit('status', { 
+              status: 'connecting',
+              message: 'Connecting with SSH key authentication...'
+            });
+            
+            // Configure for SSH key auth
+            connectionConfig.privateKey = privateKey;
+            connectionConfig.tryKeyboard = true;     // Keep keyboard-interactive as backup
           }
           
-          log(`Using password authentication for server ${server.id}`, 'terminal');
-          
-          // Configure for password auth only
-          connectionConfig.password = server.rootPassword;
-          connectionConfig.privateKey = undefined;  // Explicitly disable key auth
-          connectionConfig.tryKeyboard = true;     // Enable keyboard-interactive as backup
-          
-          // Completely remove any auth handlers to use default ssh2 behavior
+          // Let SSH2 handle authentication with the available credentials
           connectionConfig.authHandler = undefined;
-          
-          // Tell client we're connecting with password authentication
-          socket.emit('status', { 
-            status: 'connecting',
-            message: 'Connecting with password authentication...'
-          });
           
           // Handle keyboard-interactive challenges
           sshClient.on('keyboard-interactive', (name: string, instructions: string, instructionsLang: string, prompts: any[], finish: Function) => {
@@ -266,8 +292,27 @@ export function setupTerminalSocket(server: HttpServer) {
             }
             
             // If we have a root password and the prompt is asking for a password, use it
-            if (server.rootPassword && prompts.some((p: any) => p.prompt.toLowerCase().includes('password'))) {
+            // Check if we have a root password and if any prompt is asking for a password
+            if (server.rootPassword && prompts.some((p: any) => 
+              p.prompt.toLowerCase().includes('password') || 
+              p.prompt.toLowerCase().includes('senha') ||   // Portuguese 
+              p.prompt.toLowerCase().includes('contraseña') // Spanish
+            )) {
               log('Responding to password prompt with stored root password', 'terminal');
+              
+              // For password prompts, don't echo back to client
+              // If any prompt is expecting hidden input (echo = false), it's most likely a password
+              const isPasswordPrompt = prompts.some(p => p.echo === false);
+              
+              // Log the authentication attempt details
+              log(`Password authentication attempt for server ${server.id}:
+                - Server IP: ${server.ipAddress}
+                - Authentication method: Password
+                - Username: root
+                - Password length: ${server.rootPassword.length} characters
+                - Is password prompt: ${isPasswordPrompt}`, 'terminal');
+                
+              // Use the stored root password
               finish([server.rootPassword]);
             } else {
               // Otherwise, we need to pass the prompt to the client
@@ -279,6 +324,10 @@ export function setupTerminalSocket(server: HttpServer) {
               // Wait for client response (this will handle the first prompt only)
               const handleResponse = (data: string) => {
                 socket.off('data', handleResponse);
+                
+                // Don't log the actual input as it might be sensitive
+                log('Received response from client for interactive prompt', 'terminal');
+                
                 finish([data.trim()]);
               };
               
