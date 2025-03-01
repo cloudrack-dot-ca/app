@@ -185,9 +185,6 @@ export function setupTerminalSocket(server: HttpServer) {
             }
           }
           
-          // Log connection attempt with key format info (masked)
-          log(`Connecting to ${server.ipAddress} with key in format: ${privateKey.includes('-----BEGIN RSA PRIVATE KEY-----') ? 'RSA PEM' : 'OTHER PEM'}`, 'terminal');
-          
           // Determine if we should use password or key-based authentication
           const connectionConfig: any = {
             host: server.ipAddress,
@@ -195,11 +192,9 @@ export function setupTerminalSocket(server: HttpServer) {
             username: 'root',
             readyTimeout: 60000, // Extended timeout even further
             keepaliveInterval: 5000,
-            // Don't retry too many times to avoid auth lockouts
+            // Limit retries to prevent too many auth failures
             retries: 1,
             retry_delay: 2000,
-            // Explicitly set authentication method to password 
-            authHandler: null, // We will set our own auth handler
             // Set explicit algorithms for better compatibility with older servers
             algorithms: {
               kex: [
@@ -236,70 +231,47 @@ export function setupTerminalSocket(server: HttpServer) {
             }
           };
           
-          // Only use password authentication for improved reliability
-          if (server.rootPassword) {
-            log(`Using password authentication for server ${server.id}`, 'terminal');
-            connectionConfig.password = server.rootPassword;
-            
-            // Remove options that may interfere with password auth
-            connectionConfig.privateKey = undefined;
-            
-            // Tell client we're using password auth
-            socket.emit('status', { 
-              status: 'connecting',
-              message: 'Using stored root password for authentication'
-            });
-          } else {
+          // Check if a root password is set for this server
+          if (!server.rootPassword) {
             log('No root password available for authentication', 'terminal');
             socket.emit('error', 'No password is set for this server. Please set a root password to use the terminal.');
             throw new Error('Root password required for terminal access');
           }
+
+          // SIMPLEST POSSIBLE AUTHENTICATION - DIRECT PASSWORD
+          // Completely bypass the more complex authentication handlers
+          log(`Using simple password authentication for server ${server.id}`, 'terminal');
           
-          // Always try keyboard-interactive as fallback
-          connectionConfig.tryKeyboard = true;
+          // Set direct password authentication
+          connectionConfig.password = server.rootPassword;
           
-          // Add keyboard-interactive handler for password prompt fallback
+          // Remove any conflicting options
+          connectionConfig.privateKey = undefined;
+          connectionConfig.tryKeyboard = false; // Don't try keyboard-interactive initially
+          
+          // Tell client we're using password auth
+          socket.emit('status', { 
+            status: 'connecting',
+            message: 'Using stored root password for authentication'
+          });
+          
+          // Only set a simple auth handler as fallback
           connectionConfig.authHandler = (methodsLeft: string[], partialSuccess: boolean, callback: Function) => {
-            // Guard against null or undefined methodsLeft
             if (!methodsLeft || !Array.isArray(methodsLeft)) {
-              log('Warning: Auth methods list is invalid', 'terminal');
-              if (server.rootPassword) {
-                return callback('password');
-              }
-              socket.emit('error', 'No authentication methods available. Please set a root password for your server.');
-              return callback(null);
-            }
-            
-            // Safely log available methods
-            log(`SSH auth methods left: ${methodsLeft.join ? methodsLeft.join(', ') : String(methodsLeft)}`, 'terminal');
-            
-            // SIMPLIFIED AUTHENTICATION - ONLY USE PASSWORD
-            // Only proceed if we have a root password set for the server
-            if (!server.rootPassword) {
-              log('No root password available for authentication', 'terminal');
-              socket.emit('error', 'No password is set for this server. Please set a root password to use the terminal.');
-              return callback(null);
-            }
-            
-            // Try password auth first if available
-            if (methodsLeft.includes('password')) {
-              log('Using password auth method with stored root password', 'terminal');
+              // If methods list is invalid but we have a password, just try password auth
+              log('Auth methods list is invalid, trying password auth', 'terminal');
               return callback('password');
-            } 
-            // Then try keyboard-interactive which will also use the password
-            else if (methodsLeft.includes('keyboard-interactive')) {
-              log('Using keyboard-interactive auth method with root password', 'terminal');
+            }
+            
+            log(`Authentication methods available: ${methodsLeft.join(', ')}`, 'terminal');
+            
+            // Just try password auth if available, otherwise keyboard-interactive
+            if (methodsLeft.includes('password')) {
+              return callback('password');
+            } else if (methodsLeft.includes('keyboard-interactive')) {
               return callback('keyboard-interactive');
-            }
-            // As a last resort, try none - just in case the server allows it
-            else if (methodsLeft.includes('none')) {
-              log('Trying none auth method (unlikely to work)', 'terminal');
-              return callback('none');
-            }
-            // Otherwise, report that no suitable auth methods are available
-            else {
-              log('No supported auth methods available', 'terminal');
-              socket.emit('error', 'Server does not support password authentication. Please contact support.');
+            } else {
+              socket.emit('error', 'Server does not support password authentication');
               return callback(null);
             }
           };

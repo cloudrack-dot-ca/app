@@ -442,17 +442,17 @@ const ArticleViewer = ({ article }: { article: DocArticle | null }) => {
 
   return (
     <div className="prose prose-zinc dark:prose-invert max-w-none">
-      <div className="mb-4 pb-4 border-b flex justify-between items-center">
+      <div className="mb-4 pb-4 border-b flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">{article.title}</h1>
           <p className="text-sm text-muted-foreground">Last updated: {article.lastUpdated}</p>
         </div>
-        <Button variant="outline" size="sm" className="flex items-center gap-1">
+        <Button variant="outline" size="sm" className="flex items-center gap-1 self-start sm:self-auto">
           <ExternalLink className="h-4 w-4" />
           <span>Print</span>
         </Button>
       </div>
-      <div dangerouslySetInnerHTML={formatContent(article.content)} />
+      <div dangerouslySetInnerHTML={formatContent(article.content)} className="overflow-x-auto" />
     </div>
   );
 };
@@ -758,7 +758,7 @@ export default function DocsPage() {
   };
   
   return (
-    <div className="container py-8">
+    <div className="container mx-auto max-w-7xl py-8">
       <div className="flex items-center mb-6">
         <h1 className="text-3xl font-bold flex items-center">
           <Book className="mr-2 h-8 w-8" />
@@ -781,9 +781,9 @@ export default function DocsPage() {
         </TabsList>
         
         <TabsContent value="documentation" className="w-full">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             {/* Documentation Sidebar */}
-            <div className="md:col-span-1">
+            <div className="md:col-span-3">
               <Card>
                 <CardContent className="p-4">
                   <DocSidebar 
@@ -796,7 +796,7 @@ export default function DocsPage() {
             </div>
             
             {/* Documentation Content */}
-            <div className="md:col-span-3">
+            <div className="md:col-span-9">
               <Card>
                 <CardContent className="p-6">
                   <ArticleViewer article={activeArticle} />
