@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { HardDrive, Trash2, Server as ServerIcon } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,6 +14,7 @@ interface ServerCardProps {
 
 export default function ServerCard({ server }: ServerCardProps) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   async function deleteServer() {
     try {
@@ -88,8 +89,8 @@ export default function ServerCard({ server }: ServerCardProps) {
                   
                   console.log("Navigating to server detail, ID:", validId);
                   
-                  // Navigate to the server details page
-                  window.location.href = `/servers/${validId}`;
+                  // Use navigate from wouter instead of directly modifying location
+                  navigate(`/servers/${validId}`);
                 } catch (err) {
                   console.error("Navigation error:", err);
                   toast({

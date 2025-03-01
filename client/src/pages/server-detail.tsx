@@ -58,22 +58,27 @@ const regionFlags: { [key: string]: string } = {
 export default function ServerDetailPage() {
   // Extract and validate params
   const params = useParams<{ id: string }>();
-  const pathId = params?.id || '';
+  const pathId = params?.id;
   
   // Parse the server ID from the URL
-  let serverId: number;
-  try {
-    // Parse the server ID
-    serverId = parseInt(pathId);
-    
-    // If we get an invalid ID, show an error
-    if (isNaN(serverId) || serverId <= 0) {
-      console.error("Invalid server ID in URL:", pathId);
-      serverId = -1; // Use an invalid ID that will be caught by the error handling
+  let serverId: number = -1;
+  
+  if (pathId) {
+    try {
+      // Parse the server ID
+      serverId = parseInt(pathId);
+      
+      // If we get an invalid ID, show an error
+      if (isNaN(serverId) || serverId <= 0) {
+        console.error("Invalid server ID in URL:", pathId);
+        serverId = -1; // Use an invalid ID that will be caught by the error handling
+      }
+    } catch (err) {
+      console.error("Error parsing server ID:", err);
+      serverId = -1;
     }
-  } catch (err) {
-    console.error("Error parsing server ID:", err);
-    serverId = -1;
+  } else {
+    console.error("No server ID provided in URL");
   }
   
   // Comprehensive debug logging
