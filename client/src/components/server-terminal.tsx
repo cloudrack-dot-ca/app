@@ -38,7 +38,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         background: '#1a1b26',
         foreground: '#a9b1d6',
         cursor: '#f7f7f7',
-        selection: 'rgba(128, 203, 196, 0.3)',
+        selectionBackground: 'rgba(128, 203, 196, 0.3)',
         black: '#32344a',
         red: '#f7768e',
         green: '#9ece6a',

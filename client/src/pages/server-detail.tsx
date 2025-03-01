@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Server as SchemaServer, Volume } from "@shared/schema";
+import ServerTerminal from "@/components/server-terminal";
 
 // Extended Server interface with additional properties for UI display
 interface Server extends SchemaServer {
@@ -859,55 +860,8 @@ export default function ServerDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="relative">
-                <div className="bg-black text-green-400 p-4 h-[400px] rounded-md font-mono overflow-auto">
-                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-green-800">
-                    <span className="text-xs">Connected to {server.name} ({server.ipAddress})</span>
-                    <div className="flex space-x-2">
-                      <span className="animate-pulse text-xs">●</span>
-                      <span className="text-xs">Active connection</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1 mb-4">
-                    <p>Welcome to Ubuntu 22.04.3 LTS</p>
-                    <p>Last login: {new Date().toUTCString()}</p>
-                    <p>System information as of {new Date().toLocaleDateString()}</p>
-                    <p>&nbsp;</p>
-                    <p>System load:  0.8              Users logged in:      1</p>
-                    <p>Usage of /:   25.1% of 24.06GB IPv4 address:         {server.ipAddress}</p>
-                    <p>Memory usage: 18%              Swap usage:           0%</p>
-                    <p>&nbsp;</p>
-                    <p>● System information:        <span className="text-green-200">{server.application || "Generic"}</span></p>
-                    <p>● CPU:                       <span className="text-green-200">{specs.vcpus} vCPU(s)</span></p>
-                    <p>● Memory:                    <span className="text-green-200">{specs.memory / 1024}GB</span></p>
-                    <p>● Disk:                      <span className="text-green-200">{specs.disk}GB SSD</span></p>
-                    <p>&nbsp;</p>
-                    <p>root@{server.name}:~# <span className="animate-pulse">_</span></p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between mt-4">
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Reconnect
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Terminal className="h-4 w-4 mr-2" />
-                      Full Screen
-                    </Button>
-                  </div>
-                  
-                  <Button variant="ghost" size="sm">
-                    <span className="text-xs text-muted-foreground">
-                      Note: This is a simulation. In a production environment, this would be a real terminal connection.
-                    </span>
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-4">
+              {/* SSH Access Section - Moved to Top */}
+              <div className="mb-6">
                 <h3 className="text-lg font-medium mb-2">SSH Access</h3>
                 <p className="text-sm mb-4">Connect to your server via SSH using the following command:</p>
                 <div className="bg-muted p-3 rounded-md font-mono text-sm flex justify-between items-center">
