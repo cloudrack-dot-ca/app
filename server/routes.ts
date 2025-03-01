@@ -1,6 +1,7 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import type { Server as HttpServer } from "http";
+import type { User } from "@shared/schema";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
@@ -10,10 +11,11 @@ import {
   insertVolumeSchema, 
   users, 
   servers,
-  type Server
+  type Server,
+  type IPBan
 } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
-import { insertTicketSchema, insertMessageSchema } from "@shared/schema";
+import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@shared/schema";
 import { db } from "./db";
 
 // Cost constants
@@ -73,9 +75,9 @@ async function checkBalance(userId: number, costInDollars: number) {
 }
 
 // Admin middleware to check if the user is an admin
-function adminMiddleware(req: any, res: any, next: any) {
+function adminMiddleware(req: Request, res: Response, next: NextFunction) {
   if (!req.user) {
-    return res.sendStatus(401);
+    return res.status(401).send();
   }
 
   if (!req.user.isAdmin) {
@@ -179,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       const newBan = await storage.createIPBan({
         ipAddress,
         reason: reason || "Banned by administrator",
-        bannedBy: req.user.id,
+        bannedBy: req.user!.id,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         isActive: true
       });
