@@ -150,7 +150,7 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
                   {volume.size}GB in {regionFlags[volume.region] || volume.region}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Cost: ${(volume.size * (0.00014 + 0.009)).toFixed(5)}/hour
+                  Cost: ${(volume.size * 0.000208333).toFixed(5)}/hour (${(volume.size * 0.15).toFixed(2)}/month)
                 </p>
                 <div className="flex gap-2 mt-4">
                   <TooltipProvider>
@@ -245,10 +245,10 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                New cost: ${(newSize * (0.00014 + 0.009)).toFixed(5)}/hour
+                New cost: ${(newSize * 0.000208333).toFixed(5)}/hour (${(newSize * 0.15).toFixed(2)}/month)
               </p>
               <p className="text-sm text-muted-foreground">
-                Difference: +${((newSize - resizingVolume.size) * (0.00014 + 0.009)).toFixed(5)}/hour
+                Difference: +${((newSize - resizingVolume.size) * 0.000208333).toFixed(5)}/hour (+${((newSize - resizingVolume.size) * 0.15).toFixed(2)}/month)
               </p>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setResizingVolume(null)}>
@@ -311,7 +311,7 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
                     </div>
                   </FormControl>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Cost: ${(volumeSize * (0.00014 + 0.009)).toFixed(5)}/hour
+                    Cost: ${(volumeSize * 0.000208333).toFixed(5)}/hour (${(volumeSize * 0.15).toFixed(2)}/month)
                   </p>
                   <FormMessage />
                 </FormItem>

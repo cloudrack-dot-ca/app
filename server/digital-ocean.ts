@@ -127,7 +127,7 @@ export class DigitalOceanClient {
       vcpus: 1,
       disk: 25,
       transfer: 1000,
-      price_monthly: 5,
+      price_monthly: 7,
       processor_type: 'regular'
     },
     {
@@ -136,7 +136,7 @@ export class DigitalOceanClient {
       vcpus: 1,
       disk: 50,
       transfer: 2000,
-      price_monthly: 10,
+      price_monthly: 12,
       processor_type: 'regular'
     },
     {
@@ -145,7 +145,7 @@ export class DigitalOceanClient {
       vcpus: 2,
       disk: 80,
       transfer: 4000,
-      price_monthly: 20,
+      price_monthly: 22,
       processor_type: 'regular'
     },
     {
@@ -154,7 +154,7 @@ export class DigitalOceanClient {
       vcpus: 4,
       disk: 160,
       transfer: 5000,
-      price_monthly: 40,
+      price_monthly: 42,
       processor_type: 'regular'
     },
     
@@ -165,7 +165,7 @@ export class DigitalOceanClient {
       vcpus: 2,
       disk: 80,
       transfer: 4000,
-      price_monthly: 26,
+      price_monthly: 28,
       processor_type: 'intel'
     },
     {
@@ -174,7 +174,7 @@ export class DigitalOceanClient {
       vcpus: 4,
       disk: 160,
       transfer: 5000,
-      price_monthly: 52,
+      price_monthly: 54,
       processor_type: 'intel'
     },
     {
@@ -183,7 +183,7 @@ export class DigitalOceanClient {
       vcpus: 8,
       disk: 320,
       transfer: 6000,
-      price_monthly: 104,
+      price_monthly: 106,
       processor_type: 'intel'
     },
     
@@ -194,7 +194,7 @@ export class DigitalOceanClient {
       vcpus: 2,
       disk: 80,
       transfer: 4000,
-      price_monthly: 24,
+      price_monthly: 26,
       processor_type: 'amd'
     },
     {
@@ -203,7 +203,7 @@ export class DigitalOceanClient {
       vcpus: 4,
       disk: 160,
       transfer: 5000,
-      price_monthly: 48,
+      price_monthly: 50,
       processor_type: 'amd'
     },
     {
@@ -212,7 +212,7 @@ export class DigitalOceanClient {
       vcpus: 8,
       disk: 320,
       transfer: 6000,
-      price_monthly: 96,
+      price_monthly: 98,
       processor_type: 'amd'
     },
     
