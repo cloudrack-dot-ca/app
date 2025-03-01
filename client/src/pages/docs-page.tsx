@@ -423,28 +423,28 @@ const ArticleViewer = ({ article }: { article: DocArticle | null }) => {
   const formatContent = (content: string) => {
     // Parse headers
     let formattedContent = content
-      .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-6 mb-4">$1</h1>')
-      .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mt-5 mb-3">$1</h2>')
-      .replace(/^### (.*$)/gm, '<h3 class="text-lg font-medium mt-4 mb-2">$1</h3>')
+      .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-6 mb-4 text-foreground">$1</h1>')
+      .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">$1</h2>')
+      .replace(/^### (.*$)/gm, '<h3 class="text-lg font-medium mt-4 mb-2 text-foreground">$1</h3>')
       // Parse code blocks
-      .replace(/```([^`]+)```/g, '<pre class="bg-muted p-3 rounded-md my-4 overflow-x-auto text-sm font-mono">$1</pre>')
-      .replace(/`([^`]+)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm font-mono">$1</code>')
+      .replace(/```([^`]+)```/g, '<pre class="bg-muted p-3 rounded-md my-4 overflow-x-auto text-sm font-mono text-foreground">$1</pre>')
+      .replace(/`([^`]+)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm font-mono text-foreground">$1</code>')
       // Parse lists
-      .replace(/^\s*[\-\*]\s(.*)$/gm, '<li class="ml-4 mb-1">$1</li>')
+      .replace(/^\s*[\-\*]\s(.*)$/gm, '<li class="ml-4 mb-1 text-foreground">$1</li>')
       // Parse paragraphs
       .replace(/^(?!<[hl\d]|<pre|<li)(.*$)/gm, (match) => {
         if (match.trim() === '') return '<br>';
-        return `<p class="mb-3">${match}</p>`;
+        return `<p class="mb-3 text-foreground">${match}</p>`;
       });
 
     return { __html: formattedContent };
   };
 
   return (
-    <div className="prose prose-zinc dark:prose-invert max-w-none">
+    <div className="prose prose-zinc dark:prose-invert max-w-none text-foreground">
       <div className="mb-4 pb-4 border-b flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{article.title}</h1>
+          <h1 className="text-3xl font-bold text-foreground">{article.title}</h1>
           <p className="text-sm text-muted-foreground">Last updated: {article.lastUpdated}</p>
         </div>
         <Button 
@@ -522,7 +522,7 @@ const DocSidebar = ({
           <div key={section.id} className="mb-2">
             <button
               onClick={() => toggleSection(section.id)}
-              className="w-full flex items-center justify-between px-2 py-1.5 text-sm font-medium hover:bg-muted rounded-md transition-colors"
+              className="w-full flex items-center justify-between px-2 py-1.5 text-sm font-medium hover:bg-muted rounded-md transition-colors text-foreground"
             >
               <span>{section.title}</span>
               {expandedSections[section.id] ? 
@@ -538,7 +538,7 @@ const DocSidebar = ({
                     key={article.id}
                     onClick={() => setActiveArticleId(article.id)}
                     className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted rounded-md transition-colors ${
-                      activeArticleId === article.id ? 'bg-muted font-medium' : 'text-muted-foreground'
+                      activeArticleId === article.id ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'
                     }`}
                   >
                     {article.title}
@@ -768,7 +768,7 @@ export default function DocsPage() {
   return (
     <div className="container mx-auto max-w-7xl py-8">
       <div className="flex items-center mb-6">
-        <h1 className="text-3xl font-bold flex items-center">
+        <h1 className="text-3xl font-bold flex items-center text-foreground">
           <Book className="mr-2 h-8 w-8" />
           Documentation
         </h1>
