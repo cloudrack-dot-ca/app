@@ -1,4 +1,4 @@
-import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, serverMetrics, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey, type ServerMetric } from "@shared/schema";
+import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, serverMetrics, ipBans, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey, type ServerMetric, type IPBan, type InsertIPBan } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import session from "express-session";

@@ -96,6 +96,17 @@ export const sshKeys = pgTable("ssh_keys", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Add IP ban functionality
+export const ipBans = pgTable("ip_bans", {
+  id: serial("id").primaryKey(),
+  ipAddress: text("ip_address").notNull().unique(),
+  reason: text("reason"),
+  bannedBy: integer("banned_by").notNull(), // Admin user ID who created the ban
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"), // Optional expiration date, null means permanent
+  isActive: boolean("is_active").notNull().default(true),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -137,6 +148,13 @@ export const insertSSHKeySchema = createInsertSchema(sshKeys).pick({
   publicKey: true,
 });
 
+export const insertIPBanSchema = createInsertSchema(ipBans).pick({
+  ipAddress: true,
+  reason: true,
+}).extend({
+  expiresAt: z.date().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Server = typeof servers.$inferSelect;
@@ -147,3 +165,5 @@ export type SupportTicket = typeof supportTickets.$inferSelect;
 export type SupportMessage = typeof supportMessages.$inferSelect;
 export type InsertSSHKey = z.infer<typeof insertSSHKeySchema>;
 export type SSHKey = typeof sshKeys.$inferSelect;
+export type InsertIPBan = z.infer<typeof insertIPBanSchema>;
+export type IPBan = typeof ipBans.$inferSelect;
