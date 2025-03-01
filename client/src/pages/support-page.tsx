@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { useWebSocket, WebSocketProvider } from "@/hooks/use-websocket";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,17 @@ const regionFlags: { [key: string]: string } = {
   'blr1': '🇮🇳 Bangalore',
 };
 
+// Component for connection status to avoid hooks in render
+function ConnectionStatus() {
+  const { connected } = useWebSocket();
+  return (
+    <div className="flex items-center text-xs text-muted-foreground">
+      <div className={`w-2 h-2 rounded-full mr-1 ${connected ? "bg-green-500" : "bg-red-500"}`}></div>
+      {connected ? "Connected" : "Disconnected"}
+    </div>
+  );
+}
+
 interface TicketDetails {
   ticket: SupportTicket;
   messages: SupportMessage[];
@@ -58,7 +69,7 @@ interface TicketDetails {
 export default function SupportPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { subscribeToTicket, unsubscribeFromTicket, ticketUpdates, connected } = useWebSocket();
+  const { subscribeToTicket, unsubscribeFromTicket, ticketUpdates } = useWebSocket();
   const params = useParams();
   const [location, setLocation] = useLocation();
   const [selectedTicket, setSelectedTicket] = React.useState<number | null>(null);
@@ -482,12 +493,7 @@ export default function SupportPage() {
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-semibold">Conversation</h2>
-              {selectedTicket && (
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <div className={`w-2 h-2 rounded-full mr-1 ${connected ? "bg-green-500" : "bg-red-500"}`}></div>
-                  {connected ? "Connected" : "Disconnected"}
-                </div>
-              )}
+              {selectedTicket && <ConnectionStatus />}
             </div>
             <div className="flex space-x-2">
               {selectedTicketData?.ticket?.status === "open" && (
