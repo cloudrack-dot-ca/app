@@ -57,7 +57,7 @@ export interface Firewall {
 export class CloudRackClient {
   private apiKey: string;
   public useMock: boolean;
-  private apiBaseUrl = 'https://api.cloudrack.com/v2';
+  private apiBaseUrl = 'https://api.digitalocean.com/v2'; // Keep the actual API URL, just rename the class
 
   constructor() {
     this.apiKey = process.env.DIGITAL_OCEAN_API_KEY || '';
