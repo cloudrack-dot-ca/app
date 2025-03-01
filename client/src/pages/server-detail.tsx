@@ -65,13 +65,40 @@ export default function ServerDetailPage() {
   const [newPassword, setNewPassword] = useState("");
   const [ipv6Enabled, setIpv6Enabled] = useState(false);
   
-  // Fetch server details
+  // Fetch server details with explicit queryFn to better handle errors
   const { data: server, isLoading: serverLoading, error: serverError } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
     enabled: !isNaN(serverId) && !!user,
-    retry: 2,
+    retry: 3,
+    retryDelay: 1000,
     staleTime: 30000,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
+    queryFn: async ({ queryKey }) => {
+      console.log("Fetching server details for ID:", serverId, "User:", user?.id);
+      const res = await fetch(queryKey[0] as string, {
+        credentials: "include",
+      });
+      
+      if (!res.ok) {
+        const text = await res.text();
+        console.error(`Server fetch error (${res.status}):`, text);
+        
+        if (res.status === 401) {
+          throw new Error("Authentication required. Please log in again.");
+        } else if (res.status === 404) {
+          throw new Error("Server not found or you don't have access to it.");
+        }
+        
+        try {
+          const json = JSON.parse(text);
+          throw new Error(json.message || json.error || `${res.status}: ${res.statusText}`);
+        } catch (e) {
+          throw new Error(`Error ${res.status}: ${text || res.statusText}`);
+        }
+      }
+      
+      return res.json();
+    }
   });
   
   // Log any server fetch errors to help debug
@@ -218,10 +245,29 @@ export default function ServerDetailPage() {
       <div className="container py-8">
         <div className="text-center">
           <h2 className="text-2xl font-bold">Server not found</h2>
-          <p className="text-muted-foreground mt-2">The requested server could not be found.</p>
-          <Button className="mt-4" onClick={() => navigate("/dashboard")}>
-            Return to Dashboard
-          </Button>
+          <p className="text-muted-foreground mt-2">
+            {serverError 
+              ? `Error: ${(serverError as Error).message}` 
+              : "The requested server could not be found or you don't have permission to access it."}
+          </p>
+          <div className="mt-6 space-y-4">
+            <Button 
+              className="mx-2" 
+              onClick={() => navigate("/dashboard")}
+            >
+              Return to Dashboard
+            </Button>
+            {serverError && (
+              <Button
+                variant="outline"
+                className="mx-2"
+                onClick={() => queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] })}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     );
