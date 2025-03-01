@@ -774,12 +774,19 @@ runcmd:
 
   async deleteDroplet(id: string): Promise<void> {
     if (this.useMock) {
+      console.log(`Mock deletion of droplet ${id} successful`);
       return; // Mock deletion just returns
     }
     
     try {
       await this.apiRequest(`/droplets/${id}`, 'DELETE');
-    } catch (error) {
+    } catch (error: any) {
+      // Check if it's a 404 error, which means the droplet doesn't exist
+      if (error.message && error.message.includes('404 Not Found')) {
+        console.log(`Droplet ${id} not found on DigitalOcean, it may have been already deleted`);
+        return; // Consider a 404 as a successful deletion
+      }
+      
       console.error(`Error deleting droplet ${id}:`, error);
       throw error;
     }

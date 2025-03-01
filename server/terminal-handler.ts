@@ -167,20 +167,33 @@ export function setupTerminalSocket(server: HttpServer) {
           // Log connection attempt with key format info (masked)
           log(`Connecting to ${server.ipAddress} with key in format: ${privateKey.includes('-----BEGIN RSA PRIVATE KEY-----') ? 'RSA PEM' : 'OTHER PEM'}`, 'terminal');
           
-          // Use SSH key authentication with explicit PEM format
-          sshClient.connect({
+          // Determine if we should use password or key-based authentication
+          const connectionConfig: any = {
             host: server.ipAddress,
             port: 22,
             username: 'root',
-            privateKey: privateKey, // Must be in PEM format
-            readyTimeout: 20000, // Extended timeout
-            keepaliveInterval: 10000,
-            tryKeyboard: true, // Try keyboard-interactive auth as fallback
+            readyTimeout: 40000, // Extended timeout even further
+            keepaliveInterval: 5000,
             debug: (message: string) => {
               // Always log SSH debug messages for troubleshooting terminal issues
               log(`SSH Debug: ${message}`, 'terminal');
             }
-          });
+          };
+          
+          // If the server has a root password, use password authentication instead of key
+          if (server.rootPassword) {
+            log(`Using password authentication for server ${server.id}`, 'terminal');
+            connectionConfig.password = server.rootPassword;
+          } else {
+            // Use SSH key authentication with explicit PEM format
+            log(`Using key-based authentication for server ${server.id}`, 'terminal');
+            connectionConfig.privateKey = privateKey;
+          }
+          
+          // Always try keyboard-interactive as fallback
+          connectionConfig.tryKeyboard = true;
+          
+          sshClient.connect(connectionConfig);
         } catch (error: any) {
           log(`SSH connection error: ${error.message}`, 'terminal');
           socket.emit('error', `Failed to connect: ${error.message}`);
