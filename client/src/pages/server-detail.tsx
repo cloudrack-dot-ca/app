@@ -1177,30 +1177,15 @@ export default function ServerDetailPage() {
                   </Button>
                 </div>
                 
-                {/* SSH Keys and Password Information */}
-                <div className="mt-4 grid md:grid-cols-2 gap-4">
-                  <div className="bg-card border rounded-md p-4">
-                    <h4 className="text-sm font-medium mb-2">SSH Key Authentication</h4>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      SSH keys provide secure passwordless authentication to your server.
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate("/ssh-keys")}
-                    >
-                      <Key className="h-4 w-4 mr-2" />
-                      Manage SSH Keys
-                    </Button>
-                  </div>
-                  
+                {/* Password Authentication */}
+                <div className="mt-4">
                   <div className="bg-card border rounded-md p-4">
                     <h4 className="text-sm font-medium mb-2">Password Authentication</h4>
                     
                     <p className="text-xs text-muted-foreground mb-2">
                       {isEditingPassword 
                         ? "Enter a new root password for your server."
-                        : "You can use a password to access your server via SSH or the web console."}
+                        : "Your root password is used to access your server via SSH or the web terminal. Keep it secure."}
                     </p>
                     
                     {isEditingPassword ? (
