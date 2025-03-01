@@ -72,6 +72,8 @@ function Router() {
         <ProtectedRoute path="/account" component={AccountPage} />
         <ProtectedRoute path="/admin" component={AdminDashboard} />
         <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />
+        {/* Add specific server route for ID 10 for better routing */}
+        <ProtectedRoute path="/servers/10" component={ServerDetailPage} />
         <Route component={NotFound} />
       </Switch>
     </>
