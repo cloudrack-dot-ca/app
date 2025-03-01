@@ -487,7 +487,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[160px]">
-                {[8, 10, 12, 13, 14, 15, 16, 18, 20, 22, 24].map((size) => (
+                {[8, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24].map((size) => (
                   <DropdownMenuItem
                     key={size}
                     onClick={() => changeFontSize(size)}
