@@ -269,7 +269,10 @@ QEpmj5pJcQuC8/8zEpP5QGl1A3wsm0z/gmN4TKhfv4pOfTMeD4dJbA==
     try {
       if (fs.existsSync(this.publicKeyPath)) {
         this.publicKeyContent = fs.readFileSync(this.publicKeyPath, 'utf8').trim();
-        console.log(`Loaded CloudRack public key: ${this.publicKeyContent?.substring(0, 30)}...`);
+        // Only log if this is the first time we're loading the key
+        if (!this.initialized) {
+          console.log(`Loaded CloudRack public key: ${this.publicKeyContent?.substring(0, 30)}...`);
+        }
       } else {
         console.warn('CloudRack public key file not found:', this.publicKeyPath);
       }
