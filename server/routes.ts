@@ -510,23 +510,27 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         // Continue without CloudRack key if it fails - we'll add it later
       }
       
-      // Add the system SSH key to ensure server access
+      // Add the system SSH key to ensure server access 
+      // This is CRITICAL for web terminal access
       try {
+        console.log(`[KEY-MANAGER] Ensuring system SSH key exists for user ${req.user.id}`);
         // Ensure the user has the system key (create if not exists)
         const systemKeyId = await systemKeyManager.ensureSystemKey(req.user.id);
         
         if (systemKeyId) {
-          console.log(`[DEBUG] Adding system key ID: ${systemKeyId}`);
+          console.log(`[KEY-MANAGER] ✅ Adding system key ID: ${systemKeyId} to server creation`);
           // Make sure not to add duplicate keys
           if (!sshKeys.includes(systemKeyId)) {
             sshKeys.push(systemKeyId);
-            console.log(`[DEBUG] System key added to server creation request`);
+            console.log(`[KEY-MANAGER] ✅ System key added to server creation request - will be installed on the VPS`);
+          } else {
+            console.log(`[KEY-MANAGER] ⚠️ System key was already in the SSH keys list`);
           }
         } else {
-          console.log(`[DEBUG] Failed to add system key`);
+          console.log(`[KEY-MANAGER] ❌ Failed to add system key - terminal access may be limited`);
         }
       } catch (systemKeyError) {
-        console.error(`[ERROR] Error adding system key: ${systemKeyError}`);
+        console.error(`[KEY-MANAGER] ❌ Error adding system key: ${systemKeyError}`);
         // Continue without system key if it fails
       }
       

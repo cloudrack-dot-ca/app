@@ -76,16 +76,21 @@ export function SystemKeyNotice() {
     return (
       <Alert className="mb-6 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
         <Key className="h-4 w-4 text-green-600 dark:text-green-400" />
-        <AlertTitle className="text-green-700 dark:text-green-300">System Key is Active</AlertTitle>
+        <AlertTitle className="text-green-700 dark:text-green-300">System Access Key is Active</AlertTitle>
         <AlertDescription className="text-green-600/90 dark:text-green-400/90">
           <p>
-            Your account has the system SSH key properly configured. This key is automatically added 
-            to any new servers you create, ensuring you always have access.
+            Your account has the CloudRack system SSH key properly configured. During server creation, this key is 
+            automatically added to your new VPS instances, allowing secure web terminal access without requiring 
+            passwords.
           </p>
           <p className="mt-2">
             <span className="font-mono text-xs bg-green-100 dark:bg-green-900/30 px-1 rounded">
               Fingerprint: {systemKeyStatus.fingerprint}
             </span>
+          </p>
+          <p className="mt-2 text-sm">
+            <strong>Security note:</strong> This key is stored securely on CloudRack's servers and is used exclusively 
+            to provide you with web terminal access to your VPS instances.
           </p>
           <div className="mt-3">
             <Button 
@@ -111,11 +116,16 @@ export function SystemKeyNotice() {
   return (
     <Alert className="mb-6 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
       <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-      <AlertTitle className="text-amber-700 dark:text-amber-300">System Key Missing</AlertTitle>
+      <AlertTitle className="text-amber-700 dark:text-amber-300">System Access Key Missing</AlertTitle>
       <AlertDescription className="text-amber-600/90 dark:text-amber-400/90">
         <p>
-          Your account is missing the CloudRack system SSH key. This key ensures access to your VPS servers.
-          It's recommended to add this key to your account for full system compatibility.
+          Your account is missing the CloudRack system SSH key. This key is essential for web terminal 
+          access to your VPS servers and is automatically added during server creation to enable 
+          password-less authentication.
+        </p>
+        <p className="mt-2">
+          <strong>Why it's important:</strong> Without this key, you may experience difficulty accessing 
+          your servers through the CloudRack web terminal, requiring manual setup of alternative access methods.
         </p>
         <p className="mt-2">
           <span className="font-mono text-xs bg-amber-100 dark:bg-amber-900/30 px-1 rounded">
