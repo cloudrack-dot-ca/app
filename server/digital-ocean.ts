@@ -570,9 +570,9 @@ runcmd:
 `;
       }
       
-      const response = await this.apiRequest<{ server: any }>('/servers', 'POST', dropletData);
+      const response = await this.apiRequest<{ server: any }>('/servers', 'POST', serverData);
       
-      // In real API, the droplet is being created asynchronously, 
+      // In real API, the server is being created asynchronously, 
       // so we need to poll for the IP address
       let ipAddress = null;
       let ipv6Address = null;
@@ -582,7 +582,7 @@ runcmd:
         await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
         
         const serverDetails = await this.apiRequest<{ server: any }>(
-          `/servers/${response.server ? response.server.id : response.droplet.id}`
+          `/servers/${response.server.id}`
         );
         
         // Extract IP addresses from networks
@@ -603,12 +603,12 @@ runcmd:
       }
       
       return {
-        id: response.server ? response.server.id.toString() : response.droplet.id.toString(),
+        id: response.server.id.toString(),
         ip_address: ipAddress || 'pending',
         ...(options.ipv6 && ipv6Address ? { ipv6_address: ipv6Address } : {})
       };
     } catch (error) {
-      console.error('Error creating droplet:', error);
+      console.error('Error creating server:', error);
       throw error;
     }
   }
@@ -690,7 +690,7 @@ runcmd:
       
       // If this is a 409 Conflict error, it could be because the volume is still attached
       if (error.message && error.message.includes('409 Conflict')) {
-        console.warn(`Volume ${id} may still be attached to a droplet. Will proceed with local deletion.`);
+        console.warn(`Volume ${id} may still be attached to a server. Will proceed with local deletion.`);
       } else {
         throw error;
       }
@@ -705,7 +705,7 @@ runcmd:
   }
 
   async performDropletAction(
-    dropletId: string, 
+    serverId: string, 
     action: 'power_on' | 'power_off' | 'reboot' | 'enable_ipv6'
   ): Promise<void> {
     if (this.useMock) {
@@ -788,7 +788,7 @@ runcmd:
     }
   }
 
-  async getServerMetrics(dropletId: string): Promise<any> {
+  async getServerMetrics(serverId: string): Promise<any> {
     // Always generate mock metrics for consistency and to avoid CloudRack API errors 
     // since we're in development and the API may not be fully integrated
     return this.generateMockMetrics();
