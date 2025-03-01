@@ -176,6 +176,25 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.sendStatus(404);
       }
       
+      // Load the server password from the database - this is stored in the Extended Server record
+      // This is necessary to correctly pass rootPassword for SSH terminals
+      try {
+        const extendedServer = await db.query.servers.findFirst({
+          where: eq(schema.servers.id, serverId)
+        });
+        
+        if (extendedServer && extendedServer.rootPassword) {
+          // Include the rootPassword in the response
+          return res.json({
+            ...server,
+            rootPassword: extendedServer.rootPassword
+          });
+        }
+      } catch (dbError) {
+        console.warn('Failed to fetch extended server details:', dbError);
+        // Continue with standard response if we can't get extended details
+      }
+      
       res.json(server);
     } catch (error) {
       res.status(500).json({ message: (error as Error).message });
