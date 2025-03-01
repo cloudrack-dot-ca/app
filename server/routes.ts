@@ -164,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
       const auth = req.body.auth || {};
 
-      // Create the actual droplet via DigitalOcean API
+      // Create the actual droplet via CloudRack API
       let droplet;
       try {
         droplet = await digitalOcean.createDroplet({
@@ -172,12 +172,12 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           region: parsed.data.region,
           size: parsed.data.size,
           application: parsed.data.application,
-          // Pass authentication details to DigitalOcean
+          // Pass authentication details to CloudRack
           ssh_keys: auth.type === "ssh" ? [auth.value] : undefined,
           password: auth.type === "password" ? auth.value : undefined,
         });
       } catch (error) {
-        throw new Error(`Failed to create server with DigitalOcean: ${(error as Error).message}`);
+        throw new Error(`Failed to create server with CloudRack: ${(error as Error).message}`);
       }
 
       const server = await storage.createServer({
