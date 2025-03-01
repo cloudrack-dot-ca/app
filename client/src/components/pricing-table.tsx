@@ -32,23 +32,31 @@ export default function PricingTable() {
   const processorTypeInfo = {
     regular: {
       label: "Standard SSD",
-      description: "Balanced performance for general workloads",
-      color: "default"
+      description: "Balanced performance for general workloads with reliable SSD storage",
+      color: "default",
+      bgColor: "bg-gray-600",
+      textColor: "text-blue-400"
     },
     intel: {
       label: "Intel Optimized",
-      description: "Enhanced performance for CPU-intensive tasks with Intel processors",
-      color: "blue"
+      description: "Enhanced performance for CPU-intensive tasks with Intel Xeon processors",
+      color: "blue",
+      bgColor: "bg-blue-600",
+      textColor: "text-blue-400"
     },
     amd: {
       label: "AMD EPYC",
       description: "High performance and efficiency with AMD EPYC processors",
-      color: "red"
+      color: "red",
+      bgColor: "bg-red-600",
+      textColor: "text-red-400"
     },
     gpu: {
       label: "GPU Accelerated",
-      description: "NVIDIA GPU accelerated instances for AI and rendering",
-      color: "green"
+      description: "NVIDIA GPU accelerated instances for AI, rendering and machine learning",
+      color: "green",
+      bgColor: "bg-green-600",
+      textColor: "text-green-400"
     }
   };
 
@@ -61,19 +69,10 @@ export default function PricingTable() {
           
           return (
             <Card key={size.slug} className="overflow-hidden border-2 hover:border-primary transition-all duration-200">
-              {processorType !== "regular" && (
-                <div className={`${
-                  processorInfo.color === "blue" 
-                    ? "bg-blue-600" 
-                    : processorInfo.color === "red" 
-                    ? "bg-red-600" 
-                    : processorInfo.color === "green" 
-                    ? "bg-green-600" 
-                    : "bg-gray-600"
-                } text-white text-xs font-medium py-1 px-3 text-center`}>
-                  {processorInfo.label}
-                </div>
-              )}
+              {/* Processor type banner */}
+              <div className={`${processorInfo.bgColor} text-white text-xs font-medium py-1 px-3 text-center`}>
+                {processorInfo.label}
+              </div>
               <CardHeader>
                 <CardTitle className="text-2xl">
                   {size.memory / 1024}GB
@@ -89,7 +88,7 @@ export default function PricingTable() {
                   </span>
                 </p>
                 <div className="flex items-center space-x-2 mb-3">
-                  <Cpu className="h-4 w-4 text-muted-foreground" />
+                  <Cpu className={`h-4 w-4 ${processorInfo.textColor}`} />
                   <span className="text-sm">{processorInfo.label}</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
