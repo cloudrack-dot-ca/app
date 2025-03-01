@@ -114,16 +114,23 @@ export function setupTerminalSocket(server: HttpServer) {
             throw new Error('Server IP address is not available');
           }
           
+          // Log connection attempt for debugging
+          log(`Attempting SSH connection to ${server.ipAddress} for server ${server.id}`, 'terminal');
+          
+          // Get the root password or use a fallback if not available
+          // In production, we would use SSH keys instead of passwords
+          const password = server.rootPassword || 'defaultrootpassword';
+          
           sshClient.connect({
             host: server.ipAddress,
             port: 22,
             username: 'root',
-            // Use password for now, but ideally this would use SSH keys
-            password: server.rootPassword || 'defaultpassword',
-            // Alternatively, use private key
-            // privateKey: require('fs').readFileSync('/path/to/private/key')
-            readyTimeout: 10000,
-            keepaliveInterval: 10000
+            password: password,
+            readyTimeout: 15000,
+            keepaliveInterval: 10000,
+            debug: (message: string) => {
+              log(`SSH Debug: ${message}`, 'terminal');
+            }
           });
         } catch (error: any) {
           log(`SSH connection error: ${error.message}`, 'terminal');
@@ -141,7 +148,12 @@ export function setupTerminalSocket(server: HttpServer) {
       // Handle resize events
       socket.on('resize', (data: { rows: number, cols: number }) => {
         if (sshStream) {
-          sshStream.setWindow(data.rows, data.cols, 480, 640);
+          try {
+            // Use proper SSH window size parameters
+            sshStream.setWindow(data.rows, data.cols, data.cols * 8, data.rows * 10);
+          } catch (err) {
+            log(`Terminal resize error: ${err}`, 'terminal');
+          }
         }
       });
       

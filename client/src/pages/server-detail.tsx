@@ -959,7 +959,7 @@ export default function ServerDetailPage() {
                     <span className="text-sm font-medium">Terminal Access</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    This is an interactive terminal with basic command simulation. For full functionality, use SSH access.
+                    This is a real SSH terminal with full Linux command support. No need for external SSH clients.
                   </p>
                 </div>
                 
