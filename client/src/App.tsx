@@ -65,42 +65,26 @@ function Nav() {
   );
 }
 
-// Footer component with CloudRack branding
-function Footer() {
-  return (
-    <footer className="mt-auto border-t py-4">
-      <div className="container mx-auto px-4 flex justify-center items-center">
-        <p className="text-sm text-muted-foreground">
-          CloudRack 2025 Powered By Repl.it
-        </p>
-      </div>
-    </footer>
-  );
-}
-
 function Router() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <>
       <Nav />
-      <div className="flex-1">
-        <Switch>
-          <Route path="/" component={HomePage} />
-          <Route path="/auth" component={AuthPage} />
-          <ProtectedRoute path="/dashboard" component={Dashboard} />
-          <ProtectedRoute path="/volumes" component={VolumesPage} />
-          <ProtectedRoute path="/billing" component={BillingPage} />
-          <ProtectedRoute path="/support" component={SupportPage} />
-          <ProtectedRoute path="/support/:id" component={SupportPage} />
-          <ProtectedRoute path="/ssh-keys" component={SSHKeysPage} />
-          <ProtectedRoute path="/account" component={AccountPage} />
-          <ProtectedRoute path="/admin" component={AdminDashboard} />
-          {/* Make sure this is the only server route to avoid conflicts */}
-          <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />
-          <Route component={NotFound} />
-        </Switch>
-      </div>
-      <Footer />
-    </div>
+      <Switch>
+        <Route path="/" component={HomePage} />
+        <Route path="/auth" component={AuthPage} />
+        <ProtectedRoute path="/dashboard" component={Dashboard} />
+        <ProtectedRoute path="/volumes" component={VolumesPage} />
+        <ProtectedRoute path="/billing" component={BillingPage} />
+        <ProtectedRoute path="/support" component={SupportPage} />
+        <ProtectedRoute path="/support/:id" component={SupportPage} />
+        <ProtectedRoute path="/ssh-keys" component={SSHKeysPage} />
+        <ProtectedRoute path="/account" component={AccountPage} />
+        <ProtectedRoute path="/admin" component={AdminDashboard} />
+        {/* Make sure this is the only server route to avoid conflicts */}
+        <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </>
   );
 }
 

@@ -53,7 +53,7 @@ async function deductHourlyServerCosts() {
     const user = await storage.getUser(server.userId);
     if (!user || user.balance < 100) { // Less than $1
       // If user can't pay, delete the server
-      await digitalOcean.deleteServer(server.dropletId);
+      await digitalOcean.deleteDroplet(server.dropletId);
       await storage.deleteServer(server.id);
       continue;
     }
@@ -164,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
       const auth = req.body.auth || {};
 
-      // Create the actual droplet via CloudRack API
+      // Create the actual droplet via DigitalOcean API
       let droplet;
       try {
         droplet = await digitalOcean.createDroplet({
@@ -172,12 +172,12 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           region: parsed.data.region,
           size: parsed.data.size,
           application: parsed.data.application,
-          // Pass authentication details to CloudRack
+          // Pass authentication details to DigitalOcean
           ssh_keys: auth.type === "ssh" ? [auth.value] : undefined,
           password: auth.type === "password" ? auth.value : undefined,
         });
       } catch (error) {
-        throw new Error(`Failed to create server with CloudRack: ${(error as Error).message}`);
+        throw new Error(`Failed to create server with DigitalOcean: ${(error as Error).message}`);
       }
 
       const server = await storage.createServer({
@@ -222,12 +222,12 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       return res.sendStatus(404);
     }
 
-    // Delete the server from CloudRack
+    // Delete the server from DigitalOcean
     try {
-      await digitalOcean.deleteServer(server.dropletId);
+      await digitalOcean.deleteDroplet(server.dropletId);
     } catch (error) {
-      console.warn(`Failed to delete server ${server.dropletId} from CloudRack, but proceeding with local deletion:`, error);
-      // Continue with deletion even if the CloudRack API call fails
+      console.warn(`Failed to delete droplet ${server.dropletId} from DigitalOcean, but proceeding with local deletion:`, error);
+      // Continue with deletion even if the DigitalOcean API call fails
       // This allows us to clean up orphaned records in our database
     }
 
@@ -293,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
     }
 
-    // Create the volume in CloudRack with error handling
+    // Create the volume in DigitalOcean with error handling
     let doVolume;
     try {
       doVolume = await digitalOcean.createVolume({
@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
     } catch (error: any) {
       return res.status(400).json({ 
-        message: error.message || "Failed to create volume in CloudRack. Please try again with a different name."
+        message: error.message || "Failed to create volume in DigitalOcean. Please try again with a different name."
       });
     }
 
@@ -373,8 +373,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Now try to delete the volume
       await digitalOcean.deleteVolume(volume.volumeId);
     } catch (error) {
-      console.warn(`Failed to delete volume ${volume.volumeId} from CloudRack, but proceeding with local deletion:`, error);
-      // Continue with deletion even if the CloudRack API call fails
+      console.warn(`Failed to delete volume ${volume.volumeId} from DigitalOcean, but proceeding with local deletion:`, error);
+      // Continue with deletion even if the DigitalOcean API call fails
     }
     
     await storage.deleteVolume(volume.id);
@@ -693,7 +693,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
 
     try {
-      // Call the CloudRack client to reboot the droplet
+      // Call the DigitalOcean client to reboot the droplet
       await digitalOcean.performDropletAction(server.dropletId, "reboot");
       
       // Update server status
@@ -728,13 +728,13 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
 
     try {
-      // Determine the CloudRack API action and new status
-      const cloudAction = action === "start" ? "power_on" : "power_off";
+      // Determine the DO API action and new status
+      const doAction = action === "start" ? "power_on" : "power_off";
       const newStatus = action === "start" ? "active" : "off";
       const transitionStatus = action === "start" ? "starting" : "stopping";
       
-      // Call CloudRack API
-      await digitalOcean.performDropletAction(server.dropletId, cloudAction as any);
+      // Call DigitalOcean API
+      await digitalOcean.performDropletAction(server.dropletId, doAction as any);
       
       // Update server status to transition state first
       let updatedServer = await storage.updateServer(server.id, { status: transitionStatus });
@@ -794,7 +794,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       
       // Only need to call the API if enabling IPv6
       if (enabled) {
-        // Call CloudRack API to enable IPv6
+        // Call DigitalOcean API to enable IPv6
         await digitalOcean.performDropletAction(server.dropletId, "enable_ipv6");
         
         // Generate a fake IPv6 address - in a real implementation this would be retrieved from the API
@@ -888,19 +888,19 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       const latestMetric = await storage.getLatestServerMetric(serverId);
 
       if (!latestMetric) {
-        // If no metrics exist, fetch from CloudRack and create a new one
-        const cloudMetrics = await digitalOcean.getServerMetrics(server.dropletId);
+        // If no metrics exist, fetch from DigitalOcean and create a new one
+        const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
         
         // Convert to our metric format
         const newMetric = {
           serverId,
-          cpuUsage: Math.round(cloudMetrics.cpu),
-          memoryUsage: Math.round(cloudMetrics.memory),
-          diskUsage: Math.round(cloudMetrics.disk),
-          networkIn: cloudMetrics.network_in,
-          networkOut: cloudMetrics.network_out,
-          loadAverage: cloudMetrics.load_average,
-          uptimeSeconds: cloudMetrics.uptime_seconds,
+          cpuUsage: Math.round(doMetrics.cpu),
+          memoryUsage: Math.round(doMetrics.memory),
+          diskUsage: Math.round(doMetrics.disk),
+          networkIn: doMetrics.network_in,
+          networkOut: doMetrics.network_out,
+          loadAverage: doMetrics.load_average,
+          uptimeSeconds: doMetrics.uptime_seconds,
           timestamp: new Date()
         };
         
@@ -918,19 +918,19 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Check if we need to refresh the metrics (if older than 5 minutes)
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       if (latestMetric.timestamp < fiveMinutesAgo) {
-        // Fetch fresh metrics from CloudRack
-        const cloudMetrics = await digitalOcean.getServerMetrics(server.dropletId);
+        // Fetch fresh metrics from DigitalOcean
+        const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
         
         // Convert to our metric format and save
         const newMetric = {
           serverId,
-          cpuUsage: Math.round(cloudMetrics.cpu),
-          memoryUsage: Math.round(cloudMetrics.memory),
-          diskUsage: Math.round(cloudMetrics.disk),
-          networkIn: cloudMetrics.network_in,
-          networkOut: cloudMetrics.network_out,
-          loadAverage: cloudMetrics.load_average,
-          uptimeSeconds: cloudMetrics.uptime_seconds,
+          cpuUsage: Math.round(doMetrics.cpu),
+          memoryUsage: Math.round(doMetrics.memory),
+          diskUsage: Math.round(doMetrics.disk),
+          networkIn: doMetrics.network_in,
+          networkOut: doMetrics.network_out,
+          loadAverage: doMetrics.load_average,
+          uptimeSeconds: doMetrics.uptime_seconds,
           timestamp: new Date()
         };
         
@@ -988,11 +988,11 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.sendStatus(404);
       }
 
-      // Fetch fresh server details from CloudRack to update IP addresses
+      // Fetch fresh server details from DigitalOcean to update IP addresses
       try {
-        // Define the type for CloudRack server response
-        interface CloudRackServerResponse {
-          server: {
+        // Define the type for DigitalOcean droplet response
+        interface DigitalOceanDropletResponse {
+          droplet: {
             id: number;
             status: string;
             networks: {
@@ -1008,13 +1008,13 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           };
         }
 
-        // Fetch server details with proper typing
-        const serverDetails = await digitalOcean.apiRequest<CloudRackServerResponse>(
-          `/servers/${server.dropletId}`
+        // Fetch droplet details with proper typing
+        const dropletDetails = await digitalOcean.apiRequest<DigitalOceanDropletResponse>(
+          `/droplets/${server.dropletId}`
         );
         
         // Update server with latest IP information if available
-        if (serverDetails?.server && serverDetails.server.networks) {
+        if (dropletDetails?.droplet && dropletDetails.droplet.networks) {
           // Create server update data object with proper typing to avoid confusion with Node's http.Server
           const serverUpdateData = { 
             lastMonitored: new Date() 
@@ -1026,9 +1026,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           };
           
           // Update IPv4 address
-          if (serverDetails.server.networks.v4 && serverDetails.server.networks.v4.length > 0) {
-            const publicIp = serverDetails.server.networks.v4.find(
-              (network: {ip_address: string; type: string}) => network.type === 'public'
+          if (dropletDetails.droplet.networks.v4 && dropletDetails.droplet.networks.v4.length > 0) {
+            const publicIp = dropletDetails.droplet.networks.v4.find(
+              (network) => network.type === 'public'
             );
             if (publicIp) {
               serverUpdateData.ipAddress = publicIp.ip_address;
@@ -1036,13 +1036,13 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           }
           
           // Update IPv6 address
-          if (serverDetails.server.networks.v6 && serverDetails.server.networks.v6.length > 0) {
-            serverUpdateData.ipv6Address = serverDetails.server.networks.v6[0].ip_address;
+          if (dropletDetails.droplet.networks.v6 && dropletDetails.droplet.networks.v6.length > 0) {
+            serverUpdateData.ipv6Address = dropletDetails.droplet.networks.v6[0].ip_address;
           }
           
           // Update server status
-          if (serverDetails.server.status) {
-            serverUpdateData.status = serverDetails.server.status;
+          if (dropletDetails.droplet.status) {
+            serverUpdateData.status = dropletDetails.droplet.status;
           }
           
           await storage.updateServer(serverId, serverUpdateData);
@@ -1052,19 +1052,19 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         // Continue with metrics even if IP update fails
       }
 
-      // Fetch fresh metrics from CloudRack
-      const cloudMetrics = await digitalOcean.getServerMetrics(server.dropletId);
+      // Fetch fresh metrics from DigitalOcean
+      const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
       
       // Convert to our metric format and save
       const newMetric = {
         serverId,
-        cpuUsage: Math.round(cloudMetrics.cpu),
-        memoryUsage: Math.round(cloudMetrics.memory),
-        diskUsage: Math.round(cloudMetrics.disk),
-        networkIn: cloudMetrics.network_in,
-        networkOut: cloudMetrics.network_out,
-        loadAverage: cloudMetrics.load_average,
-        uptimeSeconds: cloudMetrics.uptime_seconds,
+        cpuUsage: Math.round(doMetrics.cpu),
+        memoryUsage: Math.round(doMetrics.memory),
+        diskUsage: Math.round(doMetrics.disk),
+        networkIn: doMetrics.network_in,
+        networkOut: doMetrics.network_out,
+        loadAverage: doMetrics.load_average,
+        uptimeSeconds: doMetrics.uptime_seconds,
         timestamp: new Date()
       };
       

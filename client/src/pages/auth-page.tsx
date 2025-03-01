@@ -27,7 +27,7 @@ export default function AuthPage() {
       <div className="flex-1 p-8 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Welcome to CloudRack</CardTitle>
+            <CardTitle>Welcome to CloudHost</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login">
@@ -50,7 +50,7 @@ export default function AuthPage() {
           <Server className="h-16 w-16 mx-auto mb-6 text-primary" />
           <h2 className="text-3xl font-bold mb-4">Cloud VPS Hosting</h2>
           <p className="text-muted-foreground">
-            Deploy your applications on high-performance virtual servers powered by CloudRack.
+            Deploy your applications on high-performance virtual servers powered by DigitalOcean.
             Choose from multiple locations worldwide and scale your infrastructure with ease.
           </p>
         </div>

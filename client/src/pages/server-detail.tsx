@@ -182,24 +182,24 @@ export default function ServerDetailPage() {
 
   const updatePasswordMutation = useMutation({
     mutationFn: async (password: string) => {
-      // Updated to specifically mention CloudRack integration
+      // Updated to specifically mention DigitalOcean integration
       return await apiRequest("PATCH", `/api/servers/${serverId}/password`, { 
         password,
-        digital_ocean_integration: true  // Flag to indicate we're using CloudRack API for this
+        digital_ocean_integration: true  // Flag to indicate we're using DigitalOcean API for this
       });
     },
     onSuccess: () => {
       toast({
-        title: "Password Updated via CloudRack",
-        description: "Your server password has been updated through the CloudRack API and will be effective immediately.",
+        title: "Password Updated via DigitalOcean",
+        description: "Your server password has been updated through the DigitalOcean API and will be effective immediately.",
       });
       setIsEditingPassword(false);
       setNewPassword("");
     },
     onError: (error: Error) => {
       toast({
-        title: "CloudRack API Error",
-        description: error.message || "Failed to update password through CloudRack API. Please try again.",
+        title: "Digital Ocean API Error",
+        description: error.message || "Failed to update password through DigitalOcean API. Please try again.",
         variant: "destructive",
       });
     }

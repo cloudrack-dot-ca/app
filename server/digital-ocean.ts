@@ -1,11 +1,6 @@
 import { Server, Volume } from "@shared/schema";
 import fetch from 'node-fetch';
 
-/**
- * CloudRack API Interfaces
- * These interfaces define the structure of data returned by the CloudRack API
- */
-
 export interface Region {
   slug: string;
   name: string;
@@ -31,21 +26,17 @@ export interface Application {
   type: string;
 }
 
-/**
- * CloudRack API Client
- * This class provides methods to interact with the CloudRack API for managing
- * cloud infrastructure including virtual servers, volumes, and applications.
- */
-export class CloudRackClient {
+// Support both mock and real DigitalOcean API
+export class DigitalOceanClient {
   private apiKey: string;
   private useMock: boolean;
-  private apiBaseUrl = 'https://api.cloudrack.com/v2'; // CloudRack API endpoint
+  private apiBaseUrl = 'https://api.digitalocean.com/v2';
 
   constructor() {
-    this.apiKey = process.env.CLOUDRACK_API_KEY || '';
+    this.apiKey = process.env.DIGITAL_OCEAN_API_KEY || '';
     this.useMock = !this.apiKey;
     if (this.useMock) {
-      console.log('CloudRack API available, but using mock applications data for consistency');
+      console.warn('DigitalOcean API key not found. Using mock data.');
     }
   }
 
@@ -404,9 +395,9 @@ export class CloudRackClient {
         try {
           const errorText = await response.text();
           const errorJson = errorText ? JSON.parse(errorText) : {};
-          throw new Error(`CloudRack API Error: ${JSON.stringify(errorJson)}`);
+          throw new Error(`DigitalOcean API Error: ${JSON.stringify(errorJson)}`);
         } catch (parseError) {
-          throw new Error(`CloudRack API Error: ${response.status} ${response.statusText}`);
+          throw new Error(`DigitalOcean API Error: ${response.status} ${response.statusText}`);
         }
       }
 
@@ -426,7 +417,7 @@ export class CloudRackClient {
         return {} as T;
       }
     } catch (error) {
-      console.error(`Error in CloudRack API request to ${endpoint}:`, error);
+      console.error(`Error in DigitalOcean API request to ${endpoint}:`, error);
       throw error;
     }
   }
@@ -489,27 +480,15 @@ export class CloudRackClient {
     }
     
     try {
-      // In a real implementation, we would fetch from the CloudRack API
-      // Due to complex structure of the API for applications, we'll use mock data
+      // In a real implementation, we would fetch from the DigitalOcean API
+      // Due to complex structure of DO's API for applications, we'll use mock data
       // instead of trying to parse their complex response format
-      console.log('CloudRack API available, but using mock applications data for consistency');
+      console.log('DigitalOcean API available, but using mock applications data for consistency');
       return this.mockApplications;
     } catch (error) {
       console.error('Error fetching applications, falling back to mock data:', error);
       return this.mockApplications;
     }
-  }
-
-  async createServer(options: {
-    name: string;
-    region: string;
-    size: string;
-    application?: string;
-    ssh_keys?: string[];
-    password?: string;
-    ipv6?: boolean;
-  }): Promise<{ id: string; ip_address: string; ipv6_address?: string }> {
-    return this.createDroplet(options); // For backward compatibility
   }
 
   async createDroplet(options: {
@@ -522,7 +501,7 @@ export class CloudRackClient {
     ipv6?: boolean;
   }): Promise<{ id: string; ip_address: string; ipv6_address?: string }> {
     if (this.useMock) {
-      // Mock server creation with optional IPv6
+      // Mock droplet creation with optional IPv6
       const mockResponse = {
         id: Math.random().toString(36).substring(7),
         ip_address: `${Math.floor(Math.random() * 256)}.${Math.floor(
@@ -543,8 +522,8 @@ export class CloudRackClient {
     }
     
     try {
-      // Prepare server creation data
-      const serverData: any = {
+      // Prepare droplet creation data
+      const dropletData: any = {
         name: options.name,
         region: options.region,
         size: options.size,
@@ -558,7 +537,7 @@ export class CloudRackClient {
       if (options.password) {
         // This more comprehensive cloud-init script properly sets the password
         // and ensures SSH password authentication is enabled
-        serverData.user_data = `#cloud-config
+        dropletData.user_data = `#cloud-config
 password: ${options.password}
 chpasswd: { expire: False }
 ssh_pwauth: True
@@ -570,9 +549,9 @@ runcmd:
 `;
       }
       
-      const response = await this.apiRequest<{ server: any }>('/servers', 'POST', serverData);
+      const response = await this.apiRequest<{ droplet: any }>('/droplets', 'POST', dropletData);
       
-      // In real API, the server is being created asynchronously, 
+      // In real API, the droplet is being created asynchronously, 
       // so we need to poll for the IP address
       let ipAddress = null;
       let ipv6Address = null;
@@ -581,13 +560,13 @@ runcmd:
       while ((!ipAddress || (options.ipv6 && !ipv6Address)) && attempts < 20) {
         await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
         
-        const serverDetails = await this.apiRequest<{ server: any }>(
-          `/servers/${response.server.id}`
+        const dropletDetails = await this.apiRequest<{ droplet: any }>(
+          `/droplets/${response.droplet.id}`
         );
         
         // Extract IP addresses from networks
-        if (serverDetails.server.networks?.v4?.length > 0) {
-          const publicIp = serverDetails.server.networks.v4.find(
+        if (dropletDetails.droplet.networks?.v4?.length > 0) {
+          const publicIp = dropletDetails.droplet.networks.v4.find(
             (network: any) => network.type === 'public'
           );
           if (publicIp) {
@@ -595,20 +574,20 @@ runcmd:
           }
         }
         
-        if (options.ipv6 && serverDetails.server.networks?.v6?.length > 0) {
-          ipv6Address = serverDetails.server.networks.v6[0].ip_address;
+        if (options.ipv6 && dropletDetails.droplet.networks?.v6?.length > 0) {
+          ipv6Address = dropletDetails.droplet.networks.v6[0].ip_address;
         }
         
         attempts++;
       }
       
       return {
-        id: response.server.id.toString(),
+        id: response.droplet.id.toString(),
         ip_address: ipAddress || 'pending',
         ...(options.ipv6 && ipv6Address ? { ipv6_address: ipv6Address } : {})
       };
     } catch (error) {
-      console.error('Error creating server:', error);
+      console.error('Error creating droplet:', error);
       throw error;
     }
   }
@@ -655,23 +634,15 @@ runcmd:
     }
   }
 
-  async deleteServer(id: string): Promise<void> {
-    if (this.useMock) {
-      return; // Mock deletion just returns
-    }
-    
-    return this.deleteDroplet(id); // Call the original method for backward compatibility
-  }
-
   async deleteDroplet(id: string): Promise<void> {
     if (this.useMock) {
       return; // Mock deletion just returns
     }
     
     try {
-      await this.apiRequest(`/servers/${id}`, 'DELETE');
+      await this.apiRequest(`/droplets/${id}`, 'DELETE');
     } catch (error) {
-      console.error(`Error deleting server ${id}:`, error);
+      console.error(`Error deleting droplet ${id}:`, error);
       throw error;
     }
   }
@@ -690,22 +661,15 @@ runcmd:
       
       // If this is a 409 Conflict error, it could be because the volume is still attached
       if (error.message && error.message.includes('409 Conflict')) {
-        console.warn(`Volume ${id} may still be attached to a server. Will proceed with local deletion.`);
+        console.warn(`Volume ${id} may still be attached to a droplet. Will proceed with local deletion.`);
       } else {
         throw error;
       }
     }
   }
 
-  async performServerAction(
-    serverId: string, 
-    action: 'power_on' | 'power_off' | 'reboot' | 'enable_ipv6'
-  ): Promise<void> {
-    return this.performDropletAction(serverId, action); // For backward compatibility
-  }
-
   async performDropletAction(
-    serverId: string, 
+    dropletId: string, 
     action: 'power_on' | 'power_off' | 'reboot' | 'enable_ipv6'
   ): Promise<void> {
     if (this.useMock) {
@@ -714,22 +678,17 @@ runcmd:
     
     try {
       await this.apiRequest(
-        `/servers/${dropletId}/actions`, 
+        `/droplets/${dropletId}/actions`, 
         'POST', 
         { type: action }
       );
     } catch (error) {
-      console.error(`Error performing ${action} on server ${dropletId}:`, error);
+      console.error(`Error performing ${action} on droplet ${dropletId}:`, error);
       throw error;
     }
   }
   
-  // Method to attach volumes to servers
-  async attachVolumeToServer(volumeId: string, serverId: string, region: string): Promise<void> {
-    return this.attachVolumeToDroplet(volumeId, serverId, region); // For backward compatibility
-  }
-
-  // Legacy method to attach volumes to droplets
+  // New method to attach volumes to droplets
   async attachVolumeToDroplet(volumeId: string, dropletId: string, region: string): Promise<void> {
     if (this.useMock) {
       return; // Mock attachment just returns success
@@ -741,27 +700,22 @@ runcmd:
         'POST',
         {
           type: 'attach',
-          server_id: parseInt(dropletId), // Using server_id instead of droplet_id
+          droplet_id: parseInt(dropletId),
           region
         }
       );
       
-      // Wait for the attachment to complete (this would be async in real API)
+      // Wait for the attachment to complete (this would be async in real DO API)
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      console.log(`Successfully attached volume ${volumeId} to server ${dropletId}`);
+      console.log(`Successfully attached volume ${volumeId} to droplet ${dropletId}`);
     } catch (error) {
-      console.error(`Error attaching volume ${volumeId} to server ${dropletId}:`, error);
+      console.error(`Error attaching volume ${volumeId} to droplet ${dropletId}:`, error);
       throw error;
     }
   }
   
-  // Method to detach volumes from servers
-  async detachVolumeFromServer(volumeId: string, serverId: string, region: string): Promise<void> {
-    return this.detachVolumeFromDroplet(volumeId, serverId, region); // For backward compatibility
-  }
-
-  // Legacy method to detach volumes from droplets
+  // New method to detach volumes from droplets
   async detachVolumeFromDroplet(volumeId: string, dropletId: string, region: string): Promise<void> {
     if (this.useMock) {
       return; // Mock detachment just returns success
@@ -773,23 +727,23 @@ runcmd:
         'POST',
         {
           type: 'detach',
-          server_id: parseInt(dropletId), // Using server_id instead of droplet_id
+          droplet_id: parseInt(dropletId),
           region
         }
       );
       
-      // Wait for the detachment to complete (this would be async in real API)
+      // Wait for the detachment to complete (this would be async in real DO API)
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      console.log(`Successfully detached volume ${volumeId} from server ${dropletId}`);
+      console.log(`Successfully detached volume ${volumeId} from droplet ${dropletId}`);
     } catch (error) {
-      console.error(`Error detaching volume ${volumeId} from server ${dropletId}:`, error);
+      console.error(`Error detaching volume ${volumeId} from droplet ${dropletId}:`, error);
       throw error;
     }
   }
 
-  async getServerMetrics(serverId: string): Promise<any> {
-    // Always generate mock metrics for consistency and to avoid CloudRack API errors 
+  async getServerMetrics(dropletId: string): Promise<any> {
+    // Always generate mock metrics for consistency and to avoid DigitalOcean API errors 
     // since we're in development and the API may not be fully integrated
     return this.generateMockMetrics();
   }
@@ -812,4 +766,4 @@ runcmd:
   }
 }
 
-export const digitalOcean = new CloudRackClient();
+export const digitalOcean = new DigitalOceanClient();
