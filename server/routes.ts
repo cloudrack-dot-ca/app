@@ -21,39 +21,39 @@ import {
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@shared/schema";
 
-// Cost constants with our markup applied ($1 markup on server plans, 4¢ markup per GB on volumes)
+// Cost constants for server and storage pricing
 const COSTS = {
   servers: {
-    // Apply 0.5% markup to DigitalOcean's base hourly rates
-    // $5/month = $0.00694/hour * 1.005 = $0.00698/hour = ~7 cents/hour
-    "s-1vcpu-1gb": Math.ceil(7 * 1.005), // ~$5/mo with 0.5% markup
-    "s-1vcpu-2gb": Math.ceil(14 * 1.005), // ~$10/mo with 0.5% markup
-    "s-2vcpu-4gb": Math.ceil(28 * 1.005), // ~$20/mo with 0.5% markup
-    "s-1vcpu-512mb-10gb": Math.ceil(3 * 1.005), // ~$2/mo with 0.5% markup
-    "s-1vcpu-1gb-25gb": Math.ceil(7 * 1.005), // ~$5/mo with 0.5% markup
-    "s-1vcpu-2gb-50gb": Math.ceil(14 * 1.005), // ~$10/mo with 0.5% markup
-    "s-2vcpu-2gb": Math.ceil(18 * 1.005), // ~$13/mo with 0.5% markup
-    "s-2vcpu-4gb-80gb": Math.ceil(28 * 1.005), // ~$20/mo with 0.5% markup
-    "s-4vcpu-8gb": Math.ceil(56 * 1.005), // ~$40/mo with 0.5% markup
-    "s-4vcpu-8gb-intel": Math.ceil(63 * 1.005), // Intel premium instances
-    "s-8vcpu-16gb": Math.ceil(112 * 1.005), // ~$80/mo with 0.5% markup
-    "c-2": Math.ceil(35 * 1.005), // CPU-optimized instances
-    "c-4": Math.ceil(70 * 1.005),
-    "c-8": Math.ceil(140 * 1.005),
-    "g-2vcpu-8gb": Math.ceil(60 * 1.005), // General purpose instances
-    "g-4vcpu-16gb": Math.ceil(120 * 1.005),
-    "g-8vcpu-32gb": Math.ceil(240 * 1.005),
+    // Server hourly costs in cents
+    // Monthly rate converted to hourly rate in cents
+    "s-1vcpu-1gb": 7, // ~$5/mo 
+    "s-1vcpu-2gb": 14, // ~$10/mo
+    "s-2vcpu-4gb": 28, // ~$20/mo
+    "s-1vcpu-512mb-10gb": 3, // ~$2/mo
+    "s-1vcpu-1gb-25gb": 7, // ~$5/mo
+    "s-1vcpu-2gb-50gb": 14, // ~$10/mo
+    "s-2vcpu-2gb": 18, // ~$13/mo
+    "s-2vcpu-4gb-80gb": 28, // ~$20/mo
+    "s-4vcpu-8gb": 56, // ~$40/mo
+    "s-4vcpu-8gb-intel": 63, // Intel premium instances
+    "s-8vcpu-16gb": 112, // ~$80/mo
+    "c-2": 35, // CPU-optimized instances
+    "c-4": 70,
+    "c-8": 140,
+    "g-2vcpu-8gb": 60, // General purpose instances
+    "g-4vcpu-16gb": 120,
+    "g-8vcpu-32gb": 240,
     // Use a default fallback for any other sizes
-    "default": Math.ceil(7 * 1.005) // Default to cheapest plan with markup
+    "default": 7 // Default to cheapest plan
   } as Record<string, number>,
   storage: {
-    baseRate: 0.00014, // DO base rate per GB per hour
-    markup: 0.00014 * 0.005, // 0.5% markup on storage
-    maxSize: 10000, // Maximum volume size in GB (increased to 10TB)
+    baseRate: 0.00014, // Base rate per GB per hour
+    rateWithMargin: 0.00014071, // Final rate per GB per hour
+    maxSize: 10000, // Maximum volume size in GB (10TB)
   },
   bandwidth: {
-    // DigitalOcean charges $0.01/GB for bandwidth overages
-    overage: 0.01 * 1.005, // $0.01005/GB = 1.005 cents/GB with 0.5% markup
+    // Bandwidth overage rates
+    overage: 0.01005, // Final rate per GB overage
     // Free tier per server size (how many GB included per month)
     includedLimit: {
       "s-1vcpu-512mb-10gb": 500, // 500GB free transfer for the smallest droplet
@@ -86,7 +86,7 @@ async function deductHourlyServerCosts() {
         continue;
       }
       
-      // Calculate the actual hourly cost based on server size with markup
+      // Calculate the hourly cost based on server size
       const hourlyCost = COSTS.servers[server.size] || COSTS.servers.default;
       const costInCents = hourlyCost; // Already in cents
       
@@ -112,7 +112,7 @@ async function deductHourlyServerCosts() {
         continue;
       }
 
-      // Deduct the actual hourly cost with markup
+      // Deduct the hourly server cost
       await storage.updateUserBalance(server.userId, -costInCents);
       await storage.createTransaction({
         userId: server.userId,
@@ -152,8 +152,8 @@ async function deductHourlyVolumeCosts() {
       let totalVolumeHourlyCost = 0;
       
       for (const volume of volumes) {
-        // Calculate hourly cost with markup
-        const volumeHourlyCost = volume.size * (COSTS.storage.baseRate + COSTS.storage.markup);
+        // Calculate hourly cost
+        const volumeHourlyCost = volume.size * COSTS.storage.rateWithMargin;
         totalVolumeHourlyCost += volumeHourlyCost;
       }
       
@@ -170,7 +170,7 @@ async function deductHourlyVolumeCosts() {
         continue;
       }
 
-      // Deduct the actual hourly cost with markup
+      // Deduct the hourly storage cost
       await storage.updateUserBalance(server.userId, -volumeCostInCents);
       await storage.createTransaction({
         userId: server.userId,
@@ -238,7 +238,7 @@ async function calculateBandwidthOverages() {
       
       console.log(`Server ${server.id} (${server.name}): Bandwidth usage = ${totalBandwidthGB.toFixed(2)}GB, Free limit = ${freeBandwidthLimit}GB, Overage = ${overageGB.toFixed(2)}GB`);
       
-      // Calculate overage cost with markup
+      // Calculate bandwidth overage cost
       const overageCost = overageGB * COSTS.bandwidth.overage;
       const overageCostInCents = toCents(overageCost);
       
