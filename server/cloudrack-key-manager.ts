@@ -108,7 +108,19 @@ export class CloudRackKeyManager {
       
       // Generate new SSH keys explicitly in PEM format (-m PEM flag)
       console.log('Generating new CloudRack SSH keys in PEM format...');
-      await exec(`ssh-keygen -m PEM -t rsa -b 4096 -f ${this.keyPath} -N "" -C "cloudrack-terminal@cloudrack.io"`);
+      
+      // The -m PEM flag is critical for ssh2 compatibility
+      // This ensures OpenSSH format keys are converted to the traditional PEM format
+      try {
+        await exec(`ssh-keygen -m PEM -t rsa -b 4096 -f ${this.keyPath} -N "" -C "cloudrack-terminal@cloudrack.io"`);
+      } catch (execError) {
+        console.error('Error generating SSH key with exec:', execError);
+        // Try alternative approach with execSync which might be more reliable
+        const { execSync } = require('child_process');
+        execSync(`ssh-keygen -m PEM -t rsa -b 4096 -f ${this.keyPath} -N "" -C "cloudrack-terminal@cloudrack.io"`, {
+          stdio: 'pipe'
+        });
+      }
       
       // Verify creation and format
       if (!fs.existsSync(this.keyPath)) {
@@ -117,6 +129,7 @@ export class CloudRackKeyManager {
       
       const privateKey = fs.readFileSync(this.keyPath, 'utf8');
       if (!privateKey.includes('-----BEGIN RSA PRIVATE KEY-----')) {
+        console.error('Generated key is not in PEM format, contents:', privateKey.substring(0, 50) + '...');
         throw new Error('Private key not in PEM format');
       }
       
