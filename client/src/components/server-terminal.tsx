@@ -217,6 +217,9 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     }
   };
 
+  // Create ref for fullscreen container
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+  
   // Toggle full screen mode with browser's native fullscreen API
   const toggleFullScreen = () => {
     const newFullscreenState = !isFullScreen;
@@ -231,11 +234,19 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       document.documentElement.style.overflow = 'hidden';
       
       // Request browser fullscreen if supported
-      const elem = document.documentElement;
-      if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(err => {
+      const container = fullscreenContainerRef.current;
+      if (container) {
+        try {
+          if (container.requestFullscreen) {
+            container.requestFullscreen();
+          } else if ((container as any).webkitRequestFullscreen) {
+            (container as any).webkitRequestFullscreen();
+          } else if ((container as any).msRequestFullscreen) {
+            (container as any).msRequestFullscreen();
+          }
+        } catch (err) {
           console.log("Error attempting to enable fullscreen:", err);
-        });
+        }
       }
     } else {
       // Exit fullscreen
@@ -243,10 +254,18 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       document.documentElement.style.overflow = '';
       
       // Exit browser fullscreen if active
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(err => {
-          console.log("Error attempting to exit fullscreen:", err);
-        });
+      try {
+        if (document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).msFullscreenElement) {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            (document as any).webkitExitFullscreen();
+          } else if ((document as any).msExitFullscreen) {
+            (document as any).msExitFullscreen();
+          }
+        }
+      } catch (err) {
+        console.log("Error attempting to exit fullscreen:", err);
       }
     }
     
@@ -286,9 +305,15 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
           }
         };
         
-        // Add event listener for browser fullscreen change
+        // Add event listener for browser fullscreen change with vendor prefixes
         const handleFullscreenChange = () => {
-          if (!document.fullscreenElement && isFullScreen) {
+          if (
+            !document.fullscreenElement && 
+            !(document as any).webkitFullscreenElement && 
+            !(document as any).mozFullScreenElement && 
+            !(document as any).msFullscreenElement && 
+            isFullScreen
+          ) {
             // User exited browser fullscreen, update our state
             setIsFullScreen(false);
             document.body.style.overflow = '';
@@ -298,32 +323,56 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         
         window.addEventListener('keydown', handleEscKey);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
         
         return () => {
           window.removeEventListener('keydown', handleEscKey);
           document.removeEventListener('fullscreenchange', handleFullscreenChange);
+          document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+          document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+          document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
         };
       }
     }
   }, [isFullScreen, fitAddon]);
   
-  // Clean up when component unmounts
+  // Clean up when component unmounts - ensure we exit fullscreen
   useEffect(() => {
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
       
-      // Ensure we exit fullscreen on component unmount
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(err => {
-          console.log("Error attempting to exit fullscreen on unmount:", err);
-        });
+      // Ensure we exit fullscreen on component unmount with vendor prefixes
+      try {
+        if (
+          document.fullscreenElement || 
+          (document as any).webkitFullscreenElement || 
+          (document as any).mozFullScreenElement || 
+          (document as any).msFullscreenElement
+        ) {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            (document as any).webkitExitFullscreen();
+          } else if ((document as any).mozCancelFullScreen) {
+            (document as any).mozCancelFullScreen();
+          } else if ((document as any).msExitFullscreen) {
+            (document as any).msExitFullscreen();
+          }
+        }
+      } catch (err) {
+        console.log("Error attempting to exit fullscreen on unmount:", err);
       }
     };
   }, []);
 
   return (
-    <div className={`relative ${isFullScreen ? 'fixed inset-0 z-[100] bg-black' : ''}`}>
+    <div 
+      ref={fullscreenContainerRef}
+      className={`relative ${isFullScreen ? 'fixed inset-0 z-[100] bg-black' : ''}`}
+    >
       {/* In fullscreen mode, we don't need an overlay as the terminal itself will take up the entire screen */}
       
       {connectionError && !isFullScreen && (
@@ -336,9 +385,22 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         className={`
           ${isFullScreen 
             ? 'absolute inset-0 h-screen w-screen border-none' 
-            : 'border rounded-md overflow-hidden relative h-[400px]'}
+            : 'border rounded-md overflow-hidden relative h-[400px] group'}
         `}
       >
+        {/* Large fullscreen button that appears when hovering (only in normal mode) */}
+        {!isFullScreen && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+            <Button
+              onClick={toggleFullScreen}
+              variant="outline"
+              className="bg-black/80 border-gray-700 text-white hover:bg-black/90"
+            >
+              <Maximize2 className="mr-2 h-4 w-4" />
+              Enter Full Screen
+            </Button>
+          </div>
+        )}
         {/* We removed the resize indicator since it's not needed in a true fullscreen experience */}
         {/* Terminal header bar */}
         <div className={`${isFullScreen ? 'bg-black text-gray-300' : 'bg-gray-800 text-gray-300'} p-2 flex justify-between items-center text-xs`}>
