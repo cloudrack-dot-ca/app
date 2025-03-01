@@ -53,7 +53,7 @@ async function deductHourlyServerCosts() {
     const user = await storage.getUser(server.userId);
     if (!user || user.balance < 100) { // Less than $1
       // If user can't pay, delete the server
-      await digitalOcean.deleteDroplet(server.dropletId);
+      await digitalOcean.deleteServer(server.dropletId);
       await storage.deleteServer(server.id);
       continue;
     }
@@ -224,9 +224,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
     // Delete the server from CloudRack
     try {
-      await digitalOcean.deleteDroplet(server.dropletId);
+      await digitalOcean.deleteServer(server.dropletId);
     } catch (error) {
-      console.warn(`Failed to delete droplet ${server.dropletId} from CloudRack, but proceeding with local deletion:`, error);
+      console.warn(`Failed to delete server ${server.dropletId} from CloudRack, but proceeding with local deletion:`, error);
       // Continue with deletion even if the CloudRack API call fails
       // This allows us to clean up orphaned records in our database
     }
@@ -992,7 +992,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       try {
         // Define the type for CloudRack server response
         interface CloudRackServerResponse {
-          droplet: {
+          server: {
             id: number;
             status: string;
             networks: {
@@ -1010,11 +1010,11 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
         // Fetch server details with proper typing
         const serverDetails = await digitalOcean.apiRequest<CloudRackServerResponse>(
-          `/droplets/${server.dropletId}`
+          `/servers/${server.dropletId}`
         );
         
         // Update server with latest IP information if available
-        if (serverDetails?.droplet && serverDetails.droplet.networks) {
+        if (serverDetails?.server && serverDetails.server.networks) {
           // Create server update data object with proper typing to avoid confusion with Node's http.Server
           const serverUpdateData = { 
             lastMonitored: new Date() 
@@ -1026,8 +1026,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           };
           
           // Update IPv4 address
-          if (serverDetails.droplet.networks.v4 && serverDetails.droplet.networks.v4.length > 0) {
-            const publicIp = serverDetails.droplet.networks.v4.find(
+          if (serverDetails.server.networks.v4 && serverDetails.server.networks.v4.length > 0) {
+            const publicIp = serverDetails.server.networks.v4.find(
               (network: {ip_address: string; type: string}) => network.type === 'public'
             );
             if (publicIp) {
@@ -1036,13 +1036,13 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           }
           
           // Update IPv6 address
-          if (serverDetails.droplet.networks.v6 && serverDetails.droplet.networks.v6.length > 0) {
-            serverUpdateData.ipv6Address = serverDetails.droplet.networks.v6[0].ip_address;
+          if (serverDetails.server.networks.v6 && serverDetails.server.networks.v6.length > 0) {
+            serverUpdateData.ipv6Address = serverDetails.server.networks.v6[0].ip_address;
           }
           
           // Update server status
-          if (serverDetails.droplet.status) {
-            serverUpdateData.status = serverDetails.droplet.status;
+          if (serverDetails.server.status) {
+            serverUpdateData.status = serverDetails.server.status;
           }
           
           await storage.updateServer(serverId, serverUpdateData);
