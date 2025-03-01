@@ -47,7 +47,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   const socketRef = useRef<any>(null);
   const { user } = useAuth();
   const [currentFont, setCurrentFont] = useState<string>(TERMINAL_FONTS[0].value);
-  const [fontSize, setFontSize] = useState<number>(15); // Default font size
+  const [fontSize, setFontSize] = useState<number>(14); // Default font size
   
   // Function to change terminal font
   const changeTerminalFont = (newFont: string) => {
@@ -487,7 +487,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[160px]">
-                {[12, 13, 14, 15, 16, 18, 20, 22, 24].map((size) => (
+                {[8, 10, 12, 13, 14, 15, 16, 18, 20, 22, 24].map((size) => (
                   <DropdownMenuItem
                     key={size}
                     onClick={() => changeFontSize(size)}
