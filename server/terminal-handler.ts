@@ -261,7 +261,14 @@ export function setupTerminalSocket(server: HttpServer) {
           
           // Add keyboard-interactive handler for password prompt fallback
           connectionConfig.authHandler = (methodsLeft: string[], partialSuccess: boolean, callback: Function) => {
-            log(`SSH auth methods left: ${methodsLeft.join(', ')}`, 'terminal');
+            // Guard against null or undefined methodsLeft
+            if (!methodsLeft || !Array.isArray(methodsLeft)) {
+              log('Warning: Auth methods list is invalid, defaulting to publickey', 'terminal');
+              return callback('publickey');
+            }
+            
+            // Safely log available methods
+            log(`SSH auth methods left: ${methodsLeft.join ? methodsLeft.join(', ') : String(methodsLeft)}`, 'terminal');
             
             if (methodsLeft.includes('keyboard-interactive')) {
               log('Using keyboard-interactive auth method', 'terminal');
@@ -275,7 +282,13 @@ export function setupTerminalSocket(server: HttpServer) {
               log('Using publickey auth method', 'terminal');
               return callback('publickey');
             } else {
-              // No supported methods left
+              // No supported methods left - try password as last resort if we have one
+              if (server.rootPassword) {
+                log('No standard methods available, trying password as last resort', 'terminal');
+                return callback('password');
+              }
+              // Otherwise, give up
+              log('No authentication methods available', 'terminal');
               return callback(null);
             }
           };

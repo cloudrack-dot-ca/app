@@ -476,8 +476,8 @@ export default function ServerDetailPage() {
   const isRunning = server.status !== "off";
 
   return (
-    <div className="container py-8">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-wrap items-center gap-4 mb-6">
         <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
@@ -980,11 +980,13 @@ export default function ServerDetailPage() {
                   </p>
                 </div>
                 
-                <ServerTerminal 
-                  serverId={server.id} 
-                  serverName={server.name} 
-                  ipAddress={server.ipAddress || 'unknown'}
-                />
+                <div className="w-full">
+                  <ServerTerminal 
+                    serverId={server.id} 
+                    serverName={server.name} 
+                    ipAddress={server.ipAddress || 'unknown'}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

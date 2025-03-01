@@ -238,7 +238,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   };
 
   return (
-    <div className={`relative ${isFullScreen ? 'fixed inset-0 z-50 bg-background p-6' : ''}`}>
+    <div className={`relative w-full ${isFullScreen ? 'fixed inset-0 z-50 bg-background p-6' : ''}`}>
       {connectionError && (
         <div className="bg-red-500/10 text-red-500 p-3 rounded-md mb-4">
           {connectionError}
@@ -247,7 +247,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       
       <div 
         className={`
-          border rounded-md overflow-hidden
+          border rounded-md overflow-hidden w-full mx-auto
           ${isFullScreen ? 'h-[calc(100vh-100px)]' : 'h-[400px]'}
         `}
       >
@@ -283,7 +283,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         </div>
         <div 
           ref={terminalRef} 
-          className="h-full"
+          className="h-full w-full"
         />
       </div>
       
