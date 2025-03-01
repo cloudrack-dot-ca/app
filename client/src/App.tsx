@@ -13,11 +13,12 @@ import VolumesPage from "@/pages/volumes-page";
 import ServerDetailPage from "@/pages/server-detail";
 import SSHKeysPage from "@/pages/ssh-keys";
 import AccountPage from "@/pages/account-page";
+import DocsPage from "@/pages/docs-page";
 import AdminDashboard from "@/pages/admin/dashboard";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
-import { Home, ShieldCheck, Settings } from "lucide-react";
+import { Home, ShieldCheck, Settings, Book } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useEffect } from "react";
 
@@ -41,14 +42,22 @@ function Nav() {
   return (
     <nav className="border-b">
       <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-        {!user && (
-          <Link href="/">
+        <div className="flex items-center space-x-2">
+          {!user && (
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <Home className="h-4 w-4 mr-2" />
+                Home
+              </Button>
+            </Link>
+          )}
+          <Link href="/docs">
             <Button variant="ghost" size="sm">
-              <Home className="h-4 w-4 mr-2" />
-              Home
+              <Book className="h-4 w-4 mr-2" />
+              Documentation
             </Button>
           </Link>
-        )}
+        </div>
         <div className="flex items-center gap-2">
           {user && user.isAdmin && (
             <Link href="/admin">
@@ -72,6 +81,7 @@ function Router() {
       <Switch>
         <Route path="/" component={HomePage} />
         <Route path="/auth" component={AuthPage} />
+        <Route path="/docs" component={DocsPage} />
         <ProtectedRoute path="/dashboard" component={Dashboard} />
         <ProtectedRoute path="/volumes" component={VolumesPage} />
         <ProtectedRoute path="/billing" component={BillingPage} />
