@@ -324,6 +324,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         throw new Error(`Failed to create server: ${errorMessage}`);
       }
 
+      // First create the server without the password
       const server = await storage.createServer({
         ...parsed.data,
         userId: req.user.id,
@@ -338,8 +339,17 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         },
         application: parsed.data.application || null,
         lastMonitored: null,
-        rootPassword: rootPassword, // Store the generated root password
       });
+      
+      // Then update the root password directly using the same approach as the password update endpoint
+      await db.update(schema.servers)
+        .set({ 
+          rootPassword: auth.type === "password" && auth.value ? auth.value : rootPassword,
+        })
+        .where(eq(schema.servers.id, server.id));
+        
+      console.log(`Set initial root password for server ${server.id} (password length: ${(auth.type === "password" && auth.value ? auth.value : rootPassword).length})`);
+      
 
       // Deduct balance and create transaction
       await storage.updateUserBalance(req.user.id, -minimumBalance);
@@ -353,12 +363,18 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         createdAt: new Date(),
       });
 
-      // Return both the server and the password we generated earlier
+      // Fetch the updated server with the correct password from the database
+      const updatedServerData = await db.query.servers.findFirst({
+        where: eq(schema.servers.id, server.id)
+      });
+      
+      // Return both the server and the password that was saved to the database
+      const effectivePassword = auth.type === "password" && auth.value ? auth.value : rootPassword;
       const responseObj = {
         ...server,
-        rootPassword: rootPassword
+        rootPassword: effectivePassword
       };
-      console.log(`[DEBUG] Returning server with root password (masked): ${rootPassword.substring(0, 3)}***`);
+      console.log(`[DEBUG] Returning server with root password (masked): ${effectivePassword.substring(0, 3)}***`);
       res.status(201).json(responseObj);
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
