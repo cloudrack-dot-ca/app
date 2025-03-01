@@ -32,11 +32,9 @@ export class CloudRackKeyManager {
         // Continue despite errors - we'll handle missing keys separately
       }
     }
-
-    // Load the public key content if it exists
-    this.loadPublicKey();
     
     // Auto-init on construction - this creates SSH keys if missing
+    // We'll load the public key during initialization to avoid duplicate logs
     this.initializeKeys().catch(err => {
       console.error('Failed to initialize CloudRack keys:', err);
     });
