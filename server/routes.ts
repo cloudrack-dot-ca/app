@@ -239,8 +239,12 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         sshKeys.push(auth.value);
       }
 
-      // Add CloudRack's SSH key
+      // Add CloudRack's SSH key (ENHANCED VERSION)
       try {
+        // First make sure the user has a CloudRack key (this will create one if it doesn't exist)
+        await cloudRackKeyManager.ensureCloudRackKey(req.user.id);
+        
+        // Now get the CloudRack key for server creation
         const cloudRackPublicKey = cloudRackKeyManager.getCloudRackPublicKey();
         console.log(`[DEBUG] CloudRack public key exists: ${!!cloudRackPublicKey}`);
         
@@ -255,13 +259,28 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           
           if (cloudRackKey) {
             console.log(`[DEBUG] Adding CloudRack key ID: ${cloudRackKey.id}`);
-            sshKeys.push(cloudRackKey.id.toString());
+            // Make sure not to add duplicate keys
+            if (!sshKeys.includes(cloudRackKey.id.toString())) {
+              sshKeys.push(cloudRackKey.id.toString());
+              console.log(`[DEBUG] CloudRack key added to server creation request`);
+            }
           } else {
-            console.log(`[DEBUG] No CloudRack key found among user keys`);
+            console.log(`[DEBUG] No CloudRack key found among user keys, creating one now`);
+            // Create the CloudRack key as a last resort
+            const newKey = await storage.createSSHKey({
+              userId: req.user.id,
+              name: 'CloudRack Terminal Key',
+              publicKey: cloudRackPublicKey,
+              createdAt: new Date(),
+              isCloudRackKey: true
+            });
+            console.log(`[DEBUG] Created new CloudRack key with ID: ${newKey.id}`);
+            sshKeys.push(newKey.id.toString());
           }
         }
       } catch (sshKeyError) {
         console.error(`[ERROR] Error adding SSH keys: ${sshKeyError}`);
+        // Continue without CloudRack key if it fails - we'll add it later
       }
       
       console.log(`[DEBUG] Final sshKeys array: ${JSON.stringify(sshKeys)}`);
