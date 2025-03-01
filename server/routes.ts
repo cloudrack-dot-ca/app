@@ -436,9 +436,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.status(400).json(parsed.error);
       }
 
-      // Get the hourly cost for this server size including markup
-      const sizeSlug = parsed.data.size;
-      const hourlyCost = (COSTS.servers[sizeSlug] || COSTS.servers.default) / 100; // Use our marked-up pricing
+      // Get the hourly cost for this server size with margin included
+      const sizeSlug = parsed.data.size as keyof typeof COSTS.servers;
+      const hourlyCost = (COSTS.servers[sizeSlug] || COSTS.servers.default) / 100; // Convert from cents to dollars
       const minimumBalance = toCents(hourlyCost); // Require 1h worth of balance in cents
       await checkBalance(req.user.id, hourlyCost);
 
