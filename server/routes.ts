@@ -580,11 +580,37 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.status(404).json({ message: "Transaction not found" });
       }
       
-      // For now, we'll just return transaction details in JSON format
-      // In a real implementation, you would generate a PDF invoice here
+      // Get transaction description based on type
+      const description = 
+        transaction.type === 'deposit' ? 'Funds added to account' : 
+        transaction.type === 'server_charge' ? 'Server creation charge' : 
+        transaction.type === 'volume_charge' ? 'Volume storage charge' :
+        transaction.type === 'hourly_server_charge' ? 'Hourly server usage' :
+        'Service charge';
+      
+      // Format the invoice date
+      const invoiceDate = new Date(transaction.createdAt);
+      const formattedDate = `${invoiceDate.getFullYear()}-${String(invoiceDate.getMonth() + 1).padStart(2, '0')}-${String(invoiceDate.getDate()).padStart(2, '0')}`;
+      
+      // Format the invoice number
+      const invoiceNumber = `INV-${transaction.id.toString().padStart(6, '0')}`;
+      
+      // Format amount to dollars with 2 decimal places
+      const formattedAmount = (transaction.amount / 100).toFixed(2);
+      
+      // Return invoice data
       res.json({
-        invoiceNumber: `INV-${transaction.id.toString().padStart(6, '0')}`,
-        date: transaction.createdAt,
+        invoice: {
+          invoiceNumber,
+          date: formattedDate,
+          fullDate: transaction.createdAt,
+        },
+        company: {
+          name: "CloudRack Services",
+          address: "123 Server Avenue, Cloud City",
+          email: "billing@cloudrack.io",
+          website: "https://cloudrack.io"
+        },
         customer: {
           id: req.user.id,
           name: req.user.username,
@@ -592,10 +618,18 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         transaction: {
           id: transaction.id,
           type: transaction.type,
-          amount: transaction.amount,
-          description: transaction.description,
+          description,
+          amount: formattedAmount,
+          currency: transaction.currency,
           status: transaction.status,
-        }
+        },
+        // If we had tax information, it would go here
+        tax: {
+          rate: 0,
+          amount: "0.00"
+        },
+        // Total would include tax
+        total: formattedAmount
       });
       
       // Note: In a real implementation, we would use a library like PDFKit to generate 
