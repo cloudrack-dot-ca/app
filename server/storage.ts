@@ -55,6 +55,13 @@ export interface IStorage {
   getSSHKey(id: number): Promise<SSHKey | undefined>;
   deleteSSHKey(id: number): Promise<void>;
 
+  // IP Ban functionality
+  getIPBan(ipAddress: string): Promise<IPBan | undefined>;
+  getAllIPBans(): Promise<IPBan[]>;
+  createIPBan(ban: Omit<IPBan, "id" | "createdAt">): Promise<IPBan>;
+  updateIPBan(id: number, updates: Partial<IPBan>): Promise<IPBan>;
+  deleteIPBan(id: number): Promise<void>;
+  
   sessionStore: session.Store;
 }
 
@@ -323,6 +330,39 @@ export class DatabaseStorage implements IStorage {
       .where(eq(serverMetrics.serverId, serverId))
       .orderBy(desc(serverMetrics.timestamp))
       .limit(limit);
+  }
+
+  // IP Ban Implementation
+  async getIPBan(ipAddress: string): Promise<IPBan | undefined> {
+    const [ban] = await db.select()
+      .from(ipBans)
+      .where(eq(ipBans.ipAddress, ipAddress));
+    return ban;
+  }
+
+  async getAllIPBans(): Promise<IPBan[]> {
+    return await db.select()
+      .from(ipBans)
+      .orderBy(desc(ipBans.createdAt));
+  }
+
+  async createIPBan(ban: Omit<IPBan, "id" | "createdAt">): Promise<IPBan> {
+    const [newBan] = await db.insert(ipBans)
+      .values(ban)
+      .returning();
+    return newBan;
+  }
+
+  async updateIPBan(id: number, updates: Partial<IPBan>): Promise<IPBan> {
+    const [updatedBan] = await db.update(ipBans)
+      .set(updates)
+      .where(eq(ipBans.id, id))
+      .returning();
+    return updatedBan;
+  }
+
+  async deleteIPBan(id: number): Promise<void> {
+    await db.delete(ipBans).where(eq(ipBans.id, id));
   }
 }
 

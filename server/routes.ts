@@ -151,6 +151,76 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       res.status(500).json({ error: (error as Error).message });
     }
   });
+  
+  // IP Ban Management Routes (Admin Only)
+  app.get("/api/admin/ip-bans", adminMiddleware, async (_req, res) => {
+    try {
+      const allBans = await storage.getAllIPBans();
+      res.json(allBans);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+  
+  app.post("/api/admin/ip-bans", adminMiddleware, async (req, res) => {
+    try {
+      const { ipAddress, reason, expiresAt } = req.body;
+      
+      if (!ipAddress) {
+        return res.status(400).json({ message: "IP address is required" });
+      }
+      
+      // Check if IP is already banned
+      const existingBan = await storage.getIPBan(ipAddress);
+      if (existingBan && existingBan.isActive) {
+        return res.status(400).json({ message: "This IP address is already banned" });
+      }
+      
+      const newBan = await storage.createIPBan({
+        ipAddress,
+        reason: reason || "Banned by administrator",
+        bannedBy: req.user.id,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        isActive: true
+      });
+      
+      res.status(201).json(newBan);
+    } catch (error) {
+      console.error("Error creating IP ban:", error);
+      res.status(500).json({ message: "Failed to create IP ban" });
+    }
+  });
+  
+  app.patch("/api/admin/ip-bans/:id", adminMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { reason, expiresAt, isActive } = req.body;
+      
+      const banId = parseInt(id);
+      const updates: Partial<IPBan> = {};
+      
+      if (reason !== undefined) updates.reason = reason;
+      if (expiresAt !== undefined) updates.expiresAt = new Date(expiresAt);
+      if (isActive !== undefined) updates.isActive = isActive;
+      
+      const updatedBan = await storage.updateIPBan(banId, updates);
+      res.json(updatedBan);
+    } catch (error) {
+      console.error("Error updating IP ban:", error);
+      res.status(500).json({ message: "Failed to update IP ban" });
+    }
+  });
+  
+  app.delete("/api/admin/ip-bans/:id", adminMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteIPBan(parseInt(id));
+      res.sendStatus(204);
+    } catch (error) {
+      console.error("Error deleting IP ban:", error);
+      res.status(500).json({ message: "Failed to delete IP ban" });
+    }
+  });
 
   app.get("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
