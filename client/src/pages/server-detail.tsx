@@ -258,14 +258,28 @@ export default function ServerDetailPage() {
               Return to Dashboard
             </Button>
             {serverError && (
-              <Button
-                variant="outline"
-                className="mx-2"
-                onClick={() => queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] })}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </Button>
+              <div className="flex flex-col gap-2 items-center mt-2">
+                <Button
+                  variant="outline"
+                  className="mx-2"
+                  onClick={() => {
+                    // Refetch both user and server data
+                    refetchUser();
+                    queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
+                    
+                    toast({
+                      title: "Refreshing data",
+                      description: "Attempting to reload server information...",
+                    });
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  If problems persist, try refreshing the page or logging out and back in
+                </p>
+              </div>
             )}
           </div>
         </div>
