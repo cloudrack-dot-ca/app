@@ -328,47 +328,72 @@ export class DigitalOceanClient {
 
   // Helper method to map application slugs to valid image IDs
   private getImageForApplication(appSlug?: string): string {
-    if (!appSlug) return 'ubuntu-20-04-x64';
+    if (!appSlug || appSlug === 'none') return 'ubuntu-20-04-x64';
     
     // In a real implementation, these would be actual DO application images
-    // For our mock implementation, we'll just default to Ubuntu 20.04
+    // For our mock implementation, we'll still use proper naming but point to Ubuntu
     const baseImage = 'ubuntu-20-04-x64';
     
-    // For demonstration purposes, we'll maintain this map to show how
-    // different applications would map to different base images in a real implementation
+    // In production, these would be actual DigitalOcean marketplace image IDs
+    // For now, we'll name them appropriately to demonstrate the functionality
     const appMap: Record<string, string> = {
       // Web Development
-      'nodejs': baseImage,
-      'python': baseImage,
-      'docker': baseImage,
-      'lamp': baseImage,
-      'lemp': baseImage,
-      'mean': baseImage,
-      'mern': baseImage,
+      'nodejs': 'nodejs-20-04',
+      'python': 'python-20-04',
+      'docker': 'docker-20-04',
+      'lamp': 'lamp-20-04',
+      'lemp': 'lemp-20-04',
+      'mean': 'mean-20-04',
+      'mern': 'mern-20-04',
       
       // CMS
-      'wordpress': baseImage,
-      'ghost': baseImage, 
-      'drupal': baseImage,
+      'wordpress': 'wordpress-20-04',
+      'ghost': 'ghost-20-04', 
+      'drupal': 'drupal-20-04',
+      'joomla': 'joomla-20-04',
       
       // E-commerce
-      'woocommerce': baseImage,
-      'magento': baseImage,
+      'woocommerce': 'woocommerce-20-04',
+      'magento': 'magento-20-04',
+      'prestashop': 'prestashop-20-04',
+      
+      // Frameworks
+      'django': 'django-20-04',
+      'rails': 'rails-20-04',
+      'laravel': 'laravel-20-04',
       
       // Data Science
-      'jupyter': baseImage,
-      'rstudio': baseImage,
+      'jupyter': 'jupyter-20-04',
+      'rstudio': 'rstudio-20-04',
+      'tensorflow': 'tensorflow-20-04',
       
       // Databases
-      'mongodb': baseImage,
-      'postgres': baseImage,
-      'mysql': baseImage,
-      'redis': baseImage,
+      'mongodb': 'mongodb-20-04',
+      'postgres': 'postgres-20-04',
+      'mysql': 'mysql-20-04',
+      'redis': 'redis-20-04',
+      'couchdb': 'couchdb-20-04',
       
       // CI/CD and DevOps
-      'jenkins': baseImage,
-      'gitlab': baseImage,
+      'jenkins': 'jenkins-20-04',
+      'gitlab': 'gitlab-20-04',
+      'prometheus': 'prometheus-20-04',
+      'grafana': 'grafana-20-04',
+      
+      // Game Servers
+      'minecraft': 'game-minecraft-20-04',
+      'csgo': 'game-csgo-20-04',
+      'valheim': 'game-valheim-20-04',
+      'rust': 'game-rust-20-04',
+      'ark': 'game-ark-20-04',
+      
+      // Discord Bots
+      'discordjs': 'nodejs-20-04', // Discord.js runs on Node.js
+      'discordpy': 'python-20-04', // Discord.py runs on Python
     };
+    
+    // Log application selection for debugging
+    console.log(`Application selected: ${appSlug}, Using image: ${appMap[appSlug] || baseImage}`);
     
     return appMap[appSlug] || baseImage;
   }
