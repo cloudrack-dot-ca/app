@@ -166,8 +166,11 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
         title: "Rule added",
         description: "Firewall rule added successfully",
       });
+      // Refresh both this component and parent components
       refetch();
       resetNewRuleForm();
+      // Invalidate all firewall-related queries to ensure UI updates everywhere
+      queryClient.invalidateQueries({ queryKey: ['/api/servers', serverId, 'firewall'] });
     },
     onError: (error: Error) => {
       toast({
@@ -192,7 +195,10 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
         title: "Rule deleted",
         description: "Firewall rule deleted successfully",
       });
+      // Refresh both this component and parent components
       refetch();
+      // Invalidate all firewall-related queries to ensure UI updates everywhere
+      queryClient.invalidateQueries({ queryKey: ['/api/servers', serverId, 'firewall'] });
     },
     onError: (error: Error) => {
       toast({
@@ -217,7 +223,10 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
         title: "Firewall updated",
         description: "Firewall configuration updated successfully",
       });
+      // Refresh both this component and parent components
       refetch();
+      // Invalidate all firewall-related queries to ensure UI updates everywhere
+      queryClient.invalidateQueries({ queryKey: ['/api/servers', serverId, 'firewall'] });
     },
     onError: (error: Error) => {
       toast({
@@ -364,24 +373,23 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
 
   if (noFirewall) {
     return (
-      <div className="p-6 text-center space-y-4 border border-dashed rounded-lg">
-        <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto" />
-        <h3 className="text-lg font-semibold">No Firewall Configured</h3>
-        <p className="text-muted-foreground">
-          This server does not have a firewall configured. Without a firewall, your server
-          may be vulnerable to unauthorized access.
+      <div className="p-4 text-center space-y-3 border border-dashed rounded-lg bg-muted/10">
+        <AlertTriangle className="h-10 w-10 text-yellow-500 mx-auto" />
+        <h3 className="text-base font-semibold">No Firewall Configured</h3>
+        <p className="text-sm text-muted-foreground">
+          This server does not have a firewall enabled. You should enable a firewall and add rules
+          to protect your server from unauthorized access.
         </p>
         <Button 
           onClick={handleCreateFirewall} 
-          className="mt-4" 
+          className="mt-2" 
           disabled={createFirewallMutation.isPending}
         >
           <Shield className="h-4 w-4 mr-2" />
-          {createFirewallMutation.isPending ? "Creating..." : "Create Default Firewall"}
+          {createFirewallMutation.isPending ? "Enabling..." : "Enable Firewall"}
         </Button>
-        <p className="text-xs text-muted-foreground mt-2">
-          This will create a basic firewall allowing SSH (22), HTTP (80), and HTTPS (443) inbound traffic
-          and allow all outbound traffic.
+        <p className="text-xs text-muted-foreground mt-1">
+          This will create a firewall with no rules. You will need to add rules after creation.
         </p>
       </div>
     );

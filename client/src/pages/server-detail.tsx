@@ -72,7 +72,7 @@ import VolumeManager from "@/components/volume-manager";
 import ServerMonitoring from "@/components/server-monitoring";
 import FirewallManager from "@/components/firewall-manager";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 
 // Firewall Rule interface (simplified from the full interface in firewall-manager.tsx)
 // Schema for firewall disable confirmation
@@ -1093,12 +1093,15 @@ export default function ServerDetailPage() {
                             size="sm"
                           >
                             <Shield className="h-4 w-4 mr-2" />
-                            Advanced Firewall Settings
+                            Manage Firewall Rules
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <DialogHeader>
-                            <DialogTitle>Firewall Configuration</DialogTitle>
+                        <DialogContent className="max-w-2xl h-[90vh] max-h-[700px] overflow-y-auto">
+                          <DialogHeader className="mb-4">
+                            <DialogTitle>Firewall Rules Manager</DialogTitle>
+                            <DialogDescription>
+                              Add or remove rules to control network traffic to and from your server
+                            </DialogDescription>
                           </DialogHeader>
                           <FirewallManager serverId={serverId} />
                         </DialogContent>
@@ -1113,7 +1116,7 @@ export default function ServerDetailPage() {
                   </div>
                   
                   <p className="text-xs text-muted-foreground mt-4">
-                    First, enable the firewall by clicking "Enable Firewall", then use "Advanced Firewall Settings" 
+                    First, enable the firewall by clicking "Enable Firewall", then use "Manage Firewall Rules" 
                     to add protection rules for your server. The firewall starts with no rules by default.
                   </p>
                 </div>
