@@ -208,15 +208,15 @@ export default function BillingPage() {
             <ul className="space-y-2">
               <li className="flex justify-between">
                 <span>1GB RAM, 1 vCPU</span>
-                <span>${(0.007 * 1.005).toFixed(5)}/hour</span>
+                <span>$0.00704 USD/hour</span>
               </li>
               <li className="flex justify-between">
                 <span>2GB RAM, 1 vCPU</span>
-                <span>${(0.014 * 1.005).toFixed(5)}/hour</span>
+                <span>$0.01407 USD/hour</span>
               </li>
               <li className="flex justify-between">
                 <span>4GB RAM, 2 vCPU</span>
-                <span>${(0.028 * 1.005).toFixed(5)}/hour</span>
+                <span>$0.02814 USD/hour</span>
               </li>
             </ul>
           </CardContent>
@@ -228,11 +228,11 @@ export default function BillingPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <p className="text-lg font-bold mb-1">${(0.00014 * 1.005).toFixed(6)}/GB/hour</p>
+              <p className="text-lg font-bold mb-1">$0.000141 USD/GB/hour</p>
               <p className="text-sm text-muted-foreground">For block storage volumes</p>
             </div>
             <div>
-              <p className="text-lg font-bold mb-1">${(0.01 * 1.005).toFixed(5)}/GB</p>
+              <p className="text-lg font-bold mb-1">$0.01005 USD/GB</p>
               <p className="text-sm text-muted-foreground">For bandwidth overages beyond included limit</p>
             </div>
           </CardContent>
@@ -362,7 +362,7 @@ export default function BillingPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-lg ${tx.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.type === 'deposit' ? '+' : '-'}${(tx.amount / 100).toFixed(2)}
+                          {tx.type === 'deposit' ? '+' : '-'}${(tx.amount / 100).toFixed(2)} USD
                         </span>
                         <Badge variant={tx.status === "completed" ? "default" : "secondary"}>
                           {tx.status}

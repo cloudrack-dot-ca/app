@@ -560,9 +560,9 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${stats.billing.totalDeposits.toFixed(2)}</div>
+                  <div className="text-2xl font-bold">${stats.billing.totalDeposits.toFixed(2)} USD</div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    ${stats.billing.totalSpending.toFixed(2)} in spending
+                    ${stats.billing.totalSpending.toFixed(2)} USD in spending
                   </p>
                   <p className="text-xs text-muted-foreground mt-1 italic">
                     Auto-updates every 5 minutes
