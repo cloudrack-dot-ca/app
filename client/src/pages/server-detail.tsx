@@ -420,10 +420,10 @@ export default function ServerDetailPage() {
 
   const updatePasswordMutation = useMutation({
     mutationFn: async (password: string) => {
-      // Updated to specifically mention CloudRack integration
+      // CloudRack integration for password update
       return await apiRequest("PATCH", `/api/servers/${serverId}/password`, { 
         password,
-        digital_ocean_integration: true  // Flag to indicate we're using CloudRack API for this
+        cloudrack_integration: true  // Flag to indicate we're using CloudRack API for this
       });
     },
     onSuccess: () => {
@@ -433,6 +433,9 @@ export default function ServerDetailPage() {
       });
       setIsEditingPassword(false);
       setNewPassword("");
+      
+      // Refresh the server details to update the UI
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/details`] });
     },
     onError: (error: Error) => {
       toast({

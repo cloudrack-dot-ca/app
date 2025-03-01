@@ -1,0 +1,85 @@
+[vite] connecting... client:495:8
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+XHRGET
+https://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/api/servers/36/firewall
+[HTTP/1.1 404 Not Found 597ms]
+
+XHRGET
+https://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/api/servers/36/firewall
+[HTTP/1.1 404 Not Found 620ms]
+
+[vite] hot updated: /src/components/server-terminal-real.tsx client:223:18
+[vite] hot updated: /src/index.css?v=05w2v2zTEilcIks5ZzikT client:223:18
+XHRGET
+https://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/api/servers/36/firewall
+[HTTP/1.1 404 Not Found 410ms]
+
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Fetching data for: /api/servers/36/metrics/latest queryClient.ts:59:14
+Fetching data for: /api/servers/36/metrics/history queryClient.ts:59:14
+Fetching data for: /api/servers/36/metrics/latest queryClient.ts:59:14
+Fetching data for: /api/servers/36/metrics/history queryClient.ts:59:14
+Fetching data for: /api/servers/36 queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Fetching data for: /api/servers/36/details queryClient.ts:59:14
+[Terminal Debug] Loading password data... server-terminal-real.tsx:52:14
+Terminal initializing, root password available: false server-terminal-real.tsx:63:12
+[Terminal Debug] Server 36 password status: 
+Object { hasPassword: true, passwordLength: 17 }
+server-terminal-real.tsx:45:14
+Terminal initializing, root password available: true server-terminal-real.tsx:63:12
+GET
+wss://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/socket.io/?serverId=36&userId=3&EIO=4&transport=websocket&sid=8cyebZF3ww695GkoAAAI
+NS_ERROR_WEBSOCKET_CONNECTION_REFUSED
+
+Firefox can’t establish a connection to the server at wss://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/socket.io/?serverId=36&userId=3&EIO=4&transport=websocket&sid=8cyebZF3ww695GkoAAAI. websocket.js:119:18
+The connection to wss://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/socket.io/?serverId=36&userId=3&EIO=4&transport=websocket&sid=8cyebZF3ww695GkoAAAI was interrupted while the page was loading. websocket.js:119:18
+Socket connected to backend server-terminal-real.tsx:156:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+
+​
+

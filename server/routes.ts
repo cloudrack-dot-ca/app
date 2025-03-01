@@ -1080,13 +1080,13 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Log the password update - without showing the actual password
       console.log(`Root password updated for server ${serverId} by user ${req.user.id}`);
       
-      // For DigitalOcean integration - in a real implementation with the actual DigitalOcean API,
+      // For CloudRack integration - in a real implementation with the actual CloudRack API,
       // we would make an API call here to reset the server's root password.
       // For demonstration purposes, we are just storing it in our database.
       
-      if (digital_ocean_integration) {
-        console.log(`Digital Ocean integration flag set for password update on server ${serverId}`);
-        // This would be where we'd make the API call to DigitalOcean
+      if (cloudrack_integration || digital_ocean_integration) {
+        console.log(`CloudRack integration flag set for password update on server ${serverId}`);
+        // This would be where we'd make the API call to CloudRack
       }
       
       res.json({ 

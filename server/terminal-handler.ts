@@ -257,15 +257,19 @@ export function setupTerminalSocket(server: HttpServer) {
           
           // Configure connection options based on authentication method available
           if (server.rootPassword) {
-            log(`Using password authentication for server ${server.id}`, 'terminal');
+            log(`Using password authentication for server ${server.id} (password length: ${server.rootPassword.length})`, 'terminal');
             socket.emit('status', { 
               status: 'connecting',
               message: 'Connecting with password authentication...'
             });
             
-            // Configure for password auth
+            // Configure for password auth - masked password for security in logs
+            log(`Password set for authentication: ${server.rootPassword.substring(0, 2)}****`, 'terminal');
             connectionConfig.password = server.rootPassword;
             connectionConfig.tryKeyboard = true;     // Enable keyboard-interactive as backup
+            
+            // Add detailed debugging for connection
+            log(`Connection config (password auth): host=${connectionConfig.host}, port=${connectionConfig.port}, username=${connectionConfig.username}`, 'terminal');
           } else {
             // If no password, attempt to use SSH key authentication with the CloudRack key
             log(`Using CloudRack key authentication for server ${server.id}`, 'terminal');
@@ -293,24 +297,46 @@ export function setupTerminalSocket(server: HttpServer) {
             
             // If we have a root password and the prompt is asking for a password, use it
             // Check if we have a root password and if any prompt is asking for a password
-            if (server.rootPassword && prompts.some((p: any) => 
-              p.prompt.toLowerCase().includes('password') || 
-              p.prompt.toLowerCase().includes('senha') ||   // Portuguese 
-              p.prompt.toLowerCase().includes('contraseña') // Spanish
+            // We now use a much broader check for password-related prompts in multiple languages
+            if (server.rootPassword && (
+              // Check for common password prompts in multiple languages
+              prompts.some((p: any) => 
+                p.prompt.toLowerCase().includes('password') || 
+                p.prompt.toLowerCase().includes('senha') ||        // Portuguese 
+                p.prompt.toLowerCase().includes('contraseña') ||   // Spanish
+                p.prompt.toLowerCase().includes('mot de passe') || // French
+                p.prompt.toLowerCase().includes('kennwort') ||     // German
+                p.prompt.toLowerCase().includes('пароль') ||       // Russian 
+                p.prompt.toLowerCase().includes('密码') ||          // Chinese
+                p.prompt.toLowerCase().includes('パスワード') ||      // Japanese
+                p.prompt.toLowerCase().includes('암호') ||         // Korean
+                // Also look for password prompt indicators that don't use the word "password"
+                p.echo === false ||                               // Hidden input is likely password
+                p.prompt.includes('***')                          // Stars often indicate password
+              )
             )) {
+              // Log comprehensive debugging information
               log('Responding to password prompt with stored root password', 'terminal');
+              socket.emit('status', { 
+                status: 'auth_in_progress',
+                message: 'Using stored root password for authentication'
+              });
               
               // For password prompts, don't echo back to client
               // If any prompt is expecting hidden input (echo = false), it's most likely a password
               const isPasswordPrompt = prompts.some(p => p.echo === false);
               
-              // Log the authentication attempt details
+              // Also check if there are any other clues this is a password prompt
+              const promptTexts = prompts.map(p => p.prompt.toLowerCase());
+              
+              // Log the authentication attempt details with comprehensive debugging
               log(`Password authentication attempt for server ${server.id}:
                 - Server IP: ${server.ipAddress}
                 - Authentication method: Password
                 - Username: root
                 - Password length: ${server.rootPassword.length} characters
-                - Is password prompt: ${isPasswordPrompt}`, 'terminal');
+                - Is password prompt: ${isPasswordPrompt}
+                - Prompt text: ${JSON.stringify(promptTexts)}`, 'terminal');
                 
               // Use the stored root password
               finish([server.rootPassword]);

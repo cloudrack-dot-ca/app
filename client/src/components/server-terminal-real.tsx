@@ -159,13 +159,15 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       });
       
       socket.on('status', (data: { status: string, message?: string }) => {
+        console.log('[Terminal] Status update:', data.status, data.message);
+        
         if (data.status === 'connecting') {
           term.writeln('\x1b[1;33mEstablishing secure connection...\x1b[0m');
         } else if (data.status === 'connected') {
           setIsConnected(true);
           term.writeln('\x1b[1;32mSecure connection established!\x1b[0m');
           term.writeln('\x1b[1;32m-----------------------------------------\x1b[0m');
-          term.writeln('\x1b[1;32mWelcome to CloudRack.ca Terminal Access\x1b[0m');
+          term.writeln('\x1b[1;32mWelcome to CloudRack Terminal Access\x1b[0m');
           term.writeln('\x1b[1;32m-----------------------------------------\x1b[0m');
           // Display message if provided (like authentication method used)
           if (data.message) {
@@ -175,9 +177,16 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
           setIsConnected(false);
           term.writeln('\x1b[1;31mConnection closed.\x1b[0m');
         } else if (data.status === 'password_auth') {
-          term.writeln('\x1b[1;33mUsing password authentication fallback...\x1b[0m');
+          term.writeln('\x1b[1;33mUsing password authentication...\x1b[0m');
         } else if (data.status === 'key_auth') {
           term.writeln('\x1b[1;33mUsing CloudRack Terminal Key authentication...\x1b[0m');
+        } else if (data.status === 'auth_in_progress') {
+          term.writeln('\x1b[1;33mAuthenticating: ' + (data.message || 'Verifying credentials...') + '\x1b[0m');
+        }
+        
+        // If there's a message but we didn't handle it above, display it
+        if (data.message && !['connected', 'auth_in_progress'].includes(data.status)) {
+          term.writeln(`\x1b[1;36m${data.message}\x1b[0m`);
         }
       });
       
@@ -190,17 +199,43 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         setConnectionError(error);
         term.writeln(`\x1b[1;31mError: ${error}\x1b[0m`);
         
-        // Provide helpful information based on the error
-        if (error.includes('timeout') || error.includes('Connection refused')) {
-          term.writeln('\x1b[1;33mNote: New servers may take up to 5 minutes to complete setup.\x1b[0m');
-          term.writeln('\x1b[1;33mPlease wait a few minutes and try reconnecting.\x1b[0m');
-        } else if (error.includes('Authentication failed')) {
-          term.writeln('\x1b[1;33mAuthentication error detected. This may happen if:\x1b[0m');
-          term.writeln('\x1b[1;33m1. The server has been recently rebooted\x1b[0m');
-          term.writeln('\x1b[1;33m2. SSH keys have changed on the server\x1b[0m');
-          term.writeln('\x1b[1;33mPlease contact support if this persists.\x1b[0m');
+        // Provide detailed information based on common error types
+        if (error.includes('timeout') || error.includes('Connection refused') || error.includes('ECONNREFUSED')) {
+          term.writeln('\x1b[1;33m---------- CONNECTION TROUBLESHOOTING ----------\x1b[0m');
+          term.writeln('\x1b[1;33m• New servers may take up to 5 minutes to complete setup\x1b[0m');
+          term.writeln('\x1b[1;33m• The server may be rebooting or initializing\x1b[0m');
+          term.writeln('\x1b[1;33m• Server firewall may be blocking connections\x1b[0m');
+          term.writeln('\x1b[1;33m----------------------------------------------\x1b[0m');
+          term.writeln('\x1b[1;32mRecommendation: Wait a few minutes and try reconnecting\x1b[0m');
+          term.writeln('\x1b[1;32mOr click "Reboot" on the server actions menu\x1b[0m');
+        } else if (error.includes('Authentication failed') || error.includes('auth fail') || error.includes('permission denied')) {
+          term.writeln('\x1b[1;33m---------- AUTHENTICATION TROUBLESHOOTING ----------\x1b[0m');
+          if (serverDetails?.rootPassword) {
+            term.writeln('\x1b[1;33m• Root password authentication failed\x1b[0m');
+            term.writeln('\x1b[1;33m• The stored password may be incorrect or outdated\x1b[0m');
+            term.writeln('\x1b[1;33m• Try resetting your root password\x1b[0m');
+          } else {
+            term.writeln('\x1b[1;33m• SSH key authentication failed\x1b[0m');
+            term.writeln('\x1b[1;33m• SSH keys may be missing or changed on the server\x1b[0m');
+          }
+          term.writeln('\x1b[1;33m--------------------------------------------------\x1b[0m');
+          term.writeln('\x1b[1;32mRecommendation: Try setting a new root password\x1b[0m');
+        } else if (error.includes('Host key verification failed')) {
+          term.writeln('\x1b[1;33m---------- HOST KEY VERIFICATION ISSUE ----------\x1b[0m');
+          term.writeln('\x1b[1;33m• The server\'s SSH host key has changed\x1b[0m');
+          term.writeln('\x1b[1;33m• This typically happens after server rebuilds\x1b[0m');
+          term.writeln('\x1b[1;33m• CloudRack will automatically resolve this issue\x1b[0m');
+          term.writeln('\x1b[1;33m-----------------------------------------------\x1b[0m');
+          term.writeln('\x1b[1;32mRecommendation: Try connecting again\x1b[0m');
+        } else {
+          term.writeln('\x1b[1;33m---------- GENERAL TROUBLESHOOTING ----------\x1b[0m');
+          term.writeln('\x1b[1;33m• The connection encountered an unexpected error\x1b[0m');
+          term.writeln('\x1b[1;33m• Try rebooting the server if it persists\x1b[0m');
+          term.writeln('\x1b[1;33m• Contact support if you need additional help\x1b[0m');
+          term.writeln('\x1b[1;33m-------------------------------------------\x1b[0m');
         }
         
+        term.writeln('\x1b[1;36mClick "Reconnect" to try connecting again\x1b[0m');
         setIsConnected(false);
       });
       
