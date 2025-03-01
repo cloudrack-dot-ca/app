@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { Loader2, Key, Plus, Trash2 } from "lucide-react";
+import { Loader2, Key, Plus, Trash2, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -12,12 +12,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { CloudRackTerminalNotice } from "@/components/cloudrack-terminal-notice";
+import { Badge } from "@/components/ui/badge";
 
 interface SSHKey {
   id: number;
   name: string;
   publicKey: string;
   createdAt: string;
+  isCloudRackKey?: boolean;
 }
 
 export default function SSHKeysPage() {

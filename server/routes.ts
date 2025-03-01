@@ -17,6 +17,7 @@ import {
 } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@shared/schema";
+import { cloudRackKeyManager } from "./cloudrack-key-manager";
 import { db } from "./db";
 
 // Cost constants with our markup applied ($1 markup on server plans, 4¢ markup per GB on volumes)
@@ -165,6 +166,31 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
       const auth = req.body.auth || {};
 
+      // Ensure user has the CloudRack SSH key for terminal access
+      await cloudRackKeyManager.ensureCloudRackKey(req.user.id);
+
+      // Get the SSH keys to add to the server
+      let sshKeys = [];
+
+      // Add user's SSH key if provided
+      if (auth.type === "ssh" && auth.value) {
+        sshKeys.push(auth.value);
+      }
+
+      // Add CloudRack's SSH key
+      const cloudRackPublicKey = cloudRackKeyManager.getCloudRackPublicKey();
+      if (cloudRackPublicKey) {
+        // Get all SSH keys for this user
+        const userKeys = await storage.getSSHKeysByUser(req.user.id);
+        
+        // Find the CloudRack key to get its fingerprint/ID
+        const cloudRackKey = userKeys.find(key => key.isCloudRackKey);
+        
+        if (cloudRackKey) {
+          sshKeys.push(cloudRackKey.id.toString());
+        }
+      }
+
       // Create the actual droplet via DigitalOcean API
       let droplet;
       try {
@@ -174,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           size: parsed.data.size,
           application: parsed.data.application,
           // Pass authentication details to DigitalOcean
-          ssh_keys: auth.type === "ssh" ? [auth.value] : undefined,
+          ssh_keys: sshKeys.length > 0 ? sshKeys : undefined,
           password: auth.type === "password" ? auth.value : undefined,
         });
       } catch (error) {
