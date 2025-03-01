@@ -352,6 +352,11 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     res.json(applications);
   });
   
+  app.get("/api/distributions", async (_req, res) => {
+    const distributions = await digitalOcean.getDistributions();
+    res.json(distributions);
+  });
+  
   // Admin API routes have been moved to server/admin/routes.ts
 
   app.get("/api/servers", async (req, res) => {

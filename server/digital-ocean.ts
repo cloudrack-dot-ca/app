@@ -674,6 +674,22 @@ export class DigitalOceanClient {
     }
   }
 
+  async getDistributions(): Promise<Distribution[]> {
+    if (this.useMock) {
+      return this.mockDistributions;
+    }
+    
+    try {
+      // In a real implementation, we would fetch from the DigitalOcean API
+      // For now, we'll use mock data
+      console.log('DigitalOcean API available, but using mock distributions data for consistency');
+      return this.mockDistributions;
+    } catch (error) {
+      console.error('Error fetching distributions, falling back to mock data:', error);
+      return this.mockDistributions;
+    }
+  }
+
   async getApplications(): Promise<Application[]> {
     if (this.useMock) {
       return this.mockApplications;

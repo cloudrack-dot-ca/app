@@ -39,6 +39,13 @@ interface Application {
   name: string;
   description: string;
   type: string;
+  distribution?: string; // References a distribution slug
+}
+
+interface Distribution {
+  slug: string;
+  name: string;
+  description: string;
 }
 
 function calculatePasswordStrength(password: string): number {
