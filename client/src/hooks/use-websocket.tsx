@@ -38,7 +38,25 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const maxReconnectAttempts = 5;
   const reconnectTimeoutId = useRef<NodeJS.Timeout | null>(null);
 
-  // Function to send authenticated messages
+  // Handle custom events for toast notifications to avoid circular dependencies
+  useEffect(() => {
+    const handleNewTicketMessage = (event: Event) => {
+      const customEvent = event as CustomEvent<{ ticketId: number }>;
+      toast({
+        title: 'New message',
+        description: `New message in ticket #${customEvent.detail.ticketId}`,
+      });
+    };
+    
+    // Listen for our custom event
+    window.addEventListener('new-ticket-message', handleNewTicketMessage);
+    
+    return () => {
+      window.removeEventListener('new-ticket-message', handleNewTicketMessage);
+    };
+  }, [toast]);
+
+  // Function to send authenticated messages - no dependencies
   const sendMessage = useCallback((message: WebSocketMessage) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify(message));
@@ -47,9 +65,16 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     return false;
   }, []);
 
-  // Handle establishing WebSocket connection
+  // Store user ID in a ref to avoid dependency issues
+  const userIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    userIdRef.current = user?.id ?? null;
+  }, [user?.id]);
+
+  // Handle establishing WebSocket connection - no toast or sendMessage in dependencies
   const connectWebSocket = useCallback(() => {
-    if (!user?.id) return;
+    const currentUserId = userIdRef.current;
+    if (!currentUserId) return;
     
     // Close existing connection if any
     if (ws.current) {
@@ -66,18 +91,22 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       reconnectAttempts.current = 0;
 
       // Authenticate with user ID
-      sendMessage({
-        type: 'auth',
-        userId: user.id
-      });
+      if (ws.current?.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({
+          type: 'auth',
+          userId: currentUserId
+        }));
+      }
 
       // Resubscribe to any previously subscribed tickets
       subscribedTickets.current.forEach(ticketId => {
-        sendMessage({
-          type: 'subscribe',
-          ticketId,
-          userId: user.id
-        });
+        if (ws.current?.readyState === WebSocket.OPEN) {
+          ws.current.send(JSON.stringify({
+            type: 'subscribe',
+            ticketId,
+            userId: currentUserId
+          }));
+        }
       });
     };
 
@@ -100,11 +129,11 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         }, delay);
       } else {
         console.log('Max reconnection attempts reached. Please refresh the page.');
-        toast({
-          title: 'Connection lost',
-          description: 'Unable to reconnect to the server. Please refresh the page.',
-          variant: 'destructive'
-        });
+        // Use custom event to handle the toast message
+        window.dispatchEvent(new CustomEvent('websocket-connection-error', { 
+          detail: { message: 'Unable to reconnect to the server. Please refresh the page.' }
+        }));
+        setConnected(false);
       }
     };
 
@@ -141,13 +170,13 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
                 
                 return newMap;
               });
-              
+                
               // Notify user of new message if this is a message update
               if (message.data.message) {
-                toast({
-                  title: 'New message',
-                  description: `New message in ticket #${message.ticketId}`,
-                });
+                // We'll dispatch a custom event to avoid dependency cycles with toast
+                window.dispatchEvent(new CustomEvent('new-ticket-message', { 
+                  detail: { ticketId: message.ticketId }
+                }));
               }
             }
             break;
@@ -166,11 +195,11 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       }
       socket.close();
     };
-  }, [user, sendMessage, toast]);
+  }, []);
 
   // Connect when the component mounts and user is logged in
   useEffect(() => {
-    if (user?.id) {
+    if (userIdRef.current) {
       connectWebSocket();
     }
     
@@ -184,24 +213,25 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(reconnectTimeoutId.current);
       }
     };
-  }, [user, connectWebSocket]);
+  }, [connectWebSocket]);
 
   // Function to subscribe to a ticket
   const subscribeToTicket = useCallback((ticketId: number) => {
-    if (!user?.id) return;
+    const currentUserId = userIdRef.current;
+    if (!currentUserId) return;
     
     // Add to our tracked subscriptions
     subscribedTickets.current.add(ticketId);
     
     // Send subscription request if connected
-    if (connected) {
-      sendMessage({
+    if (connected && ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({
         type: 'subscribe',
         ticketId,
-        userId: user.id
-      });
+        userId: currentUserId
+      }));
     }
-  }, [user, connected, sendMessage]);
+  }, [connected]);
 
   // Function to unsubscribe from a ticket
   const unsubscribeFromTicket = useCallback((ticketId: number) => {
