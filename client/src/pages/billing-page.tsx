@@ -219,7 +219,6 @@ export default function BillingPage() {
                 <span>${(0.028 * 1.005).toFixed(5)}/hour</span>
               </li>
             </ul>
-            <p className="text-xs text-muted-foreground mt-2">Pricing includes a 0.5% rate adjustment over base rates</p>
           </CardContent>
         </Card>
 
@@ -236,7 +235,6 @@ export default function BillingPage() {
               <p className="text-lg font-bold mb-1">${(0.01 * 1.005).toFixed(5)}/GB</p>
               <p className="text-sm text-muted-foreground">For bandwidth overages beyond included limit</p>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Pricing includes a 0.5% rate adjustment over base rates</p>
           </CardContent>
         </Card>
       </div>

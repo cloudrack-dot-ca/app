@@ -447,7 +447,15 @@ const ArticleViewer = ({ article }: { article: DocArticle | null }) => {
           <h1 className="text-3xl font-bold">{article.title}</h1>
           <p className="text-sm text-muted-foreground">Last updated: {article.lastUpdated}</p>
         </div>
-        <Button variant="outline" size="sm" className="flex items-center gap-1 self-start sm:self-auto">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="flex items-center gap-1 self-start sm:self-auto"
+          onClick={() => {
+            // Open print dialog
+            window.print();
+          }}
+        >
           <ExternalLink className="h-4 w-4" />
           <span>Print</span>
         </Button>
