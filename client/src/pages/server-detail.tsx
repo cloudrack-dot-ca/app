@@ -147,12 +147,22 @@ function ActiveFirewallRules({ serverId }: { serverId: number }) {
     );
   }
 
-  if (!firewall || !firewall.inbound_rules || firewall.inbound_rules.length === 0) {
+  if (error || !firewall) {
+    return (
+      <div className="p-4 text-center bg-yellow-50 border border-yellow-200 rounded-lg">
+        <Shield className="h-5 w-5 text-yellow-600 mx-auto mb-2" />
+        <p className="text-sm text-yellow-700">No firewall has been created yet</p>
+        <p className="text-xs text-yellow-600 mt-1">Click "Manage Firewall" to create a firewall first</p>
+      </div>
+    );
+  }
+  
+  if (!firewall.inbound_rules || firewall.inbound_rules.length === 0) {
     return (
       <div className="p-4 text-center bg-yellow-50 border border-yellow-200 rounded-lg">
         <Shield className="h-5 w-5 text-yellow-600 mx-auto mb-2" />
         <p className="text-sm text-yellow-700">No firewall rules configured.</p>
-        <p className="text-xs text-yellow-600 mt-1">Use "Configure Firewall" to set up protection.</p>
+        <p className="text-xs text-yellow-600 mt-1">Use "Manage Firewall" to set up protection.</p>
       </div>
     );
   }
@@ -812,8 +822,8 @@ export default function ServerDetailPage() {
                 <div className="bg-card border rounded-lg p-4">
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <h4 className="text-sm font-medium">Active Firewall Rules</h4>
-                      <p className="text-xs text-muted-foreground">Current inbound network traffic rules</p>
+                      <h4 className="text-sm font-medium">Firewall Configuration</h4>
+                      <p className="text-xs text-muted-foreground">Configure security rules for your server</p>
                     </div>
                     <Dialog>
                       <DialogTrigger asChild>
@@ -822,7 +832,7 @@ export default function ServerDetailPage() {
                           size="sm"
                         >
                           <Shield className="h-4 w-4 mr-2" />
-                          Configure Firewall
+                          Manage Firewall
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-3xl">
@@ -841,7 +851,8 @@ export default function ServerDetailPage() {
                   </div>
                   
                   <p className="text-xs text-muted-foreground mt-4">
-                    This section displays your active inbound firewall rules. Use the "Configure Firewall" button to manage all rules in detail.
+                    Use the "Manage Firewall" button above to create and configure your firewall. 
+                    You can set up inbound rules that control which traffic is allowed to reach your server.
                   </p>
                 </div>
               </div>
