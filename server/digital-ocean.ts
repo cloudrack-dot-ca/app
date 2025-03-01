@@ -19,11 +19,18 @@ export interface Size {
   processor_type?: 'regular' | 'intel' | 'amd' | 'gpu';
 }
 
+export interface Distribution {
+  slug: string;
+  name: string;
+  description: string;
+}
+
 export interface Application {
   slug: string;
   name: string;
   description: string;
   type: string;
+  distribution?: string; // References a distribution slug (optional for backward compatibility)
 }
 
 export interface FirewallRule {
@@ -219,45 +226,57 @@ export class DigitalOceanClient {
 
   ];
 
-  private mockApplications: Application[] = [
-    // Distributions (Base operating systems)
+  private mockDistributions: Distribution[] = [
     {
-      slug: "none",
+      slug: "ubuntu-20-04",
       name: "Ubuntu 20.04",
       description: "Clean Ubuntu 20.04 LTS installation",
-      type: "distribution",
     },
     {
       slug: "debian-11",
       name: "Debian 11",
       description: "Clean Debian 11 installation",
-      type: "distribution",
     },
     {
       slug: "centos-stream-9",
       name: "CentOS Stream 9",
       description: "Clean CentOS Stream 9 installation",
-      type: "distribution",
     },
     {
       slug: "fedora-36",
       name: "Fedora 36",
       description: "Clean Fedora 36 installation",
-      type: "distribution",
     },
     {
       slug: "rocky-linux-9",
       name: "Rocky Linux 9",
       description: "Clean Rocky Linux 9 installation",
-      type: "distribution",
     },
-    
+    {
+      slug: "ubuntu-22-04",
+      name: "Ubuntu 22.04",
+      description: "Clean Ubuntu 22.04 LTS installation",
+    },
+    {
+      slug: "debian-12",
+      name: "Debian 12",
+      description: "Clean Debian 12 installation",
+    },
+    {
+      slug: "almalinux-9",
+      name: "AlmaLinux 9",
+      description: "Clean AlmaLinux 9 installation",
+    }
+  ];
+
+  private mockApplications: Application[] = [
     // Web Development
     {
       slug: "nodejs",
       name: "Node.js",
-      description: "Node.js on Ubuntu 20.04",
+      description: "Node.js with npm and nvm",
       type: "application",
+      distribution: "ubuntu-20-04",
     },
     {
       slug: "python",
