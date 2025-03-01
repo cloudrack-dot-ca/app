@@ -1190,16 +1190,10 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Check for existing firewall
       let firewall = await digitalOcean.getFirewallByDropletId(server.dropletId);
       
-      // If no firewall exists, create a default one
+      // If no firewall exists, return 404 - user needs to create one manually
       if (!firewall) {
-        console.log(`No firewall found for server ${server.id}, creating default firewall`);
-        try {
-          firewall = digitalOcean.setupDefaultFirewall(server.dropletId);
-          console.log(`Created default firewall for server ${server.id}`);
-        } catch (setupError) {
-          console.error("Error creating default firewall:", setupError);
-          return res.status(500).json({ message: "Failed to create default firewall" });
-        }
+        console.log(`No firewall found for server ${server.id}`);
+        return res.status(404).json({ message: "No firewall found for this server" });
       }
       
       res.json(firewall);
@@ -1258,20 +1252,21 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
             outbound_rules
           });
         } else {
-          console.log(`No firewall found for server ${server.id}, creating one using setupDefaultFirewall`);
-          // Create a default firewall first
-          firewall = digitalOcean.setupDefaultFirewall(server.dropletId);
+          console.log(`No firewall found for server ${server.id}, creating a new empty firewall`);
+          // Create a new firewall with the provided rules
+          const firewallName = `firewall-${server.name}`;
           
-          // Then update it with the requested rules
-          if (firewall && firewall.id) {
-            console.log(`Updating new default firewall ${firewall.id} with custom rules`);
-            firewall = await digitalOcean.updateFirewall(firewall.id, {
-              inbound_rules,
-              outbound_rules
+          try {
+            firewall = await digitalOcean.createFirewall({
+              name: firewallName,
+              droplet_ids: [parseInt(server.dropletId)],
+              inbound_rules: inbound_rules,
+              outbound_rules: outbound_rules
             });
-          } else {
-            console.error(`Failed to create default firewall for server ${server.id}`);
-            throw new Error("Failed to create default firewall");
+            console.log(`Created new firewall ${firewall.id} for server ${server.id}`);
+          } catch (createError) {
+            console.error(`Failed to create firewall for server ${server.id}:`, createError);
+            throw new Error("Failed to create firewall");
           }
         }
         
@@ -1328,12 +1323,14 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.status(400).json({ message: "Invalid rule format. Specify 'rule_type' as 'inbound' or 'outbound' and provide a valid rule object." });
       }
       
-      // Get the current firewall or create a default one if it doesn't exist
+      // Get the current firewall
       let firewall = await digitalOcean.getFirewallByDropletId(server.dropletId);
       
       if (!firewall) {
-        console.log(`No firewall found when adding rule, creating default firewall for server ${server.id}`);
-        firewall = digitalOcean.setupDefaultFirewall(server.dropletId);
+        // If no firewall exists, return an error - user needs to enable a firewall first
+        return res.status(400).json({ 
+          message: "No firewall exists for this server. Please enable a firewall first before adding rules."
+        });
       }
       
       // Add the rule
