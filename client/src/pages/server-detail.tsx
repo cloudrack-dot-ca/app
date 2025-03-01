@@ -313,7 +313,9 @@ export default function ServerDetailPage() {
   }
 
   const specs = server.specs || { memory: 1024, vcpus: 1, disk: 25 };
-  const isRunning = server.status === "active" || server.status === "starting" || server.status === "rebooting";
+  // Servers are always running by default when created
+  // Set isRunning to true by default, only show Power On if explicitly powered off
+  const isRunning = server.status !== "off";
 
   return (
     <div className="container py-8">
