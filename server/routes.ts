@@ -7,8 +7,8 @@ import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
 import * as schema from "@shared/schema";
-import { cloudRackKeyManager } from "./cloudrack-key-manager";
-import { systemKeyManager } from "./system-key-manager";
+// CloudRack key manager has been removed
+// System key manager has been removed
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { 
@@ -1828,82 +1828,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   });
   
   // CloudRack key status and management endpoints
-  app.get("/api/cloudrack-key", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-    
-    try {
-      // Check if user has CloudRack key
-      const hasKey = await cloudRackKeyManager.hasCloudRackKey(req.user.id);
-      
-      if (hasKey) {
-        // Find the actual key for additional details
-        const keys = await storage.getSSHKeysByUser(req.user.id);
-        const cloudRackKey = keys.find(key => key.isCloudRackKey);
-        
-        res.json({
-          status: "active",
-          key: cloudRackKey
-        });
-      } else {
-        res.json({
-          status: "missing"
-        });
-      }
-    } catch (error) {
-      console.error("Error checking CloudRack key status:", error);
-      res.status(500).json({ 
-        message: "Failed to check CloudRack key status",
-        error: (error as Error).message 
-      });
-    }
-  });
+  // CloudRack key endpoint removed - using password authentication only
 
-  // Ensure or regenerate CloudRack key
-  app.post("/api/cloudrack-key", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-    
-    try {
-      // Regenerate will delete existing and create a new one
-      const regenerate = req.body.regenerate === true;
-      
-      if (regenerate) {
-        // Find and delete existing CloudRack key if present
-        const keys = await storage.getSSHKeysByUser(req.user.id);
-        const cloudRackKey = keys.find(key => key.isCloudRackKey);
-        
-        if (cloudRackKey) {
-          await storage.deleteSSHKey(cloudRackKey.id);
-        }
-      }
-      
-      // Create/ensure the CloudRack key
-      const success = await cloudRackKeyManager.ensureCloudRackKey(req.user.id);
-      
-      if (success) {
-        // Get the newly created key
-        const keys = await storage.getSSHKeysByUser(req.user.id);
-        const cloudRackKey = keys.find(key => key.isCloudRackKey);
-        
-        res.json({
-          status: "success",
-          message: regenerate ? "CloudRack key regenerated successfully" : "CloudRack key ensured successfully", 
-          key: cloudRackKey
-        });
-      } else {
-        res.status(500).json({
-          status: "error",
-          message: "Failed to create CloudRack key"
-        });
-      }
-    } catch (error) {
-      console.error("Error managing CloudRack key:", error);
-      res.status(500).json({ 
-        status: "error",
-        message: "Failed to manage CloudRack key",
-        error: (error as Error).message 
-      });
-    }
-  });
+  // CloudRack key management endpoint removed - using password authentication only
   
   // System SSH key status endpoint
   app.get("/api/system-key", async (req, res) => {
