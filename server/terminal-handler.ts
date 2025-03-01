@@ -231,30 +231,29 @@ export function setupTerminalSocket(server: HttpServer) {
             }
           };
           
-          // HYBRID AUTHENTICATION - TRY BOTH SSH KEY AND PASSWORD
-          // Use the private key as primary authentication method
-          log(`Using SSH key authentication for server ${server.id}`, 'terminal');
-          connectionConfig.privateKey = privateKey;
+          // SIMPLIFIED AUTHENTICATION - JUST USE PASSWORD WITHOUT SSH KEY
+          // The previous attempts with SSH key authentication weren't working reliably
+          // Let's focus on password authentication only for now
           
-          // Also set password as backup if available
           if (server.rootPassword) {
-            log(`Root password also available as backup authentication`, 'terminal');
+            log(`Using password authentication for server ${server.id}`, 'terminal');
             connectionConfig.password = server.rootPassword;
+            
+            // Completely disable SSH key authentication to avoid "too many authentication failures"
+            connectionConfig.privateKey = undefined;
+            
+            // Don't try keyboard-interactive initially
+            connectionConfig.tryKeyboard = false;
           } else {
-            log('No root password available for backup authentication', 'terminal');
-            socket.emit('status', { 
-              status: 'connecting', 
-              message: 'Using SSH key authentication only. No root password set for backup.' 
-            });
+            log('No root password available for authentication', 'terminal');
+            socket.emit('error', 'No password is set for this server. Please set a root password to use the terminal.');
+            throw new Error('Root password required for terminal access');
           }
           
-          // Enable keyboard-interactive as a fallback
-          connectionConfig.tryKeyboard = true;
-          
-          // Tell client we're connecting with appropriate auth method
+          // Tell client we're connecting with password authentication
           socket.emit('status', { 
             status: 'connecting',
-            message: 'Connecting with SSH key authentication...'
+            message: 'Connecting with password authentication...'
           });
           
           // Advanced auth handler to properly prioritize authentication methods
@@ -266,16 +265,16 @@ export function setupTerminalSocket(server: HttpServer) {
             
             log(`Authentication methods available: ${methodsLeft.join(', ')}`, 'terminal');
             
-            // Try publickey auth first if available (preferred method)
-            if (methodsLeft.includes('publickey')) {
-              log('Using publickey authentication method with CloudRack key', 'terminal');
-              return callback('publickey');
-            } 
-            // Then try password auth if the server accepts it
-            else if (methodsLeft.includes('password') && server.rootPassword) {
+            // Try password auth first if the server accepts it and we have a password
+            if (methodsLeft.includes('password') && server.rootPassword) {
               log('Using password authentication method with stored root password', 'terminal');
               return callback('password');
-            } 
+            }
+            // Then try publickey auth if available as a fallback
+            else if (methodsLeft.includes('publickey')) {
+              log('Using publickey authentication method with CloudRack key', 'terminal');
+              return callback('publickey');
+            }
             // Then try keyboard-interactive which will also use the password
             else if (methodsLeft.includes('keyboard-interactive') && server.rootPassword) {
               log('Using keyboard-interactive authentication method with root password', 'terminal');
