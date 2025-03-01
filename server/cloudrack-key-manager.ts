@@ -50,22 +50,32 @@ export class CloudRackKeyManager {
     try {
       // Check if keys already exist
       if (fs.existsSync(this.keyPath) && fs.existsSync(this.publicKeyPath)) {
+        // Load the existing public key
         this.loadPublicKey();
-        this.initialized = true;
-        console.log('CloudRack SSH keys already exist - loaded successfully');
-        return true;
+        
+        try {
+          // Verify the private key format is valid for ssh2 library
+          const privateKey = fs.readFileSync(this.keyPath, 'utf8');
+          
+          // Check for PEM format which is required for ssh2
+          if (!privateKey.includes('-----BEGIN') || !privateKey.includes('PRIVATE KEY-----')) {
+            console.log('Private key is not in PEM format, regenerating keys');
+            await this.regenerateKeys();
+          } else {
+            console.log('CloudRack SSH keys already exist in valid PEM format');
+            this.initialized = true;
+            return true;
+          }
+        } catch (keyError) {
+          console.error('Error reading private key, regenerating:', keyError);
+          await this.regenerateKeys();
+        }
+      } else {
+        console.log('CloudRack SSH keys not found - generating new keys');
+        await this.regenerateKeys();
       }
       
-      console.log('CloudRack SSH keys not found - generating new keys');
-      
-      // Generate a new SSH key pair
-      await exec(`ssh-keygen -t rsa -b 4096 -f ${this.keyPath} -N "" -C "cloudrack-terminal@cloudrack.io"`);
-      console.log('Generated new CloudRack SSH key pair');
-      
-      // Load the newly created public key
-      this.loadPublicKey();
-      this.initialized = true;
-      return true;
+      return this.initialized;
     } catch (error) {
       console.error('Error initializing SSH keys:', error);
       // In case of failure, provide a fallback public key for testing
@@ -73,6 +83,51 @@ export class CloudRackKeyManager {
         this.publicKeyContent = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDv8X23SfgYoZ0sUx3IvM3njHiAH2Q9pzyXm8ICrUAMm6J5hrdV cloudrack-testing-key';
         console.log('Using fallback SSH key for CloudRack terminal');
       }
+      return false;
+    }
+  }
+  
+  /**
+   * Generate new SSH keys in PEM format specifically for compatibility with ssh2
+   */
+  private async regenerateKeys(): Promise<boolean> {
+    try {
+      // Ensure the directory exists
+      const sshDir = path.dirname(this.keyPath);
+      if (!fs.existsSync(sshDir)) {
+        fs.mkdirSync(sshDir, { recursive: true });
+      }
+      
+      // Remove old keys if they exist
+      if (fs.existsSync(this.keyPath)) {
+        fs.unlinkSync(this.keyPath);
+      }
+      if (fs.existsSync(this.publicKeyPath)) {
+        fs.unlinkSync(this.publicKeyPath);
+      }
+      
+      // Generate new SSH keys explicitly in PEM format (-m PEM flag)
+      console.log('Generating new CloudRack SSH keys in PEM format...');
+      await exec(`ssh-keygen -m PEM -t rsa -b 4096 -f ${this.keyPath} -N "" -C "cloudrack-terminal@cloudrack.io"`);
+      
+      // Verify creation and format
+      if (!fs.existsSync(this.keyPath)) {
+        throw new Error('Private key was not created');
+      }
+      
+      const privateKey = fs.readFileSync(this.keyPath, 'utf8');
+      if (!privateKey.includes('-----BEGIN RSA PRIVATE KEY-----')) {
+        throw new Error('Private key not in PEM format');
+      }
+      
+      // Load the newly created public key
+      this.loadPublicKey();
+      
+      console.log('Successfully generated CloudRack SSH keys in PEM format');
+      this.initialized = true;
+      return true;
+    } catch (error) {
+      console.error('Failed to regenerate SSH keys:', error);
       return false;
     }
   }

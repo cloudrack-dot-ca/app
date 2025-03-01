@@ -137,19 +137,26 @@ export function setupTerminalSocket(server: HttpServer) {
           // Read the CloudRack SSH private key
           const privateKey = fs.readFileSync(keyPath, 'utf8');
           
-          // Use SSH key authentication instead of password
+          // Check private key format
+          if (!privateKey.includes('-----BEGIN') || !privateKey.includes('PRIVATE KEY-----')) {
+            throw new Error('Invalid SSH private key format. Please regenerate CloudRack keys.');
+          }
+          
+          // Log connection attempt with key format info (masked)
+          log(`Connecting to ${server.ipAddress} with key in format: ${privateKey.includes('-----BEGIN RSA PRIVATE KEY-----') ? 'RSA PEM' : 'OTHER PEM'}`, 'terminal');
+          
+          // Use SSH key authentication with explicit PEM format
           sshClient.connect({
             host: server.ipAddress,
             port: 22,
             username: 'root',
-            privateKey: privateKey,
-            readyTimeout: 15000,
+            privateKey: privateKey, // Must be in PEM format
+            readyTimeout: 20000, // Extended timeout
             keepaliveInterval: 10000,
+            tryKeyboard: true, // Try keyboard-interactive auth as fallback
             debug: (message: string) => {
-              // Only log in development environment
-              if (process.env.NODE_ENV === 'development') {
-                log(`SSH Debug: ${message}`, 'terminal');
-              }
+              // Always log SSH debug messages for troubleshooting terminal issues
+              log(`SSH Debug: ${message}`, 'terminal');
             }
           });
         } catch (error: any) {

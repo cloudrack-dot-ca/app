@@ -270,9 +270,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         // This ensures server creation works even if SSH keys fail
         const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).toUpperCase().slice(-2) + '!';
         
-        // Store the random password to show to the user regardless of auth type
-        const serverData = parsed.data as any;
-        serverData.rootPassword = randomPassword;
+        // No need to store in a variable anymore since we're using randomPassword directly
         
         // Set the primary authentication method
         if (auth.type === "password" && auth.value) {
@@ -335,20 +333,13 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
 
       // Check if we have a generated password to return
-      // We already set serverData earlier, just use that reference
-      if (serverData.rootPassword) {
-        // Return server with temporary root password
-        const responseObj = {
-          ...server,
-          rootPassword: serverData.rootPassword
-        };
-        console.log(`[DEBUG] Returning server with root password (masked): ${serverData.rootPassword.substring(0, 3)}***`);
-        res.status(201).json(responseObj);
-      } else {
-        // Return just the server
-        console.log(`[DEBUG] Returning server without root password`);
-        res.status(201).json(server);
-      }
+      // Always return both the server and password since we always generate one
+      const responseObj = {
+        ...server,
+        rootPassword: randomPassword
+      };
+      console.log(`[DEBUG] Returning server with root password (masked): ${randomPassword.substring(0, 3)}***`);
+      res.status(201).json(responseObj);
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
     }
