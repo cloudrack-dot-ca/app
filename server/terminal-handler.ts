@@ -68,15 +68,28 @@ export function setupTerminalSocket(server: HttpServer) {
       socket.emit('status', { status: 'connecting' });
       
       sshClient.on('ready', () => {
-        // Determine which authentication method was used
-        const authMethod = server.rootPassword 
-          ? 'Using password authentication'
-          : 'Using CloudRack Terminal Key authentication';
+        // Determine which authentication method was used and notify the client
+        if (server.rootPassword) {
+          log(`Connected to server ${server.id} using password authentication`, 'terminal');
+          socket.emit('status', { 
+            status: 'password_auth'
+          });
+        } else {
+          log(`Connected to server ${server.id} using CloudRack Terminal Key authentication`, 'terminal');
+          socket.emit('status', { 
+            status: 'key_auth'
+          });
+        }
           
-        socket.emit('status', { 
-          status: 'connected',
-          message: authMethod
-        });
+        // Then emit the connected status after a short delay to ensure sequence
+        setTimeout(() => {
+          socket.emit('status', { 
+            status: 'connected',
+            message: server.rootPassword 
+              ? 'Using password authentication (root password)'
+              : 'Using CloudRack Terminal Key authentication (SSH key)'
+          });
+        }, 100);
         
         // Create a new shell session
         sshClient.shell((err: Error | undefined, stream: ClientChannel) => {
@@ -182,6 +195,39 @@ export function setupTerminalSocket(server: HttpServer) {
             username: 'root',
             readyTimeout: 40000, // Extended timeout even further
             keepaliveInterval: 5000,
+            // Retry connection attempts
+            retries: 2,
+            retry_delay: 2000,
+            // Set explicit algorithms for better compatibility with older servers
+            algorithms: {
+              kex: [
+                'diffie-hellman-group-exchange-sha256',
+                'diffie-hellman-group14-sha256',
+                'diffie-hellman-group14-sha1',
+                'diffie-hellman-group1-sha1'
+              ],
+              cipher: [
+                'aes128-ctr',
+                'aes192-ctr',
+                'aes256-ctr',
+                'aes128-gcm',
+                'aes256-gcm',
+                'aes128-cbc',
+                'aes256-cbc'
+              ],
+              serverHostKey: [
+                'ssh-rsa',
+                'ssh-dss',
+                'ecdsa-sha2-nistp256',
+                'ecdsa-sha2-nistp384',
+                'ecdsa-sha2-nistp521'
+              ],
+              hmac: [
+                'hmac-sha2-256',
+                'hmac-sha2-512',
+                'hmac-sha1'
+              ]
+            },
             debug: (message: string) => {
               // Always log SSH debug messages for troubleshooting terminal issues
               log(`SSH Debug: ${message}`, 'terminal');
@@ -192,14 +238,77 @@ export function setupTerminalSocket(server: HttpServer) {
           if (server.rootPassword) {
             log(`Using password authentication for server ${server.id}`, 'terminal');
             connectionConfig.password = server.rootPassword;
+            
+            // Tell client we're using password auth
+            socket.emit('status', { 
+              status: 'connecting',
+              message: 'Using stored root password for authentication'
+            });
           } else {
             // Use SSH key authentication with explicit PEM format
             log(`Using key-based authentication for server ${server.id}`, 'terminal');
             connectionConfig.privateKey = privateKey;
+            
+            // Tell client we're using key auth
+            socket.emit('status', { 
+              status: 'connecting',
+              message: 'Using CloudRack Terminal Key for authentication'
+            });
           }
           
           // Always try keyboard-interactive as fallback
           connectionConfig.tryKeyboard = true;
+          
+          // Add keyboard-interactive handler for password prompt fallback
+          connectionConfig.authHandler = (methodsLeft: string[], partialSuccess: boolean, callback: Function) => {
+            log(`SSH auth methods left: ${methodsLeft.join(', ')}`, 'terminal');
+            
+            if (methodsLeft.includes('keyboard-interactive')) {
+              log('Using keyboard-interactive auth method', 'terminal');
+              
+              // If we have root password, use it automatically
+              return callback('keyboard-interactive');
+            } else if (methodsLeft.includes('password') && server.rootPassword) {
+              log('Using password auth method', 'terminal');
+              return callback('password');
+            } else if (methodsLeft.includes('publickey')) {
+              log('Using publickey auth method', 'terminal');
+              return callback('publickey');
+            } else {
+              // No supported methods left
+              return callback(null);
+            }
+          };
+          
+          // Handle keyboard-interactive challenges
+          sshClient.on('keyboard-interactive', (name: string, instructions: string, instructionsLang: string, prompts: any[], finish: Function) => {
+            log(`Received keyboard-interactive prompt: ${name}`, 'terminal');
+            
+            // If there are no prompts, just finish
+            if (prompts.length === 0) {
+              return finish([]);
+            }
+            
+            // If we have a root password and the prompt is asking for a password, use it
+            if (server.rootPassword && prompts.some((p: any) => p.prompt.toLowerCase().includes('password'))) {
+              log('Responding to password prompt with stored root password', 'terminal');
+              finish([server.rootPassword]);
+            } else {
+              // Otherwise, we need to pass the prompt to the client
+              log('Passing keyboard-interactive prompt to client', 'terminal');
+              socket.emit('auth_request', { 
+                prompt: prompts[0].prompt 
+              });
+              
+              // Wait for client response (this will handle the first prompt only)
+              const handleResponse = (data: string) => {
+                socket.off('data', handleResponse);
+                finish([data.trim()]);
+              };
+              
+              socket.on('data', handleResponse);
+            }
+          });
           
           sshClient.connect(connectionConfig);
         } catch (error: any) {
