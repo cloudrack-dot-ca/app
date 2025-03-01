@@ -1,7 +1,8 @@
 import * as React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useWebSocket, WebSocketProvider } from "@/hooks/use-websocket";
+// Temporarily disabled WebSocket for stability
+// import { useWebSocket, WebSocketProvider } from "@/hooks/use-websocket";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,29 +51,12 @@ const regionFlags: { [key: string]: string } = {
   'blr1': '🇮🇳 Bangalore',
 };
 
-// Component for connection status to avoid hooks in render
+// Component for connection status showing that WebSockets are disabled
 function ConnectionStatus() {
-  // Get connection status from our WebSocket hook
-  const { connected } = useWebSocket();
-  
-  // Since we've disabled WebSockets for now, show special indicator
-  const isWebSocketDisabled = true;
-  
-  // If WebSockets are disabled, show a special status
-  if (isWebSocketDisabled) {
-    return (
-      <div className="flex items-center text-xs text-muted-foreground">
-        <div className="w-2 h-2 rounded-full mr-1 bg-yellow-500"></div>
-        Live updates paused
-      </div>
-    );
-  }
-  
-  // Normal status indicator when WebSockets are enabled
   return (
     <div className="flex items-center text-xs text-muted-foreground">
-      <div className={`w-2 h-2 rounded-full mr-1 ${connected ? "bg-green-500" : "bg-red-500"}`}></div>
-      {connected ? "Connected" : "Disconnected"}
+      <div className="w-2 h-2 rounded-full mr-1 bg-yellow-500"></div>
+      Live updates paused
     </div>
   );
 }
@@ -85,7 +69,11 @@ interface TicketDetails {
 export default function SupportPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { subscribeToTicket, unsubscribeFromTicket, ticketUpdates } = useWebSocket();
+  // Mock WebSocket functionality while it's disabled
+  const ticketUpdates = new Map();
+  const subscribeToTicket = (_ticketId: number) => {};
+  const unsubscribeFromTicket = (_ticketId: number) => {};
+  
   const params = useParams();
   const [location, setLocation] = useLocation();
   const [selectedTicket, setSelectedTicket] = React.useState<number | null>(null);
@@ -116,6 +104,8 @@ export default function SupportPage() {
 
   const { data: tickets = [], isLoading: loadingTickets } = useQuery<SupportTicket[]>({
     queryKey: ["/api/tickets"],
+    // Add polling to replace real-time updates temporarily
+    refetchInterval: 10000, // Poll every 10 seconds for tickets list
   });
 
   const { data: selectedTicketData, isLoading: loadingTicketDetails } = useQuery<TicketDetails>({
@@ -125,7 +115,9 @@ export default function SupportPage() {
       if (!selectedTicket) throw new Error("No ticket selected");
       const response = await apiRequest("GET", `/api/tickets/${selectedTicket}`);
       return response.json();
-    }
+    },
+    // Add polling to replace real-time updates temporarily
+    refetchInterval: 5000, // Poll every 5 seconds
   });
 
   // Get user's servers for ticket creation
@@ -297,7 +289,7 @@ export default function SupportPage() {
     
     // Filter out updates that are already in the loaded messages
     // and only include message updates (not ticket status updates)
-    const newMessages = updates.filter(update => 
+    const newMessages = updates.filter((update: any) => 
       update.message && 
       !selectedTicketData.messages.some(msg => msg.id === update.id)
     );
