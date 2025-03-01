@@ -889,18 +889,18 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
       if (!latestMetric) {
         // If no metrics exist, fetch from CloudRack and create a new one
-        const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
+        const cloudMetrics = await digitalOcean.getServerMetrics(server.dropletId);
         
         // Convert to our metric format
         const newMetric = {
           serverId,
-          cpuUsage: Math.round(doMetrics.cpu),
-          memoryUsage: Math.round(doMetrics.memory),
-          diskUsage: Math.round(doMetrics.disk),
-          networkIn: doMetrics.network_in,
-          networkOut: doMetrics.network_out,
-          loadAverage: doMetrics.load_average,
-          uptimeSeconds: doMetrics.uptime_seconds,
+          cpuUsage: Math.round(cloudMetrics.cpu),
+          memoryUsage: Math.round(cloudMetrics.memory),
+          diskUsage: Math.round(cloudMetrics.disk),
+          networkIn: cloudMetrics.network_in,
+          networkOut: cloudMetrics.network_out,
+          loadAverage: cloudMetrics.load_average,
+          uptimeSeconds: cloudMetrics.uptime_seconds,
           timestamp: new Date()
         };
         
@@ -919,18 +919,18 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       if (latestMetric.timestamp < fiveMinutesAgo) {
         // Fetch fresh metrics from CloudRack
-        const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
+        const cloudMetrics = await digitalOcean.getServerMetrics(server.dropletId);
         
         // Convert to our metric format and save
         const newMetric = {
           serverId,
-          cpuUsage: Math.round(doMetrics.cpu),
-          memoryUsage: Math.round(doMetrics.memory),
-          diskUsage: Math.round(doMetrics.disk),
-          networkIn: doMetrics.network_in,
-          networkOut: doMetrics.network_out,
-          loadAverage: doMetrics.load_average,
-          uptimeSeconds: doMetrics.uptime_seconds,
+          cpuUsage: Math.round(cloudMetrics.cpu),
+          memoryUsage: Math.round(cloudMetrics.memory),
+          diskUsage: Math.round(cloudMetrics.disk),
+          networkIn: cloudMetrics.network_in,
+          networkOut: cloudMetrics.network_out,
+          loadAverage: cloudMetrics.load_average,
+          uptimeSeconds: cloudMetrics.uptime_seconds,
           timestamp: new Date()
         };
         
@@ -1008,13 +1008,13 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           };
         }
 
-        // Fetch droplet details with proper typing
-        const dropletDetails = await digitalOcean.apiRequest<DigitalOceanDropletResponse>(
+        // Fetch server details with proper typing
+        const serverDetails = await digitalOcean.apiRequest<CloudRackServerResponse>(
           `/droplets/${server.dropletId}`
         );
         
         // Update server with latest IP information if available
-        if (dropletDetails?.droplet && dropletDetails.droplet.networks) {
+        if (serverDetails?.droplet && serverDetails.droplet.networks) {
           // Create server update data object with proper typing to avoid confusion with Node's http.Server
           const serverUpdateData = { 
             lastMonitored: new Date() 
@@ -1026,9 +1026,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           };
           
           // Update IPv4 address
-          if (dropletDetails.droplet.networks.v4 && dropletDetails.droplet.networks.v4.length > 0) {
-            const publicIp = dropletDetails.droplet.networks.v4.find(
-              (network) => network.type === 'public'
+          if (serverDetails.droplet.networks.v4 && serverDetails.droplet.networks.v4.length > 0) {
+            const publicIp = serverDetails.droplet.networks.v4.find(
+              (network: {ip_address: string; type: string}) => network.type === 'public'
             );
             if (publicIp) {
               serverUpdateData.ipAddress = publicIp.ip_address;
@@ -1036,13 +1036,13 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           }
           
           // Update IPv6 address
-          if (dropletDetails.droplet.networks.v6 && dropletDetails.droplet.networks.v6.length > 0) {
-            serverUpdateData.ipv6Address = dropletDetails.droplet.networks.v6[0].ip_address;
+          if (serverDetails.droplet.networks.v6 && serverDetails.droplet.networks.v6.length > 0) {
+            serverUpdateData.ipv6Address = serverDetails.droplet.networks.v6[0].ip_address;
           }
           
           // Update server status
-          if (dropletDetails.droplet.status) {
-            serverUpdateData.status = dropletDetails.droplet.status;
+          if (serverDetails.droplet.status) {
+            serverUpdateData.status = serverDetails.droplet.status;
           }
           
           await storage.updateServer(serverId, serverUpdateData);
@@ -1053,18 +1053,18 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       }
 
       // Fetch fresh metrics from CloudRack
-      const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
+      const cloudMetrics = await digitalOcean.getServerMetrics(server.dropletId);
       
       // Convert to our metric format and save
       const newMetric = {
         serverId,
-        cpuUsage: Math.round(doMetrics.cpu),
-        memoryUsage: Math.round(doMetrics.memory),
-        diskUsage: Math.round(doMetrics.disk),
-        networkIn: doMetrics.network_in,
-        networkOut: doMetrics.network_out,
-        loadAverage: doMetrics.load_average,
-        uptimeSeconds: doMetrics.uptime_seconds,
+        cpuUsage: Math.round(cloudMetrics.cpu),
+        memoryUsage: Math.round(cloudMetrics.memory),
+        diskUsage: Math.round(cloudMetrics.disk),
+        networkIn: cloudMetrics.network_in,
+        networkOut: cloudMetrics.network_out,
+        loadAverage: cloudMetrics.load_average,
+        uptimeSeconds: cloudMetrics.uptime_seconds,
         timestamp: new Date()
       };
       
