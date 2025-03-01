@@ -125,7 +125,7 @@ const getPortDescription = (port: string) => {
 
 // ActiveFirewallCheck component to check if a firewall exists
 function ActiveFirewallCheck({ serverId, children }: { serverId: number, children: (exists: boolean) => JSX.Element }) {
-  const { data: firewall, isLoading } = useQuery({
+  const { data: firewall, isLoading, refetch } = useQuery({
     queryKey: ['/api/servers', serverId, 'firewall'],
     queryFn: () => fetch(`/api/servers/${serverId}/firewall`)
       .then(res => {
@@ -137,8 +137,16 @@ function ActiveFirewallCheck({ serverId, children }: { serverId: number, childre
         }
         return res.json();
       }),
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: true,
+    refetchInterval: 3000, // Refresh every 3 seconds to get updated status
+    staleTime: 2000       // Consider data stale after 2 seconds
   });
+
+  // Effect to refetch when the component mounts or when serverId changes
+  useEffect(() => {
+    refetch();
+    // This will make sure firewall status is current whenever we look at it
+  }, [serverId, refetch]);
 
   if (isLoading) {
     return (
@@ -158,7 +166,7 @@ function ActiveFirewallRules({ serverId }: { serverId: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Fetch current firewall configuration
-  const { data: firewall, isLoading, error } = useQuery({
+  const { data: firewall, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/servers', serverId, 'firewall'],
     queryFn: () => fetch(`/api/servers/${serverId}/firewall`)
       .then(res => {
@@ -171,8 +179,15 @@ function ActiveFirewallRules({ serverId }: { serverId: number }) {
         }
         return res.json();
       }),
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: true,
+    refetchInterval: 3000, // Refresh every 3 seconds to get updated status
+    staleTime: 2000       // Consider data stale after 2 seconds
   });
+  
+  // Effect to refetch when the component mounts or when serverId changes
+  useEffect(() => {
+    refetch();
+  }, [serverId, refetch]);
 
   if (isLoading) {
     return (
@@ -958,35 +973,29 @@ export default function ServerDetailPage() {
                         {(firewallExists: boolean) => (
                           <>
                             {!firewallExists ? (
-                                // Create Default Firewall Button
+                                // Create Empty Firewall Button (no default rules)
                                 <Button 
                                   variant="default" 
                                   size="sm"
                                   onClick={async () => {
                                     try {
+                                      // Create a firewall with no rules by default
                                       const response = await apiRequest(
                                         'PUT',
                                         `/api/servers/${serverId}/firewall`,
                                         {
-                                          inbound_rules: [
-                                            { protocol: 'tcp', ports: '22', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
-                                            { protocol: 'tcp', ports: '80', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
-                                            { protocol: 'tcp', ports: '443', sources: { addresses: ['0.0.0.0/0', '::/0'] } }
-                                          ],
-                                          outbound_rules: [
-                                            { protocol: 'tcp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } },
-                                            { protocol: 'udp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } }
-                                          ]
+                                          inbound_rules: [],
+                                          outbound_rules: []
                                         }
                                       );
                                       
                                       toast({
                                         title: "Firewall Created",
-                                        description: "Default firewall rules have been applied successfully.",
+                                        description: "Firewall has been enabled with no rules. Add rules for protection.",
                                       });
                                       
                                       // Refresh the firewall display
-                                      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/firewall`] });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/servers', serverId, 'firewall'] });
                                       
                                     } catch (error) {
                                       toast({
@@ -998,7 +1007,7 @@ export default function ServerDetailPage() {
                                   }}
                                 >
                                   <Shield className="h-4 w-4 mr-2" />
-                                  Create Default Firewall
+                                  Enable Firewall
                                 </Button>
                               ) : (
                                 // Delete Firewall Button with Confirmation
@@ -1104,8 +1113,8 @@ export default function ServerDetailPage() {
                   </div>
                   
                   <p className="text-xs text-muted-foreground mt-4">
-                    First, create a default firewall with basic protection by clicking "Create Default Firewall".
-                    Then you can use "Advanced Firewall Settings" to customize the rules.
+                    First, enable the firewall by clicking "Enable Firewall", then use "Advanced Firewall Settings" 
+                    to add protection rules for your server. The firewall starts with no rules by default.
                   </p>
                 </div>
               </div>

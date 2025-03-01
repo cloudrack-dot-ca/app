@@ -105,29 +105,38 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
         }
         return res.json();
       }),
-    refetchOnWindowFocus: false,
-    retry: false // Don't retry on 404
+    refetchOnWindowFocus: true,
+    refetchInterval: 3000, // Refresh every 3 seconds to get updated status
+    staleTime: 2000,       // Consider data stale after 2 seconds
+    retry: false           // Don't retry on 404
   });
+  
+  // Effect to refetch when component mounts
+  useEffect(() => {
+    refetch();
+  }, [serverId, refetch]);
 
-  // Create a new firewall with default rules
+  // Create a new firewall with no rules initially
   const createFirewallMutation = useMutation({
     mutationFn: async () => {
       return apiRequest(
         'PUT',
         `/api/servers/${serverId}/firewall`,
         {
-          inbound_rules: defaultInboundRules,
-          outbound_rules: defaultOutboundRules
+          inbound_rules: [], // Start with no rules as per requirement
+          outbound_rules: []
         }
       );
     },
     onSuccess: () => {
       toast({
-        title: "Firewall created",
-        description: "Default firewall rules have been applied",
+        title: "Firewall enabled",
+        description: "Firewall has been created with no rules. Add rules for protection.",
       });
       setNoFirewall(false);
+      // Update both this component and any parent components
       refetch();
+      queryClient.invalidateQueries({ queryKey: ['/api/servers', serverId, 'firewall'] });
     },
     onError: (error: Error) => {
       toast({
