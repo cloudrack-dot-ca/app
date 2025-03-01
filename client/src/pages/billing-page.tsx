@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { CurrencyDisplay } from "@/components/ui/currency-display";
 
 interface TransactionsResponse {
   transactions: BillingTransaction[];
@@ -167,7 +168,11 @@ export default function BillingPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold mb-4">
-              ${((user?.balance || 0) / 100).toFixed(2)}
+              <CurrencyDisplay 
+                amount={user?.balance || 0} 
+                showPrefix={true}
+                showSign={false}
+              />
             </p>
             <p className="text-muted-foreground">Add funds to your account to pay for servers and storage</p>
             <div className="mt-4">
@@ -361,11 +366,11 @@ export default function BillingPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-lg ${tx.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.type === 'deposit' 
-                            ? `+$${(tx.amount / 100).toFixed(2)} USD` 
-                            : `-$${(tx.amount / 100).toFixed(2)} USD`}
-                        </span>
+                        <CurrencyDisplay
+                          amount={tx.type === 'deposit' ? tx.amount : -tx.amount}
+                          showSign={true}
+                          className="text-lg"
+                        />
                         <Badge variant={tx.status === "completed" ? "default" : "secondary"}>
                           {tx.status}
                         </Badge>

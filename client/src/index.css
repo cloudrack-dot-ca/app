@@ -55,6 +55,13 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+  
+  /* Fix for currency display */
+  .text-red-600, .text-green-600 {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.01em;
+  }
 }
 
 /* Print styles for documentation */
