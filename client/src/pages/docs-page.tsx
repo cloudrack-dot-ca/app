@@ -7,6 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 import {
   ChevronDown,
   ChevronRight,
@@ -22,7 +25,8 @@ import {
   HardDrive,
   Terminal,
   Cpu,
-  Wifi
+  Wifi,
+  Save
 } from "lucide-react";
 
 // Documentation section types
@@ -547,9 +551,26 @@ export default function DocsPage() {
   const [activeTab, setActiveTab] = useState("documentation");
   const [activeArticleId, setActiveArticleId] = useState<string | null>("welcome");
   
-  // Get the active article from the mock data
+  // State for sections and articles
+  const [sections, setSections] = useState<DocSection[]>(mockSections);
+  
+  // State for editing
+  const [editSectionDialogOpen, setEditSectionDialogOpen] = useState(false);
+  const [editArticleDialogOpen, setEditArticleDialogOpen] = useState(false);
+  const [currentSection, setCurrentSection] = useState<DocSection | null>(null);
+  const [currentArticle, setCurrentArticle] = useState<DocArticle | null>(null);
+  const [isNewSection, setIsNewSection] = useState(false);
+  const [isNewArticle, setIsNewArticle] = useState(false);
+  
+  // Form state
+  const [sectionTitle, setSectionTitle] = useState("");
+  const [articleTitle, setArticleTitle] = useState("");
+  const [articleContent, setArticleContent] = useState("");
+  const [articleSectionId, setArticleSectionId] = useState("");
+  
+  // Get the active article from the sections data
   const activeArticle = activeArticleId 
-    ? mockSections
+    ? sections
         .flatMap(section => section.children)
         .find(article => article.id === activeArticleId) || null
     : null;

@@ -43,11 +43,18 @@ function Nav() {
     <nav className="border-b">
       <div className="container mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          {!user && (
+          {!user ? (
             <Link href="/">
               <Button variant="ghost" size="sm">
                 <Home className="h-4 w-4 mr-2" />
                 Home
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/dashboard">
+              <Button variant="ghost" size="sm">
+                <Home className="h-4 w-4 mr-2" />
+                Dashboard
               </Button>
             </Link>
           )}
