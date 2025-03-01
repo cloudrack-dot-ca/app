@@ -144,13 +144,32 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  // Function to format uptime
-  const formatUptime = (seconds: number) => {
-    const days = Math.floor(seconds / (3600 * 24));
-    const hours = Math.floor((seconds % (3600 * 24)) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+  // Function to format time elapsed since creation as a relative time
+  const formatRelativeTime = (createdAt: string | null) => {
+    if (!createdAt) return "Unknown";
     
-    return `${days}d ${hours}h ${minutes}m`;
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffSeconds = Math.floor((now.getTime() - created.getTime()) / 1000);
+    
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+    
+    // Convert to appropriate time unit
+    if (diffSeconds < 60) {
+      return rtf.format(-diffSeconds, 'second');
+    } else if (diffSeconds < 3600) {
+      return rtf.format(-Math.floor(diffSeconds / 60), 'minute');
+    } else if (diffSeconds < 86400) {
+      return rtf.format(-Math.floor(diffSeconds / 3600), 'hour');
+    } else if (diffSeconds < 604800) {
+      return rtf.format(-Math.floor(diffSeconds / 86400), 'day');
+    } else if (diffSeconds < 2592000) {
+      return rtf.format(-Math.floor(diffSeconds / 604800), 'week');
+    } else if (diffSeconds < 31536000) {
+      return rtf.format(-Math.floor(diffSeconds / 2592000), 'month');
+    } else {
+      return rtf.format(-Math.floor(diffSeconds / 31536000), 'year');
+    }
   };
 
   // Function to refresh metrics
@@ -229,17 +248,20 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Server Uptime and Created Time */}
+            {/* Server Creation Time */}
             <div className="space-y-2">
               <div className="flex items-center text-sm font-medium">
                 <Clock className="h-4 w-4 mr-2 text-slate-600" />
-                Server Uptime
+                Server Age
               </div>
               <div className="text-sm">
-                <div className="font-semibold">{formatUptime(currentMetrics.uptimeSeconds || 0)}</div>
+                <div className="font-semibold">
+                  {/* Use lastMonitored as an approximation for server creation time */}
+                  Created {formatRelativeTime(server?.lastMonitored ? server.lastMonitored.toString() : null)}
+                </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {server?.lastMonitored ? 
-                    `Created approximately: ${new Date(Date.now() - (currentMetrics.uptimeSeconds * 1000)).toLocaleString()}` : 
+                    `${new Date(server.lastMonitored).toLocaleString()}` : 
                     "Creation time unknown"
                   }
                 </div>

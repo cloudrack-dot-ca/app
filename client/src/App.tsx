@@ -11,7 +11,7 @@ import BillingPage from "@/pages/billing-page";
 import SupportPage from "@/pages/support-page";
 import VolumesPage from "@/pages/volumes-page";
 import ServerDetailPage from "@/pages/server-detail";
-import SSHKeysPage from "@/pages/ssh-keys";
+// SSH Keys page removed
 import AccountPage from "@/pages/account-page";
 import DocsPage from "@/pages/docs-page";
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -93,7 +93,6 @@ function Router() {
         <ProtectedRoute path="/billing" component={BillingPage} />
         <ProtectedRoute path="/support" component={SupportPage} />
         <ProtectedRoute path="/support/:id" component={SupportPage} />
-        <ProtectedRoute path="/ssh-keys" component={SSHKeysPage} />
         <ProtectedRoute path="/account" component={AccountPage} />
         <ProtectedRoute path="/admin" component={AdminDashboard} />
         {/* Make sure this is the only server route to avoid conflicts */}
