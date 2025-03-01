@@ -47,17 +47,26 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-center mb-12">World-Class Data Centers</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              "https://images.unsplash.com/photo-1653389526309-f8e2e75f8aaf",
-              "https://images.unsplash.com/photo-1653389527532-884074ac1c65",
-              "https://images.unsplash.com/photo-1653389523425-c1f572a4c3f0",
-              "https://images.unsplash.com/photo-1653389524385-9d831f930d83"
+              "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=2034&auto=format&fit=crop",
+              "https://images.unsplash.com/photo-1516280440614-37939bbacd81?q=80&w=2070&auto=format&fit=crop",
+              "https://images.unsplash.com/photo-1585008530115-91c9887f3cb0?q=80&w=2073&auto=format&fit=crop",
+              "https://images.unsplash.com/photo-1606765962248-7ff407b51667?q=80&w=1975&auto=format&fit=crop"
             ].map((src, i) => (
-              <img
-                key={i}
-                src={src}
-                alt={`Data Center ${i + 1}`}
-                className="w-full h-48 object-cover rounded-lg shadow-md"
-              />
+              <div key={i} className="relative group overflow-hidden rounded-lg shadow-lg">
+                <img
+                  src={src}
+                  alt={`CloudRack Data Center ${i + 1}`}
+                  className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-black/30 flex items-end p-4">
+                  <div className="text-white font-semibold">
+                    {i === 0 && "North America Facility"}
+                    {i === 1 && "Asia Pacific Facility"}
+                    {i === 2 && "European Facility"}
+                    {i === 3 && "Server Infrastructure"}
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
