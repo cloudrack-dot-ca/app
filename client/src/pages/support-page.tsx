@@ -52,7 +52,23 @@ const regionFlags: { [key: string]: string } = {
 
 // Component for connection status to avoid hooks in render
 function ConnectionStatus() {
+  // Get connection status from our WebSocket hook
   const { connected } = useWebSocket();
+  
+  // Since we've disabled WebSockets for now, show special indicator
+  const isWebSocketDisabled = true;
+  
+  // If WebSockets are disabled, show a special status
+  if (isWebSocketDisabled) {
+    return (
+      <div className="flex items-center text-xs text-muted-foreground">
+        <div className="w-2 h-2 rounded-full mr-1 bg-yellow-500"></div>
+        Live updates paused
+      </div>
+    );
+  }
+  
+  // Normal status indicator when WebSockets are enabled
   return (
     <div className="flex items-center text-xs text-muted-foreground">
       <div className={`w-2 h-2 rounded-full mr-1 ${connected ? "bg-green-500" : "bg-red-500"}`}></div>
