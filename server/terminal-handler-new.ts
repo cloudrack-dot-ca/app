@@ -235,12 +235,16 @@ export function setupTerminalSocket(server: HttpServer) {
           username: 'root',
           readyTimeout: 30000, // 30 seconds
           keepaliveInterval: 10000,
-          tryKeyboard: true // Enable keyboard-interactive auth as fallback
+          tryKeyboard: true, // Enable keyboard-interactive auth as primary method
+          debug: (message: string) => {
+            log(`SSH Debug: ${message}`, 'terminal');
+          }
         };
         
-        // If we have a root password, use it
+        // If we have a root password, try keyboard-interactive auth first, but also set password
         if (hasRootPassword) {
           // Use the rootPasswordValue from earlier that handles both camelCase and snake_case
+          // We set password for both normal password auth and for use in keyboard-interactive
           config.password = rootPasswordValue;
           
           // Debug log the password details
