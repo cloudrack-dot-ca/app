@@ -484,21 +484,21 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         throw new Error(`Failed to create server: ${errorMessage}`);
       }
 
-      // Create the server including rootPassword field
+      // Create the server including rootPassword field and mark as active immediately for billing
       const server = await storage.createServer({
         ...parsed.data,
         userId: req.user.id,
         dropletId: droplet.id,
         ipAddress: droplet.ip_address,
         ipv6Address: null,
-        status: "new",
+        status: "active", // Mark as active immediately for proper billing
         specs: {
           memory: 1024,
           vcpus: 1,
           disk: 25,
         },
         application: parsed.data.application || null,
-        lastMonitored: null,
+        lastMonitored: new Date(), // Set lastMonitored to current time
         rootPassword: "", // Include empty string to satisfy type, will update properly next
       });
       
