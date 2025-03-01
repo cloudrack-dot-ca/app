@@ -76,10 +76,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
 // Firewall Rule interface (simplified from the full interface in firewall-manager.tsx)
 // Schema for firewall disable confirmation
+// Using a regular string for the schema instead of literal
 const confirmFirewallDisableSchema = z.object({
-  confirmationText: z.literal("I CONFIRM DELETION OF RULES", {
-    errorMap: () => ({ message: "Please type the exact confirmation phrase" }),
-  }),
+  confirmationText: z.string()
+    .refine(val => val === "I CONFIRM DELETION OF RULES", {
+      message: "You must type 'I CONFIRM DELETION OF RULES' exactly to confirm"
+    }),
 });
 
 type ConfirmFirewallDisableFormValues = z.infer<typeof confirmFirewallDisableSchema>;
@@ -277,7 +279,7 @@ export default function ServerDetailPage() {
   const disableFirewallForm = useForm<ConfirmFirewallDisableFormValues>({
     resolver: zodResolver(confirmFirewallDisableSchema),
     defaultValues: {
-      confirmationText: ""
+      confirmationText: "" as any
     }
   });
   
