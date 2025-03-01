@@ -4,7 +4,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Maximize2, Minimize2, Lock, Key, Type, ChevronDown } from 'lucide-react';
+import { RefreshCw, Maximize2, Minimize2, Lock, Key, Type, ChevronDown, TextCursorInput } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery } from '@tanstack/react-query';
 import 'xterm/css/xterm.css';
@@ -391,7 +391,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       <div 
         className={`
           border rounded-md overflow-hidden w-full mx-auto
-          ${isFullScreen ? 'h-[calc(100vh-100px)]' : 'h-[400px]'}
+          ${isFullScreen ? 'h-[calc(100vh-100px)]' : 'h-[700px]'}
         `}
       >
         <div className="bg-gray-800 text-gray-300 p-2 flex justify-between items-center text-xs">
@@ -437,6 +437,37 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
                       {font.name}
                     </span>
                     {currentFont === font.value && (
+                      <span className="ml-auto text-primary">✓</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            {/* Font size dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  title="Font Size"
+                >
+                  <TextCursorInput className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[160px]">
+                {[12, 13, 14, 15, 16, 18, 20, 22, 24].map((size) => (
+                  <DropdownMenuItem
+                    key={size}
+                    onClick={() => changeFontSize(size)}
+                    className={fontSize === size ? "bg-muted" : ""}
+                  >
+                    <span className="flex items-center">
+                      <span className="mr-2" style={{ fontSize: `${size}px` }}>A</span>
+                      {size}px
+                    </span>
+                    {fontSize === size && (
                       <span className="ml-auto text-primary">✓</span>
                     )}
                   </DropdownMenuItem>
