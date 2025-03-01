@@ -134,11 +134,57 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
     sourceAddresses: '0.0.0.0/0,::/0', // Default to allow from anywhere
   });
 
+  // Track refresh button clicks to prevent abuse
+  const [refreshCount, setRefreshCount] = useState(0);
+  const [refreshDisabled, setRefreshDisabled] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>("Never");
+  
+  // Handle manual refresh with rate limiting
+  const handleManualRefresh = () => {
+    const now = new Date();
+    
+    // Check if this is the first refresh or more than 5 minutes have passed
+    if (!lastRefreshTime || (now.getTime() - lastRefreshTime.getTime() > 5 * 60 * 1000)) {
+      // Reset counter if it's been more than 5 minutes
+      setRefreshCount(1);
+    } else {
+      // Increment the counter
+      const newCount = refreshCount + 1;
+      setRefreshCount(newCount);
+      
+      // Check if limit reached (3 clicks within 5 minutes)
+      if (newCount >= 3) {
+        setRefreshDisabled(true);
+        
+        // Enable refresh after 5 minutes
+        setTimeout(() => {
+          setRefreshDisabled(false);
+          setRefreshCount(0);
+        }, 5 * 60 * 1000);
+      }
+    }
+    
+    // Update the last refresh time
+    setLastRefreshTime(now);
+    
+    // Perform the refresh
+    refetch();
+  };
+
   // Fetch current firewall configuration
   const { data: firewall, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/servers', serverId, 'firewall'],
     queryFn: () => fetch(`/api/servers/${serverId}/firewall`)
       .then(res => {
+        // Update the last refresh time regardless of outcome
+        const now = new Date();
+        setLastRefreshTime(now);
+        
+        // Format a human-readable last updated time
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setLastUpdated(timeString);
+        
         if (res.status === 404) {
           // Firewall doesn't exist yet
           setNoFirewall(true);
@@ -156,13 +202,13 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
         setNoFirewall(false);
         return res.json();
       }),
-    refetchOnWindowFocus: true,
-    // Only poll if a firewall exists, otherwise don't keep requesting
-    refetchInterval: noFirewall ? false : 5000, // Reduced polling from 3s to 5s
-    staleTime: 3000,       // Increased stale time from 2s to 3s
-    retry: false,          // Don't retry on 404
-    retryOnMount: false,   // Don't retry when component mounts
-    gcTime: 0              // Don't cache errors
+    refetchOnWindowFocus: false,  // Disable auto-refetch on window focus
+    // Only poll very infrequently if a firewall exists (once per minute)
+    refetchInterval: noFirewall ? false : 60000, // Reduced polling to once per minute
+    staleTime: 55000,             // Consider data stale after 55 seconds
+    retry: false,                 // Don't retry on 404
+    retryOnMount: false,          // Don't retry when component mounts
+    gcTime: 0                     // Don't cache errors
   });
   
   // Effect to refetch when component mounts
@@ -488,6 +534,43 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-base font-semibold">Firewall Configuration</h3>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              Last updated: {lastUpdated}
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleManualRefresh}
+              disabled={refreshDisabled || isLoading}
+            >
+              {isLoading ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current"></div>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 2v6h-6"></path>
+                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                    <path d="M3 12a9 9 0 0 0 6 8.5l2-5.5"></path>
+                  </svg>
+                  Refresh
+                </>
+              )}
+            </Button>
+          </div>
+          {refreshDisabled && (
+            <span className="text-xs text-muted-foreground text-red-500">
+              Refresh limit reached. Try again in 5 minutes.
+            </span>
+          )}
+          <span className="text-xs text-gray-500">
+            Auto-refresh: {noFirewall ? 'Disabled' : 'Every 1 minute'}
+          </span>
+        </div>
+      </div>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full grid grid-cols-2">
           <TabsTrigger value="inbound">Inbound Rules</TabsTrigger>
