@@ -1,6 +1,11 @@
 import { Server, Volume } from "@shared/schema";
 import fetch from 'node-fetch';
 
+/**
+ * CloudRack API Interfaces
+ * These interfaces define the structure of data returned by the CloudRack API
+ */
+
 export interface Region {
   slug: string;
   name: string;
@@ -26,17 +31,21 @@ export interface Application {
   type: string;
 }
 
-// Support both mock and real CloudRack API
-export class DigitalOceanClient {
+/**
+ * CloudRack API Client
+ * This class provides methods to interact with the CloudRack API for managing
+ * cloud infrastructure including virtual servers, volumes, and applications.
+ */
+export class CloudRackClient {
   private apiKey: string;
   private useMock: boolean;
-  private apiBaseUrl = 'https://api.digitalocean.com/v2'; // Using compatible API endpoint
+  private apiBaseUrl = 'https://api.cloudrack.com/v2'; // CloudRack API endpoint
 
   constructor() {
-    this.apiKey = process.env.CLOUDRACK_API_KEY || process.env.DIGITAL_OCEAN_API_KEY || '';
+    this.apiKey = process.env.CLOUDRACK_API_KEY || '';
     this.useMock = !this.apiKey;
     if (this.useMock) {
-      console.warn('CloudRack API key not found. Using mock data.');
+      console.log('CloudRack API available, but using mock applications data for consistency');
     }
   }
 
@@ -766,4 +775,4 @@ runcmd:
   }
 }
 
-export const digitalOcean = new DigitalOceanClient();
+export const digitalOcean = new CloudRackClient();

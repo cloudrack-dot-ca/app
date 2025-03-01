@@ -222,12 +222,12 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       return res.sendStatus(404);
     }
 
-    // Delete the server from DigitalOcean
+    // Delete the server from CloudRack
     try {
       await digitalOcean.deleteDroplet(server.dropletId);
     } catch (error) {
-      console.warn(`Failed to delete droplet ${server.dropletId} from DigitalOcean, but proceeding with local deletion:`, error);
-      // Continue with deletion even if the DigitalOcean API call fails
+      console.warn(`Failed to delete droplet ${server.dropletId} from CloudRack, but proceeding with local deletion:`, error);
+      // Continue with deletion even if the CloudRack API call fails
       // This allows us to clean up orphaned records in our database
     }
 
@@ -373,8 +373,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Now try to delete the volume
       await digitalOcean.deleteVolume(volume.volumeId);
     } catch (error) {
-      console.warn(`Failed to delete volume ${volume.volumeId} from DigitalOcean, but proceeding with local deletion:`, error);
-      // Continue with deletion even if the DigitalOcean API call fails
+      console.warn(`Failed to delete volume ${volume.volumeId} from CloudRack, but proceeding with local deletion:`, error);
+      // Continue with deletion even if the CloudRack API call fails
     }
     
     await storage.deleteVolume(volume.id);
