@@ -537,14 +537,20 @@ export default function SupportPage() {
                       <div
                         key={message.id}
                         className={`flex flex-col ${
-                          message.userId === selectedTicketData.ticket.userId
+                          message.userId !== selectedTicketData.ticket.userId
                             ? "items-end"
                             : "items-start"
                         }`}
                       >
+                        {/* Message sender identification */}
+                        <div className="mb-1 text-xs font-medium px-1">
+                          {message.userId !== selectedTicketData.ticket.userId
+                            ? "Admin"
+                            : "User"}
+                        </div>
                         <div
                           className={`max-w-[80%] rounded-lg p-3 ${
-                            message.userId === selectedTicketData.ticket.userId
+                            message.userId !== selectedTicketData.ticket.userId
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted"
                           }`}
