@@ -42,7 +42,7 @@ export default function LocationMap() {
 
   return (
     <TooltipProvider>
-      <div className="relative w-full h-[500px] rounded-lg overflow-hidden border bg-gradient-to-b from-indigo-950 to-black">
+      <div className="relative w-full h-[700px] rounded-lg overflow-hidden border bg-gradient-to-b from-indigo-950 to-black">
         {/* Enhanced world map SVG background with better continents */}
         <div className="absolute inset-0">
           <svg

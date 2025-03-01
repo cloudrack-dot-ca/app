@@ -138,27 +138,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Data Center Image Grid */}
-      <section className="py-20 bg-primary/5">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">World-Class Data Centers</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              "https://images.unsplash.com/photo-1653389526309-f8e2e75f8aaf",
-              "https://images.unsplash.com/photo-1653389527532-884074ac1c65",
-              "https://images.unsplash.com/photo-1653389523425-c1f572a4c3f0",
-              "https://images.unsplash.com/photo-1653389524385-9d831f930d83"
-            ].map((src, i) => (
-              <img
-                key={i}
-                src={src}
-                alt={`Data Center ${i + 1}`}
-                className="w-full h-48 object-cover rounded-lg shadow-md"
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+
 
       {/* Location Map */}
       <section className="py-20">
