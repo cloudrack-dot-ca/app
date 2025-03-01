@@ -1227,10 +1227,27 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         
         // Delete the firewall instead of just removing rules
         try {
-          await digitalOcean.deleteFirewall(firewall.id!);
-          return res.json({ success: true, message: "Firewall disabled successfully" });
+          if (firewall.id && (digitalOcean.useMock || firewall.id.includes('fallback'))) {
+            // If we're in mock mode or dealing with a fallback firewall, directly delete it from our records
+            console.log(`Deleting mock firewall ${firewall.id} for server ${server.id}`);
+            delete digitalOcean.mockFirewalls[firewall.id];
+            return res.json({ success: true, message: "Firewall disabled successfully" });
+          } else if (firewall.id) {
+            // For real DO firewalls, use the API
+            await digitalOcean.deleteFirewall(firewall.id);
+            return res.json({ success: true, message: "Firewall disabled successfully" });
+          } else {
+            return res.status(400).json({ message: "Invalid firewall ID" });
+          }
         } catch (error) {
           console.error("Error disabling firewall:", error);
+          
+          // Even if the API call fails, still try to remove it from our records
+          if (firewall.id && (digitalOcean.useMock || firewall.id.includes('fallback'))) {
+            delete digitalOcean.mockFirewalls[firewall.id];
+            return res.json({ success: true, message: "Firewall disabled successfully" });
+          }
+          
           return res.status(500).json({ message: "Failed to disable firewall" });
         }
       }
@@ -1353,10 +1370,45 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       }
       
       // Add the rule
-      if (rule_type === 'inbound') {
-        await digitalOcean.addRulesToFirewall(firewall.id!, [rule], []);
-      } else {
-        await digitalOcean.addRulesToFirewall(firewall.id!, [], [rule]);
+      try {
+        if (firewall.id && (firewall.id.includes('fallback') || digitalOcean.useMock)) {
+          // For mock firewalls, update the rules directly in our records
+          console.log(`Adding ${rule_type} rule to mock firewall ${firewall.id}`);
+          if (rule_type === 'inbound') {
+            firewall.inbound_rules.push(rule);
+          } else {
+            firewall.outbound_rules.push(rule);
+          }
+          
+          // Update the stored firewall
+          if (firewall.id) {
+            digitalOcean.mockFirewalls[firewall.id] = firewall;
+          }
+        } else {
+          // For real DO firewalls, use the API
+          if (firewall.id) {
+            if (rule_type === 'inbound') {
+              await digitalOcean.addRulesToFirewall(firewall.id, [rule], []);
+            } else {
+              await digitalOcean.addRulesToFirewall(firewall.id, [], [rule]);
+            }
+          } else {
+            throw new Error("Firewall ID is missing");
+          }
+        }
+      } catch (error) {
+        console.error(`Error adding rule to firewall: ${error}`);
+        // If API call fails but we have a mock firewall, update it directly
+        if (firewall.id && (firewall.id.includes('fallback') || digitalOcean.useMock)) {
+          if (rule_type === 'inbound') {
+            firewall.inbound_rules.push(rule);
+          } else {
+            firewall.outbound_rules.push(rule);
+          }
+          digitalOcean.mockFirewalls[firewall.id] = firewall;
+        } else {
+          throw error; // Re-throw if not a mock firewall
+        }
       }
       
       // Get the updated firewall

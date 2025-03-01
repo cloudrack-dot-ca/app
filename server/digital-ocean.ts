@@ -56,7 +56,7 @@ export interface Firewall {
 // Support both mock and real DigitalOcean API
 export class DigitalOceanClient {
   private apiKey: string;
-  private useMock: boolean;
+  public useMock: boolean;
   private apiBaseUrl = 'https://api.digitalocean.com/v2';
 
   constructor() {
