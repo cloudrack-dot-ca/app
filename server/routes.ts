@@ -18,6 +18,7 @@ import {
 } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { db } from "./db";
 
 // Cost constants with our markup applied ($1 markup on server plans, 4¢ markup per GB on volumes)
