@@ -6,6 +6,7 @@ import { log } from './vite';
 import { Request } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
+import { cloudRackKeyManager } from './cloudrack-key-manager';
 
 // Extend the Server type to include rootPassword
 interface ExtendedServer {

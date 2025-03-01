@@ -68,6 +68,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [processorFilter, setProcessorFilter] = useState<string>("all");
   const [applicationTypeFilter, setApplicationTypeFilter] = useState<string>("all");
+  const [installMode, setInstallMode] = useState<"application" | "distribution">("application");
   
   const { data: servers = [], isLoading } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
@@ -83,6 +84,10 @@ export default function Dashboard() {
 
   const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
+  });
+  
+  const { data: distributions = [] } = useQuery<Distribution[]>({
+    queryKey: ["/api/distributions"],
   });
 
   const form = useForm({
@@ -261,131 +266,185 @@ export default function Dashboard() {
                         </FormItem>
                       )}
                     />
-                    <div className="col-span-2 mb-1">
-                      <Label className="text-sm">Application Type</Label>
-                      <div className="flex flex-wrap gap-2 mt-1">
+                    <div className="col-span-2 mb-3">
+                      <Label className="text-sm">Installation Type</Label>
+                      <div className="flex items-center justify-between mt-2 p-2 border rounded-md">
                         <Button 
                           type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "all" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("all")}
-                          className="text-xs h-8"
+                          variant={installMode === "application" ? "default" : "outline"}
+                          onClick={() => setInstallMode("application")}
+                          className="w-full"
                         >
-                          All
+                          Application
                         </Button>
                         <Button 
                           type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "distribution" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("distribution")}
-                          className="text-xs h-8 bg-gradient-to-r from-gray-600 to-gray-800 text-white hover:from-gray-700 hover:to-gray-900 hover:text-white"
+                          variant={installMode === "distribution" ? "default" : "outline"}
+                          onClick={() => setInstallMode("distribution")}
+                          className="w-full"
                         >
-                          Base OS
-                        </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "game-server" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("game-server")}
-                          className="text-xs h-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:text-white"
-                        >
-                          Game Servers
-                        </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "bot" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("bot")}
-                          className="text-xs h-8 bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 hover:text-white"
-                        >
-                          Discord Bots
-                        </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "application" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("application")}
-                          className="text-xs h-8"
-                        >
-                          Web Dev
-                        </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "cms" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("cms")}
-                          className="text-xs h-8"
-                        >
-                          CMS
-                        </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "ecommerce" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("ecommerce")}
-                          className="text-xs h-8"
-                        >
-                          E-commerce
-                        </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "database" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("database")}
-                          className="text-xs h-8"
-                        >
-                          Database
-                        </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "data-science" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("data-science")}
-                          className="text-xs h-8"
-                        >
-                          Data Science
-                        </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant={applicationTypeFilter === "devops" ? "default" : "outline"} 
-                          onClick={() => setApplicationTypeFilter("devops")}
-                          className="text-xs h-8"
-                        >
-                          DevOps
+                          Clean OS
                         </Button>
                       </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {installMode === "application" 
+                          ? "Install a pre-configured application on your server." 
+                          : "Install a clean operating system without any pre-configured applications."}
+                      </p>
                     </div>
                     
-                    <FormField
-                      control={form.control}
-                      name="application"
-                      render={({ field }) => (
-                        <FormItem className="col-span-2">
-                          <FormLabel className="text-sm">Application</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="h-9">
-                                <SelectValue placeholder="Select application" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {applications
-                                .filter(app => applicationTypeFilter === "all" ? true : app.type === applicationTypeFilter)
-                                .map((app) => (
-                                  <SelectItem key={app.slug} value={app.slug}>
-                                    {app.name}
+                    {installMode === "application" && (
+                      <>
+                        <div className="col-span-2 mb-1">
+                          <Label className="text-sm">Application Type</Label>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            <Button 
+                              type="button"
+                              size="sm" 
+                              variant={applicationTypeFilter === "all" ? "default" : "outline"} 
+                              onClick={() => setApplicationTypeFilter("all")}
+                              className="text-xs h-8"
+                            >
+                              All
+                            </Button>
+                            <Button 
+                              type="button"
+                              size="sm" 
+                              variant={applicationTypeFilter === "game-server" ? "default" : "outline"} 
+                              onClick={() => setApplicationTypeFilter("game-server")}
+                              className="text-xs h-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:text-white"
+                            >
+                              Game Servers
+                            </Button>
+                            <Button 
+                              type="button"
+                              size="sm" 
+                              variant={applicationTypeFilter === "bot" ? "default" : "outline"} 
+                              onClick={() => setApplicationTypeFilter("bot")}
+                              className="text-xs h-8 bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 hover:text-white"
+                            >
+                              Discord Bots
+                            </Button>
+                            <Button 
+                              type="button"
+                              size="sm" 
+                              variant={applicationTypeFilter === "application" ? "default" : "outline"} 
+                              onClick={() => setApplicationTypeFilter("application")}
+                              className="text-xs h-8"
+                            >
+                              Web Dev
+                            </Button>
+                            <Button 
+                              type="button"
+                              size="sm" 
+                              variant={applicationTypeFilter === "cms" ? "default" : "outline"} 
+                              onClick={() => setApplicationTypeFilter("cms")}
+                              className="text-xs h-8"
+                            >
+                              CMS
+                            </Button>
+                            <Button 
+                              type="button"
+                              size="sm" 
+                              variant={applicationTypeFilter === "ecommerce" ? "default" : "outline"} 
+                              onClick={() => setApplicationTypeFilter("ecommerce")}
+                              className="text-xs h-8"
+                            >
+                              E-commerce
+                            </Button>
+                            <Button 
+                              type="button"
+                              size="sm" 
+                              variant={applicationTypeFilter === "database" ? "default" : "outline"} 
+                              onClick={() => setApplicationTypeFilter("database")}
+                              className="text-xs h-8"
+                            >
+                              Database
+                            </Button>
+                            <Button 
+                              type="button"
+                              size="sm" 
+                              variant={applicationTypeFilter === "data-science" ? "default" : "outline"} 
+                              onClick={() => setApplicationTypeFilter("data-science")}
+                              className="text-xs h-8"
+                            >
+                              Data Science
+                            </Button>
+                            <Button 
+                              type="button"
+                              size="sm" 
+                              variant={applicationTypeFilter === "devops" ? "default" : "outline"} 
+                              onClick={() => setApplicationTypeFilter("devops")}
+                              className="text-xs h-8"
+                            >
+                              DevOps
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <FormField
+                          control={form.control}
+                          name="application"
+                          render={({ field }) => (
+                            <FormItem className="col-span-2">
+                              <FormLabel className="text-sm">Application</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-9">
+                                    <SelectValue placeholder="Select application" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {applications
+                                    .filter(app => applicationTypeFilter === "all" ? true : app.type === applicationTypeFilter)
+                                    .map((app) => (
+                                      <SelectItem key={app.slug} value={app.slug}>
+                                        {app.name}
+                                        {app.distribution && <span className="text-xs ml-1 text-muted-foreground"> ({app.distribution})</span>}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+                    
+                    {installMode === "distribution" && (
+                      <FormField
+                        control={form.control}
+                        name="application"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel className="text-sm">Distribution</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Select distribution" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {distributions.map((distro) => (
+                                  <SelectItem key={distro.slug} value={distro.slug}>
+                                    {distro.name}
+                                    <span className="text-xs ml-1 text-muted-foreground"> ({distro.description})</span>
                                   </SelectItem>
                                 ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="text-xs" />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                     
                     <FormField
                       control={form.control}
