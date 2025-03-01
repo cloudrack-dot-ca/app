@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Shield, ArrowRight, Plus, Trash2 } from "lucide-react";
+import { Shield, ArrowRight, Plus, Trash2, AlertTriangle } from "lucide-react";
 
 // Define FirewallRule interface to match the server implementation
 interface FirewallRule {
@@ -46,6 +46,18 @@ const commonPorts = [
   { port: "2222", description: "Alternative SSH" },
 ];
 
+// Default rules
+const defaultInboundRules: FirewallRule[] = [
+  { protocol: 'tcp', ports: '22', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
+  { protocol: 'tcp', ports: '80', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
+  { protocol: 'tcp', ports: '443', sources: { addresses: ['0.0.0.0/0', '::/0'] } }
+];
+
+const defaultOutboundRules: FirewallRule[] = [
+  { protocol: 'tcp', ports: 'all', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
+  { protocol: 'udp', ports: 'all', sources: { addresses: ['0.0.0.0/0', '::/0'] } }
+];
+
 // Helper to format port description
 const getPortDescription = (port: string) => {
   const commonPort = commonPorts.find(p => p.port === port);
@@ -59,6 +71,7 @@ interface FirewallManagerProps {
 export default function FirewallManager({ serverId }: FirewallManagerProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("inbound");
+  const [noFirewall, setNoFirewall] = useState(false);
   const [newRule, setNewRule] = useState<{
     protocol: 'tcp' | 'udp' | 'icmp';
     ports: string;
@@ -72,16 +85,60 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
   // Fetch current firewall configuration
   const { data: firewall, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/servers', serverId, 'firewall'],
-    queryFn: () => fetch(`/api/servers/${serverId}/firewall`).then(res => res.json()),
-    refetchOnWindowFocus: false
+    queryFn: () => fetch(`/api/servers/${serverId}/firewall`)
+      .then(res => {
+        if (res.status === 404) {
+          // Firewall doesn't exist yet
+          setNoFirewall(true);
+          return {
+            name: `firewall-server-${serverId}`,
+            droplet_ids: [],
+            inbound_rules: [],
+            outbound_rules: []
+          };
+        }
+        if (!res.ok) {
+          throw new Error(`Error ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      }),
+    refetchOnWindowFocus: false,
+    retry: false // Don't retry on 404
   });
 
-  // If there's an error, it might be because no firewall exists yet
-  useEffect(() => {
-    if (error) {
-      console.error("Error fetching firewall:", error);
+  // Create a new firewall with default rules
+  const createFirewallMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(
+        'PUT',
+        `/api/servers/${serverId}/firewall`,
+        {
+          inbound_rules: defaultInboundRules,
+          outbound_rules: defaultOutboundRules
+        }
+      );
+    },
+    onSuccess: () => {
+      toast({
+        title: "Firewall created",
+        description: "Default firewall rules have been applied",
+      });
+      setNoFirewall(false);
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create firewall",
+        description: error.message,
+        variant: "destructive"
+      });
     }
-  }, [error]);
+  });
+
+  // Handle creating a firewall with default rules
+  const handleCreateFirewall = () => {
+    createFirewallMutation.mutate();
+  };
 
   // Add a new rule mutation
   const addRuleMutation = useMutation({
@@ -219,7 +276,7 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
             {rule.protocol.toUpperCase()} {getPortDescription(rule.ports)}
           </div>
           <div className="text-sm text-muted-foreground flex items-center mt-1">
-            <span>From: {sourceText}</span>
+            <span>{ruleType === 'inbound' ? 'From' : 'To'}: {sourceText}</span>
             {ruleType === 'inbound' && (
               <>
                 <ArrowRight className="h-3 w-3 mx-1" />
@@ -287,6 +344,31 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
     return <div className="p-4 text-center">Loading firewall configuration...</div>;
   }
 
+  if (noFirewall) {
+    return (
+      <div className="p-6 text-center space-y-4 border border-dashed rounded-lg">
+        <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto" />
+        <h3 className="text-lg font-semibold">No Firewall Configured</h3>
+        <p className="text-muted-foreground">
+          This server does not have a firewall configured. Without a firewall, your server
+          may be vulnerable to unauthorized access.
+        </p>
+        <Button 
+          onClick={handleCreateFirewall} 
+          className="mt-4" 
+          disabled={createFirewallMutation.isPending}
+        >
+          <Shield className="h-4 w-4 mr-2" />
+          {createFirewallMutation.isPending ? "Creating..." : "Create Default Firewall"}
+        </Button>
+        <p className="text-xs text-muted-foreground mt-2">
+          This will create a basic firewall allowing SSH (22), HTTP (80), and HTTPS (443) inbound traffic
+          and allow all outbound traffic.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -302,13 +384,13 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
               Control which traffic can reach your server from the internet.
             </p>
             
-            {firewall?.inbound_rules?.length === 0 ? (
+            {!firewall?.inbound_rules || firewall.inbound_rules.length === 0 ? (
               <div className="text-center py-4 text-muted-foreground">
                 No inbound rules configured. Your server may not be accessible.
               </div>
             ) : (
               <div className="space-y-2">
-                {firewall?.inbound_rules?.map((rule: FirewallRule) => renderRuleItem(rule, 'inbound'))}
+                {firewall.inbound_rules.map((rule: FirewallRule) => renderRuleItem(rule, 'inbound'))}
               </div>
             )}
           </div>
@@ -375,13 +457,13 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
               Control which traffic can leave your server.
             </p>
             
-            {firewall?.outbound_rules?.length === 0 ? (
+            {!firewall?.outbound_rules || firewall.outbound_rules.length === 0 ? (
               <div className="text-center py-4 text-muted-foreground">
                 No outbound rules configured. Your server may not be able to reach the internet.
               </div>
             ) : (
               <div className="space-y-2">
-                {firewall?.outbound_rules?.map((rule: FirewallRule) => renderRuleItem(rule, 'outbound'))}
+                {firewall.outbound_rules.map((rule: FirewallRule) => renderRuleItem(rule, 'outbound'))}
               </div>
             )}
           </div>
@@ -412,7 +494,7 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Port(s)</label>
                     <Input 
-                      placeholder="e.g. 80 or 8000-9000" 
+                      placeholder="e.g. 80 or 8000-9000 or 'all'" 
                       value={newRule.ports}
                       onChange={(e) => setNewRule({...newRule, ports: e.target.value})}
                     />
