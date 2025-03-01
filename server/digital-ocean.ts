@@ -26,6 +26,33 @@ export interface Application {
   type: string;
 }
 
+export interface FirewallRule {
+  id?: string;
+  type: 'inbound' | 'outbound';
+  protocol: 'tcp' | 'udp' | 'icmp';
+  ports: string;
+  sources?: {
+    addresses?: string[];
+    load_balancer_uids?: string[];
+    tags?: string[];
+  };
+  destinations?: {
+    addresses?: string[];
+    load_balancer_uids?: string[];
+    tags?: string[];
+  };
+}
+
+export interface Firewall {
+  id?: string;
+  name: string;
+  status?: 'waiting' | 'active' | 'errored';
+  created_at?: string;
+  droplet_ids: number[];
+  inbound_rules: FirewallRule[];
+  outbound_rules: FirewallRule[];
+}
+
 // Support both mock and real DigitalOcean API
 export class DigitalOceanClient {
   private apiKey: string;
