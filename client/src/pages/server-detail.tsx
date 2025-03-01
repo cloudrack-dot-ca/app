@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Server as SchemaServer, Volume } from "@shared/schema";
 import ServerTerminal from "@/components/server-terminal-real";
+import { CloudRackTerminalNotice } from "@/components/cloudrack-terminal-notice";
 
 // Extended Server interface with additional properties for UI display
 interface Server extends SchemaServer {
@@ -860,6 +861,9 @@ export default function ServerDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* CloudRack Terminal Notice */}
+              <CloudRackTerminalNotice />
+              
               {/* SSH Access Section - Moved to Top */}
               <div className="mb-6">
                 <h3 className="text-lg font-medium mb-2">SSH Access</h3>

@@ -1,25 +1,57 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import fs from 'fs';
+import path from 'path';
 import { storage } from './storage';
-import { log } from './vite';
-
-// Path to CloudRack's SSH public key
-const CLOUDRACK_SSH_KEY_PATH = path.join(process.cwd(), '.ssh', 'cloudrack_terminal_key.pub');
 
 /**
  * Manages CloudRack SSH keys for terminal access
  */
 export class CloudRackKeyManager {
-  
+  private keyPath: string;
+  private publicKeyPath: string;
+  private publicKeyContent: string | null = null;
+
+  constructor() {
+    // Set paths for the SSH keys
+    this.keyPath = path.resolve('.ssh', 'cloudrack_terminal_key');
+    this.publicKeyPath = path.resolve('.ssh', 'cloudrack_terminal_key.pub');
+    
+    // Ensure .ssh directory exists
+    const sshDir = path.resolve('.ssh');
+    if (!fs.existsSync(sshDir)) {
+      fs.mkdirSync(sshDir, { recursive: true });
+    }
+
+    // Load the public key content if it exists
+    this.loadPublicKey();
+  }
+
+  /**
+   * Loads the public key content from the file
+   */
+  private loadPublicKey(): void {
+    try {
+      if (fs.existsSync(this.publicKeyPath)) {
+        this.publicKeyContent = fs.readFileSync(this.publicKeyPath, 'utf8').trim();
+      } else {
+        console.error('CloudRack public key file not found:', this.publicKeyPath);
+      }
+    } catch (error) {
+      console.error('Error loading CloudRack public key:', error);
+    }
+  }
+
   /**
    * Checks if a user has the CloudRack SSH key registered in their account
    */
   async hasCloudRackKey(userId: number): Promise<boolean> {
     try {
-      const userKeys = await storage.getSSHKeysByUser(userId);
-      return userKeys.some(key => key.isCloudRackKey);
+      // Get all SSH keys for this user
+      const keys = await storage.getSSHKeysByUser(userId);
+      
+      // Check if any key is marked as the CloudRack key
+      return keys.some(key => key.isCloudRackKey);
     } catch (error) {
-      log(`Error checking for CloudRack key: ${(error as Error).message}`, 'cloudrack');
+      console.error('Error checking for CloudRack key:', error);
       return false;
     }
   }
@@ -30,33 +62,33 @@ export class CloudRackKeyManager {
    */
   async ensureCloudRackKey(userId: number): Promise<boolean> {
     try {
-      // Check if user already has a CloudRack key
-      if (await this.hasCloudRackKey(userId)) {
-        return true;
+      // First check if the user already has a CloudRack key
+      const hasKey = await this.hasCloudRackKey(userId);
+      
+      if (hasKey) {
+        return true; // User already has the key
       }
 
-      // Check if CloudRack SSH public key exists
-      if (!fs.existsSync(CLOUDRACK_SSH_KEY_PATH)) {
-        log('CloudRack SSH public key not found.', 'cloudrack');
+      // If the public key content is not available, we can't proceed
+      if (!this.publicKeyContent) {
+        console.error('Cannot add CloudRack key: Public key content not available');
         return false;
       }
 
-      // Read CloudRack SSH public key
-      const publicKey = fs.readFileSync(CLOUDRACK_SSH_KEY_PATH, 'utf8');
-
-      // Create CloudRack SSH key for the user
+      // Create the CloudRack key for this user
       await storage.createSSHKey({
         userId,
         name: 'CloudRack Terminal Key',
-        publicKey,
-        isCloudRackKey: true,
+        publicKey: this.publicKeyContent,
         createdAt: new Date(),
+        isCloudRackKey: true
       });
 
-      log(`CloudRack SSH key created for user ${userId}`, 'cloudrack');
+      console.log(`CloudRack terminal key added for user ${userId}`);
       return true;
+      
     } catch (error) {
-      log(`Error ensuring CloudRack key: ${(error as Error).message}`, 'cloudrack');
+      console.error('Error ensuring CloudRack key:', error);
       return false;
     }
   }
@@ -65,15 +97,14 @@ export class CloudRackKeyManager {
    * Returns the CloudRack SSH public key content
    */
   getCloudRackPublicKey(): string | null {
-    try {
-      if (!fs.existsSync(CLOUDRACK_SSH_KEY_PATH)) {
-        return null;
-      }
-      return fs.readFileSync(CLOUDRACK_SSH_KEY_PATH, 'utf8');
-    } catch (error) {
-      log(`Error reading CloudRack public key: ${(error as Error).message}`, 'cloudrack');
-      return null;
-    }
+    return this.publicKeyContent;
+  }
+
+  /**
+   * Returns the path to the CloudRack SSH private key
+   */
+  getCloudRackPrivateKeyPath(): string {
+    return this.keyPath;
   }
 }
 
