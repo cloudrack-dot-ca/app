@@ -18,16 +18,16 @@ import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@shared/schema";
 import { db } from "./db";
 
-// Cost constants
+// Cost constants with our markup applied ($1 markup on server plans, 4¢ markup per GB on volumes)
 const COSTS = {
   servers: {
-    "s-1vcpu-1gb": 7, // $0.007 per hour (~$5/mo)
-    "s-1vcpu-2gb": 14, // $0.014 per hour (~$10/mo)
-    "s-2vcpu-4gb": 28, // $0.028 per hour (~$20/mo)
+    "s-1vcpu-1gb": 7 + 100, // $0.007 per hour + $0.10 markup (~$5/mo + $1)
+    "s-1vcpu-2gb": 14 + 100, // $0.014 per hour + $0.10 markup (~$10/mo + $1)
+    "s-2vcpu-4gb": 28 + 100, // $0.028 per hour + $0.10 markup (~$20/mo + $1)
   },
   storage: {
     baseRate: 0.00014, // DO base rate per GB per hour
-    markup: 0.009, // Our markup per GB
+    markup: 0.04 / (30 * 24), // 4¢ per GB per month converted to hourly
     maxSize: 1000, // Maximum volume size in GB
   },
 };
@@ -147,22 +147,29 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.status(400).json(parsed.error);
       }
 
-      // Check if user has enough balance (require minimum 1h worth)
-      const hourlyCost = 1; // $1 per hour
+      // Get the hourly cost for this server size including markup
+      const sizeSlug = parsed.data.size;
+      const hourlyCost = (COSTS.servers[sizeSlug] || 107) / 100; // Default to cheapest plan + $1 markup if not found
       const minimumBalance = toCents(hourlyCost); // Require 1h worth of balance in cents
       await checkBalance(req.user.id, hourlyCost);
 
       const auth = req.body.auth || {};
 
-      const droplet = await digitalOcean.createDroplet({
-        name: parsed.data.name,
-        region: parsed.data.region,
-        size: parsed.data.size,
-        application: parsed.data.application,
-        // Pass authentication details to DigitalOcean
-        ssh_keys: auth.type === "ssh" ? [auth.value] : undefined,
-        password: auth.type === "password" ? auth.value : undefined,
-      });
+      // Create the actual droplet via DigitalOcean API
+      let droplet;
+      try {
+        droplet = await digitalOcean.createDroplet({
+          name: parsed.data.name,
+          region: parsed.data.region,
+          size: parsed.data.size,
+          application: parsed.data.application,
+          // Pass authentication details to DigitalOcean
+          ssh_keys: auth.type === "ssh" ? [auth.value] : undefined,
+          password: auth.type === "password" ? auth.value : undefined,
+        });
+      } catch (error) {
+        throw new Error(`Failed to create server with DigitalOcean: ${(error as Error).message}`);
+      }
 
       const server = await storage.createServer({
         ...parsed.data,

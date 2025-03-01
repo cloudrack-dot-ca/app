@@ -8,7 +8,8 @@ if (!clientId || !clientSecret) {
 }
 
 function environment() {
-  return new paypal.core.SandboxEnvironment(clientId, clientSecret);
+  // Use Live environment instead of Sandbox for production
+  return new paypal.core.LiveEnvironment(clientId, clientSecret);
 }
 
 const client = new paypal.core.PayPalHttpClient(environment());

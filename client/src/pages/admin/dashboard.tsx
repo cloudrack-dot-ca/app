@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'wouter';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -73,6 +73,7 @@ import {
   Settings, 
   ShieldCheck, 
   Ticket, 
+  Trash2, 
   User, 
   Users 
 } from 'lucide-react';
@@ -297,6 +298,52 @@ export default function AdminDashboard() {
         description: 'IP ban removed successfully',
       });
       refetchIpBans();
+    }
+  });
+  
+  // Delete server mutation
+  const queryClient = useQueryClient();
+  const deleteServerMutation = useMutation({
+    mutationFn: async (serverId: number) => {
+      await apiRequest('DELETE', `/api/servers/${serverId}`);
+      return serverId;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Server deleted successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/servers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to delete server: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Update ticket status mutation
+  const updateTicketStatusMutation = useMutation({
+    mutationFn: async ({ ticketId, status }: { ticketId: number; status: string }) => {
+      const response = await apiRequest('PATCH', `/api/tickets/${ticketId}`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Ticket status updated successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/tickets'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to update ticket status: ${error.message}`,
+        variant: 'destructive',
+      });
     }
   });
 
@@ -625,6 +672,7 @@ export default function AdminDashboard() {
                       <TableHead>Size</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>IP Address</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -645,6 +693,22 @@ export default function AdminDashboard() {
                           </span>
                         </TableCell>
                         <TableCell>{server.ipAddress || 'Not assigned'}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => {
+                                if (window.confirm('Are you sure you want to delete this server? This action cannot be undone.')) {
+                                  deleteServerMutation.mutate(server.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -733,6 +797,7 @@ export default function AdminDashboard() {
                       <TableHead>Priority</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead>Updated</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -761,6 +826,37 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell>{new Date(ticket.createdAt).toLocaleString()}</TableCell>
                         <TableCell>{new Date(ticket.updatedAt).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                window.location.href = `/support/${ticket.id}`;
+                              }}
+                            >
+                              View & Respond
+                            </Button>
+                            <Select
+                              onValueChange={(value) => {
+                                updateTicketStatusMutation.mutate({
+                                  ticketId: ticket.id,
+                                  status: value
+                                });
+                              }}
+                              defaultValue={ticket.status}
+                            >
+                              <SelectTrigger className="w-[120px]">
+                                <SelectValue placeholder="Change Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="open">Open</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="closed">Closed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
