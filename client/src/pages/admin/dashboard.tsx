@@ -175,12 +175,12 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/stats'],
     queryFn: async () => {
       const response = await apiRequest('/api/admin/stats', { method: 'GET' });
-      return response as AdminStats;
+      return response as unknown as AdminStats;
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: 'Error',
-        description: `Failed to load admin stats: ${error.message}`,
+        description: `Failed to load admin stats`,
         variant: 'destructive',
       });
     }
@@ -191,12 +191,12 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/users'],
     queryFn: async () => {
       const response = await apiRequest('/api/admin/users', { method: 'GET' });
-      return response as AdminUser[];
+      return response as unknown as AdminUser[];
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: 'Error',
-        description: `Failed to load users: ${error.message}`,
+        description: `Failed to load users`,
         variant: 'destructive',
       });
     }
@@ -207,7 +207,14 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/servers'],
     queryFn: async () => {
       const response = await apiRequest('/api/admin/servers', { method: 'GET' });
-      return response as AdminServer[];
+      return response as unknown as AdminServer[];
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: `Failed to load servers`,
+        variant: 'destructive',
+      });
     }
   });
 
@@ -216,7 +223,14 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/tickets'],
     queryFn: async () => {
       const response = await apiRequest('/api/admin/tickets', { method: 'GET' });
-      return response as AdminTicket[];
+      return response as unknown as AdminTicket[];
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: `Failed to load tickets`,
+        variant: 'destructive',
+      });
     }
   });
 
@@ -225,7 +239,14 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/transactions'],
     queryFn: async () => {
       const response = await apiRequest('/api/admin/transactions', { method: 'GET' });
-      return response as Transaction[];
+      return response as unknown as Transaction[];
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: `Failed to load transactions`,
+        variant: 'destructive',
+      });
     }
   });
 
@@ -234,7 +255,14 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/ip-bans'],
     queryFn: async () => {
       const response = await apiRequest('/api/admin/ip-bans', { method: 'GET' });
-      return response as IPBan[];
+      return response as unknown as IPBan[];
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: `Failed to load IP bans`,
+        variant: 'destructive',
+      });
     }
   });
 
@@ -245,7 +273,7 @@ export default function AdminDashboard() {
         method: 'PATCH',
         body: { amount },
       });
-      return response as AdminUser;
+      return response as unknown as AdminUser;
     },
     onSuccess: () => {
       toast({
