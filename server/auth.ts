@@ -21,7 +21,7 @@ export async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
-async function comparePasswords(supplied: string, stored: string) {
+export async function comparePasswords(supplied: string, stored: string) {
   // Check if the stored password has the expected format
   if (!stored || !stored.includes(".")) {
     console.error("Invalid password format in database");

@@ -3,7 +3,7 @@ import { createServer } from "http";
 import type { Server as HttpServer } from "http";
 import { setupTerminalSocket } from "./terminal-handler";
 import type { User } from "@shared/schema";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
 import * as schema from "@shared/schema";
