@@ -217,16 +217,37 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     }
   };
 
-  // Toggle full screen mode
+  // Toggle full screen mode with browser's native fullscreen API
   const toggleFullScreen = () => {
     const newFullscreenState = !isFullScreen;
     setIsFullScreen(newFullscreenState);
     
-    // Add/remove body scroll lock when entering/exiting fullscreen
+    // Get the correct socket reference
+    const socket = socketRef.current;
+    
     if (newFullscreenState) {
+      // Enter fullscreen
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      
+      // Request browser fullscreen if supported
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => {
+          console.log("Error attempting to enable fullscreen:", err);
+        });
+      }
     } else {
+      // Exit fullscreen
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      
+      // Exit browser fullscreen if active
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(err => {
+          console.log("Error attempting to exit fullscreen:", err);
+        });
+      }
     }
     
     // Give the DOM time to update, then resize the terminal to fill the new space
@@ -235,11 +256,11 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         fitAddon.fit();
         
         // Update terminal dimensions and emit resize event
-        if (terminal && socketRef.current?.connected) {
+        if (terminal && socket?.connected) {
           const dims = terminal.rows && terminal.cols ? 
             { rows: terminal.rows, cols: terminal.cols } : 
             { rows: 24, cols: 80 };
-          socketRef.current.emit('resize', dims);
+          socket.emit('resize', dims);
         }
         
         // Focus the terminal when entering fullscreen
@@ -250,60 +271,77 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     }, 100);
   };
 
-  // Effect to handle fitting when fullscreen changes
+  // Effect to handle fitting when fullscreen changes and handle browser fullscreen events
   useEffect(() => {
-    if (isFullScreen && fitAddon) {
+    if (fitAddon) {
       fitAddon.fit();
       
-      // Add event listener for ESC key to exit fullscreen
-      const handleEscKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape' && isFullScreen) {
-          toggleFullScreen();
-        }
-      };
-      
-      window.addEventListener('keydown', handleEscKey);
-      
-      return () => {
-        window.removeEventListener('keydown', handleEscKey);
-      };
+      if (isFullScreen) {
+        // Add event listener for ESC key to exit fullscreen
+        const handleEscKey = (e: KeyboardEvent) => {
+          if (e.key === 'Escape' && isFullScreen) {
+            // The browser's fullscreen API will handle this naturally,
+            // but we need to update our state
+            setIsFullScreen(false);
+          }
+        };
+        
+        // Add event listener for browser fullscreen change
+        const handleFullscreenChange = () => {
+          if (!document.fullscreenElement && isFullScreen) {
+            // User exited browser fullscreen, update our state
+            setIsFullScreen(false);
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+          }
+        };
+        
+        window.addEventListener('keydown', handleEscKey);
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        
+        return () => {
+          window.removeEventListener('keydown', handleEscKey);
+          document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        };
+      }
     }
   }, [isFullScreen, fitAddon]);
   
-  // Clean up body overflow when component unmounts
+  // Clean up when component unmounts
   useEffect(() => {
     return () => {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      
+      // Ensure we exit fullscreen on component unmount
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(err => {
+          console.log("Error attempting to exit fullscreen on unmount:", err);
+        });
+      }
     };
   }, []);
 
   return (
-    <div className={`relative ${isFullScreen ? 'fixed inset-0 z-[100] bg-background' : ''}`}>
-      {/* Overlay when in fullscreen to prevent interaction with elements behind */}
-      {isFullScreen && (
-        <div className="absolute inset-0 bg-background/95 backdrop-blur-sm" />
-      )}
+    <div className={`relative ${isFullScreen ? 'fixed inset-0 z-[100] bg-black' : ''}`}>
+      {/* In fullscreen mode, we don't need an overlay as the terminal itself will take up the entire screen */}
       
-      {connectionError && (
-        <div className={`bg-red-500/10 text-red-500 p-3 rounded-md ${isFullScreen ? 'absolute top-4 left-4 right-4 z-10' : 'mb-4'}`}>
+      {connectionError && !isFullScreen && (
+        <div className="bg-red-500/10 text-red-500 p-3 rounded-md mb-4">
           {connectionError}
         </div>
       )}
       
       <div 
         className={`
-          border rounded-md overflow-hidden relative
           ${isFullScreen 
-            ? 'absolute inset-4 h-[calc(100vh-32px)] w-[calc(100vw-32px)] z-10 shadow-xl' 
-            : 'h-[400px]'}
+            ? 'absolute inset-0 h-screen w-screen border-none' 
+            : 'border rounded-md overflow-hidden relative h-[400px]'}
         `}
       >
-        {isFullScreen && (
-          <div className="absolute bottom-2 right-2 text-gray-400/40 z-10 pointer-events-none">
-            <Move className="h-6 w-6" />
-          </div>
-        )}
-        <div className="bg-gray-800 text-gray-300 p-2 flex justify-between items-center text-xs">
+        {/* We removed the resize indicator since it's not needed in a true fullscreen experience */}
+        {/* Terminal header bar */}
+        <div className={`${isFullScreen ? 'bg-black text-gray-300' : 'bg-gray-800 text-gray-300'} p-2 flex justify-between items-center text-xs`}>
           <div className="flex items-center">
             <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
             {isConnected ? 'Connected' : 'Disconnected'} - {serverName} ({ipAddress})
@@ -312,7 +350,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-6 w-6" 
+              className={`h-6 w-6 ${isFullScreen ? 'hover:bg-gray-800' : ''}`}
               onClick={handleReconnect}
               title="Reconnect"
             >
@@ -321,7 +359,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-6 w-6" 
+              className={`h-6 w-6 ${isFullScreen ? 'hover:bg-gray-800' : ''}`}
               onClick={toggleFullScreen}
               title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
             >
@@ -344,19 +382,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         />
       </div>
       
-      {isFullScreen && (
-        <div className="absolute bottom-6 right-6 z-20">
-          <Button 
-            variant="secondary" 
-            onClick={toggleFullScreen}
-            className="shadow-lg bg-background/80 backdrop-blur-sm hover:bg-background transition-all"
-          >
-            <Minimize2 className="h-4 w-4 mr-2" />
-            Exit Full Screen
-            <span className="ml-2 opacity-70 text-xs">Esc</span>
-          </Button>
-        </div>
-      )}
+      {/* Remove the additional exit fullscreen button as it's already in the header */}
     </div>
   );
 }
