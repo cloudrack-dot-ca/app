@@ -81,11 +81,33 @@ export function registerAdminRoutes(app: Express) {
     }
   });
   
-  // Get all users
+  // Get all users with pagination
   app.get('/api/admin/users', async (req: Request, res: Response) => {
     try {
-      const users = await storage.getAllUsers();
-      res.json(users);
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      
+      // Get total count of users
+      const allUsers = await storage.getAllUsers();
+      const total = allUsers.length;
+      
+      // Apply pagination
+      const users = allUsers.slice(offset, offset + limit);
+      
+      // Return paginated response
+      res.json({
+        users,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: offset + limit < total,
+          hasPrevPage: page > 1
+        }
+      });
     } catch (error) {
       log(`Admin users error: ${error}`, 'admin');
       res.status(500).json({ message: 'Failed to load users' });
@@ -140,44 +162,136 @@ export function registerAdminRoutes(app: Express) {
     }
   });
   
-  // Get all servers
+  // Get all servers with pagination
   app.get('/api/admin/servers', async (req: Request, res: Response) => {
     try {
-      const servers = await storage.getAllServers();
-      res.json(servers);
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      
+      // Get all servers
+      const allServers = await storage.getAllServers();
+      const total = allServers.length;
+      
+      // Apply pagination
+      const servers = allServers.slice(offset, offset + limit);
+      
+      // Return paginated response
+      res.json({
+        servers,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: offset + limit < total,
+          hasPrevPage: page > 1
+        }
+      });
     } catch (error) {
       log(`Admin servers error: ${error}`, 'admin');
       res.status(500).json({ message: 'Failed to load servers' });
     }
   });
   
-  // Get all tickets
+  // Get all tickets with pagination
   app.get('/api/admin/tickets', async (req: Request, res: Response) => {
     try {
-      const tickets = await storage.getAllTickets();
-      res.json(tickets);
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      
+      // Get all tickets
+      const allTickets = await storage.getAllTickets();
+      const total = allTickets.length;
+      
+      // Apply pagination and sorting (newest first)
+      const tickets = allTickets
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(offset, offset + limit);
+      
+      // Return paginated response
+      res.json({
+        tickets,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: offset + limit < total,
+          hasPrevPage: page > 1
+        }
+      });
     } catch (error) {
       log(`Admin tickets error: ${error}`, 'admin');
       res.status(500).json({ message: 'Failed to load tickets' });
     }
   });
   
-  // Get all transactions
+  // Get all transactions with pagination
   app.get('/api/admin/transactions', async (req: Request, res: Response) => {
     try {
-      const transactions = await storage.getAllTransactions();
-      res.json(transactions);
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      
+      // Get all transactions
+      const allTransactions = await storage.getAllTransactions();
+      const total = allTransactions.length;
+      
+      // Apply pagination and sorting (newest first)
+      const transactions = allTransactions
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(offset, offset + limit);
+      
+      // Return paginated response
+      res.json({
+        transactions,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: offset + limit < total,
+          hasPrevPage: page > 1
+        }
+      });
     } catch (error) {
       log(`Admin transactions error: ${error}`, 'admin');
       res.status(500).json({ message: 'Failed to load transactions' });
     }
   });
   
-  // Get all IP bans
+  // Get all IP bans with pagination
   app.get('/api/admin/ip-bans', async (req: Request, res: Response) => {
     try {
-      const ipBans = await storage.getAllIPBans();
-      res.json(ipBans);
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      
+      // Get all IP bans
+      const allIpBans = await storage.getAllIPBans();
+      const total = allIpBans.length;
+      
+      // Apply pagination
+      const ipBans = allIpBans.slice(offset, offset + limit);
+      
+      // Return paginated response
+      res.json({
+        ipBans,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: offset + limit < total,
+          hasPrevPage: page > 1
+        }
+      });
     } catch (error) {
       log(`Admin IP bans error: ${error}`, 'admin');
       res.status(500).json({ message: 'Failed to load IP bans' });
