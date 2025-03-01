@@ -188,13 +188,15 @@ export default function AdminDashboard() {
   }
 
   // Fetch admin stats
-  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['/api/admin/stats'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/stats');
       const data = await response.json();
       return data as AdminStats;
-    }
+    },
+    // Refresh data every 5 minutes automatically
+    refetchInterval: 5 * 60 * 1000
   });
 
   // Show toast on error
@@ -519,15 +521,51 @@ export default function AdminDashboard() {
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center">
-                    <CircleDollarSign className="h-4 w-4 mr-2" />
-                    Total Revenue
-                  </CardTitle>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm font-medium flex items-center">
+                      <CircleDollarSign className="h-4 w-4 mr-2" />
+                      Total Revenue
+                    </CardTitle>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => {
+                        refetchStats();
+                        toast({
+                          title: "Refreshing Revenue Data",
+                          description: "Updating financial statistics...",
+                        });
+                      }} 
+                      className="h-8 w-8"
+                      title="Refresh revenue data"
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        className="lucide lucide-refresh-cw"
+                      >
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                        <path d="M21 3v5h-5"></path>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                        <path d="M3 21v-5h5"></path>
+                      </svg>
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">${stats.billing.totalDeposits.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     ${stats.billing.totalSpending.toFixed(2)} in spending
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 italic">
+                    Auto-updates every 5 minutes
                   </p>
                 </CardContent>
               </Card>
