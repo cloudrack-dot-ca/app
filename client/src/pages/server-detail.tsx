@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Server as SchemaServer, Volume } from "@shared/schema";
-import ServerTerminal from "@/components/server-terminal";
+import ServerTerminal from "@/components/server-terminal-updated";
 
 // Extended Server interface with additional properties for UI display
 interface Server extends SchemaServer {
@@ -947,6 +947,27 @@ export default function ServerDetailPage() {
                     )}
                   </div>
                 </div>
+              </div>
+              
+              {/* Terminal Section */}
+              <div className="mt-8 border-t pt-6">
+                <h3 className="text-lg font-medium mb-4">Interactive Terminal</h3>
+                
+                <div className="bg-muted/50 rounded-md p-3 mb-4">
+                  <div className="flex items-center text-amber-600">
+                    <Terminal className="h-4 w-4 mr-2" />
+                    <span className="text-sm font-medium">Terminal Access</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This is an interactive terminal with basic command simulation. For full functionality, use SSH access.
+                  </p>
+                </div>
+                
+                <ServerTerminal 
+                  serverId={server.id} 
+                  serverName={server.name} 
+                  ipAddress={server.ipAddress || 'unknown'}
+                />
               </div>
             </CardContent>
           </Card>
