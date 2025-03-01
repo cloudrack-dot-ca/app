@@ -8,6 +8,8 @@ import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
 import * as schema from "@shared/schema";
 import { cloudRackKeyManager } from "./cloudrack-key-manager";
+import { eq, sql } from "drizzle-orm";
+import { db } from "./db";
 import { 
   insertServerSchema, 
   insertVolumeSchema, 
@@ -18,8 +20,6 @@ import {
 } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@shared/schema";
-import { eq } from "drizzle-orm";
-import { db } from "./db";
 
 // Cost constants with our markup applied ($1 markup on server plans, 4¢ markup per GB on volumes)
 const COSTS = {
