@@ -1000,7 +1000,7 @@ export default function ServerDetailPage() {
                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                         onClick={async () => {
                                           try {
-                                            await apiRequest('DELETE', `/api/servers/${serverId}/firewall`);
+                                            await apiRequest('PUT', `/api/servers/${serverId}/firewall?action=disable`);
                                             toast({
                                               title: "Firewall Disabled",
                                               description: "All firewall rules have been removed.",

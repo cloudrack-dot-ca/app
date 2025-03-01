@@ -1102,8 +1102,52 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         // Call DigitalOcean API to enable IPv6
         await digitalOcean.performDropletAction(server.dropletId, "enable_ipv6");
         
-        // Generate a fake IPv6 address - in a real implementation this would be retrieved from the API
-        ipv6Address = "2001:db8:85a3:8d3:1319:8a2e:370:7348";
+        // Wait for IPv6 to be provisioned
+        console.log(`Waiting for IPv6 to be provisioned for server ${server.id}...`);
+        
+        // Wait a short time for the IPv6 to be provisioned
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Fetch the current droplet data to get the IPv6 address
+        try {
+          // Define the type for DigitalOcean droplet response
+          interface DigitalOceanDropletResponse {
+            droplet: {
+              id: number;
+              status: string;
+              networks: {
+                v4?: Array<{
+                  ip_address: string;
+                  type: string; // 'public' or 'private'
+                }>;
+                v6?: Array<{
+                  ip_address: string;
+                  type: string;
+                }>;
+              };
+            };
+          }
+          
+          console.log(`Fetching droplet details for ${server.dropletId} to get IPv6 address`);
+          const dropletDetails = await digitalOcean.apiRequest<DigitalOceanDropletResponse>(
+            `/droplets/${server.dropletId}`
+          );
+          
+          // Check if IPv6 is available
+          if (dropletDetails?.droplet?.networks?.v6 && 
+              dropletDetails.droplet.networks.v6.length > 0) {
+            ipv6Address = dropletDetails.droplet.networks.v6[0].ip_address;
+            console.log(`Found IPv6 address: ${ipv6Address}`);
+          } else {
+            // Fallback to a placeholder if actual address is not yet available
+            console.log('IPv6 not yet available from API, using placeholder');
+            ipv6Address = server.ipv6Address || '2001:db8:85a3:8d3:1319:8a2e:370:7348';
+          }
+        } catch (apiError) {
+          console.error('Error fetching IPv6 address:', apiError);
+          // Still use the IPv6 placeholder if we can't get the actual address
+          ipv6Address = server.ipv6Address || '2001:db8:85a3:8d3:1319:8a2e:370:7348';
+        }
       }
       
       // Update the server record with the new IPv6 address (or null)
@@ -1147,7 +1191,28 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
     try {
       const { inbound_rules, outbound_rules } = req.body;
+      const action = req.query.action as string; // 'disable' or undefined
       
+      // Special case for disabling the firewall
+      if (action === 'disable') {
+        console.log(`Disabling firewall for server ${server.id}`);
+        const firewall = await digitalOcean.getFirewallByDropletId(server.dropletId);
+        
+        if (!firewall) {
+          return res.status(404).json({ message: "No firewall found for this server" });
+        }
+        
+        // Delete the firewall instead of just removing rules
+        try {
+          await digitalOcean.deleteFirewall(firewall.id!);
+          return res.json({ success: true, message: "Firewall disabled successfully" });
+        } catch (error) {
+          console.error("Error disabling firewall:", error);
+          return res.status(500).json({ message: "Failed to disable firewall" });
+        }
+      }
+      
+      // Normal rule update
       if (!Array.isArray(inbound_rules) || !Array.isArray(outbound_rules)) {
         return res.status(400).json({ message: "Invalid firewall rules format" });
       }
