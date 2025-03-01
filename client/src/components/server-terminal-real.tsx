@@ -51,35 +51,43 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   
   // Function to change terminal font
   const changeTerminalFont = (newFont: string) => {
+    // Store the previous connection status to restore after refresh
+    const wasConnected = isConnected;
+    setIsConnected(false); 
+    setConnectionStatus('Updating terminal font...');
+    
+    // Update font preference
     setCurrentFont(newFont);
     
-    // If terminal exists, update its font
+    // We'll just store the font preference - terminal will be recreated with the new font when the effect runs
+    // This avoids the "this._renderer.value is undefined" error
+    
+    // Let the user know what's happening
     if (terminal) {
-      terminal.options.fontFamily = newFont;
-      
-      // Force a redraw by updating the terminal size
-      if (fitAddon) {
-        setTimeout(() => {
-          fitAddon.fit();
-        }, 50);
-      }
+      terminal.clear();
+      terminal.writeln('\x1b[1;33mApplying new terminal font...\x1b[0m');
+      terminal.writeln('\x1b[1;33mTerminal will refresh automatically.\x1b[0m');
     }
   };
   
   // Function to change terminal font size
   const changeFontSize = (newSize: number) => {
+    // Store the previous connection status to restore after refresh
+    const wasConnected = isConnected;
+    setIsConnected(false);
+    setConnectionStatus('Updating font size...');
+    
+    // Update size preference
     setFontSize(newSize);
     
-    // If terminal exists, update its font size
+    // We'll just store the size preference - terminal will be recreated with the new size when the effect runs
+    // This avoids the "this._renderer.value is undefined" error
+    
+    // Let the user know what's happening
     if (terminal) {
-      terminal.options.fontSize = newSize;
-      
-      // Force a redraw by updating the terminal size
-      if (fitAddon) {
-        setTimeout(() => {
-          fitAddon.fit();
-        }, 50);
-      }
+      terminal.clear();
+      terminal.writeln('\x1b[1;33mApplying new font size...\x1b[0m');
+      terminal.writeln('\x1b[1;33mTerminal will refresh automatically.\x1b[0m');
     }
   };
   
