@@ -500,6 +500,18 @@ export class CloudRackClient {
     }
   }
 
+  async createServer(options: {
+    name: string;
+    region: string;
+    size: string;
+    application?: string;
+    ssh_keys?: string[];
+    password?: string;
+    ipv6?: boolean;
+  }): Promise<{ id: string; ip_address: string; ipv6_address?: string }> {
+    return this.createDroplet(options); // For backward compatibility
+  }
+
   async createDroplet(options: {
     name: string;
     region: string;
@@ -510,7 +522,7 @@ export class CloudRackClient {
     ipv6?: boolean;
   }): Promise<{ id: string; ip_address: string; ipv6_address?: string }> {
     if (this.useMock) {
-      // Mock droplet creation with optional IPv6
+      // Mock server creation with optional IPv6
       const mockResponse = {
         id: Math.random().toString(36).substring(7),
         ip_address: `${Math.floor(Math.random() * 256)}.${Math.floor(
@@ -531,8 +543,8 @@ export class CloudRackClient {
     }
     
     try {
-      // Prepare droplet creation data
-      const dropletData: any = {
+      // Prepare server creation data
+      const serverData: any = {
         name: options.name,
         region: options.region,
         size: options.size,
@@ -546,7 +558,7 @@ export class CloudRackClient {
       if (options.password) {
         // This more comprehensive cloud-init script properly sets the password
         // and ensures SSH password authentication is enabled
-        dropletData.user_data = `#cloud-config
+        serverData.user_data = `#cloud-config
 password: ${options.password}
 chpasswd: { expire: False }
 ssh_pwauth: True
@@ -558,7 +570,7 @@ runcmd:
 `;
       }
       
-      const response = await this.apiRequest<{ droplet: any }>('/droplets', 'POST', dropletData);
+      const response = await this.apiRequest<{ server: any }>('/servers', 'POST', dropletData);
       
       // In real API, the droplet is being created asynchronously, 
       // so we need to poll for the IP address
@@ -569,13 +581,13 @@ runcmd:
       while ((!ipAddress || (options.ipv6 && !ipv6Address)) && attempts < 20) {
         await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
         
-        const dropletDetails = await this.apiRequest<{ droplet: any }>(
-          `/droplets/${response.droplet.id}`
+        const serverDetails = await this.apiRequest<{ server: any }>(
+          `/servers/${response.server ? response.server.id : response.droplet.id}`
         );
         
         // Extract IP addresses from networks
-        if (dropletDetails.droplet.networks?.v4?.length > 0) {
-          const publicIp = dropletDetails.droplet.networks.v4.find(
+        if (serverDetails.server.networks?.v4?.length > 0) {
+          const publicIp = serverDetails.server.networks.v4.find(
             (network: any) => network.type === 'public'
           );
           if (publicIp) {
@@ -583,15 +595,15 @@ runcmd:
           }
         }
         
-        if (options.ipv6 && dropletDetails.droplet.networks?.v6?.length > 0) {
-          ipv6Address = dropletDetails.droplet.networks.v6[0].ip_address;
+        if (options.ipv6 && serverDetails.server.networks?.v6?.length > 0) {
+          ipv6Address = serverDetails.server.networks.v6[0].ip_address;
         }
         
         attempts++;
       }
       
       return {
-        id: response.droplet.id.toString(),
+        id: response.server ? response.server.id.toString() : response.droplet.id.toString(),
         ip_address: ipAddress || 'pending',
         ...(options.ipv6 && ipv6Address ? { ipv6_address: ipv6Address } : {})
       };
