@@ -693,7 +693,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
 
     try {
-      // Call the DigitalOcean client to reboot the droplet
+      // Call the CloudRack client to reboot the droplet
       await digitalOcean.performDropletAction(server.dropletId, "reboot");
       
       // Update server status
@@ -728,13 +728,13 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
 
     try {
-      // Determine the DO API action and new status
-      const doAction = action === "start" ? "power_on" : "power_off";
+      // Determine the CloudRack API action and new status
+      const cloudAction = action === "start" ? "power_on" : "power_off";
       const newStatus = action === "start" ? "active" : "off";
       const transitionStatus = action === "start" ? "starting" : "stopping";
       
-      // Call DigitalOcean API
-      await digitalOcean.performDropletAction(server.dropletId, doAction as any);
+      // Call CloudRack API
+      await digitalOcean.performDropletAction(server.dropletId, cloudAction as any);
       
       // Update server status to transition state first
       let updatedServer = await storage.updateServer(server.id, { status: transitionStatus });
@@ -794,7 +794,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       
       // Only need to call the API if enabling IPv6
       if (enabled) {
-        // Call DigitalOcean API to enable IPv6
+        // Call CloudRack API to enable IPv6
         await digitalOcean.performDropletAction(server.dropletId, "enable_ipv6");
         
         // Generate a fake IPv6 address - in a real implementation this would be retrieved from the API
@@ -888,7 +888,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       const latestMetric = await storage.getLatestServerMetric(serverId);
 
       if (!latestMetric) {
-        // If no metrics exist, fetch from DigitalOcean and create a new one
+        // If no metrics exist, fetch from CloudRack and create a new one
         const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
         
         // Convert to our metric format
@@ -918,7 +918,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Check if we need to refresh the metrics (if older than 5 minutes)
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       if (latestMetric.timestamp < fiveMinutesAgo) {
-        // Fetch fresh metrics from DigitalOcean
+        // Fetch fresh metrics from CloudRack
         const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
         
         // Convert to our metric format and save
@@ -988,10 +988,10 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.sendStatus(404);
       }
 
-      // Fetch fresh server details from DigitalOcean to update IP addresses
+      // Fetch fresh server details from CloudRack to update IP addresses
       try {
-        // Define the type for DigitalOcean droplet response
-        interface DigitalOceanDropletResponse {
+        // Define the type for CloudRack server response
+        interface CloudRackServerResponse {
           droplet: {
             id: number;
             status: string;
@@ -1052,7 +1052,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         // Continue with metrics even if IP update fails
       }
 
-      // Fetch fresh metrics from DigitalOcean
+      // Fetch fresh metrics from CloudRack
       const doMetrics = await digitalOcean.getServerMetrics(server.dropletId);
       
       // Convert to our metric format and save
