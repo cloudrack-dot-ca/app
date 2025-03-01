@@ -183,6 +183,48 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       res.status(500).json({ message: (error as Error).message });
     }
   });
+  
+  // API endpoint for testing password update with our fix
+  app.post("/api/servers/:id/test-password-fix", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const serverId = parseInt(req.params.id);
+      const server = await storage.getServer(serverId);
+      
+      if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
+        return res.sendStatus(404);
+      }
+      
+      // Generate a test password
+      const testPassword = "TestFix" + Math.random().toString(36).slice(-6) + "!";
+      
+      // Update using our new approach
+      await db.update(schema.servers)
+        .set({ 
+          rootPassword: testPassword,
+          lastMonitored: new Date()
+        })
+        .where(eq(schema.servers.id, serverId));
+      
+      // Return the updated server with new password
+      const updatedServer = await db.query.servers.findFirst({
+        where: eq(schema.servers.id, serverId)
+      });
+      
+      // Return the new password
+      res.json({ 
+        message: "Password updated with test fix", 
+        password: testPassword,
+        passwordFromDB: updatedServer?.rootPassword,
+        serverId: serverId
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error updating password: " + (error as Error).message 
+      });
+    }
+  });
 
   app.post("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
