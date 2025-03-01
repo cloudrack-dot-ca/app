@@ -231,62 +231,30 @@ export function setupTerminalSocket(server: HttpServer) {
             }
           };
           
-          // SIMPLIFIED AUTHENTICATION - JUST USE PASSWORD WITHOUT SSH KEY
-          // The previous attempts with SSH key authentication weren't working reliably
-          // Let's focus on password authentication only for now
+          // ULTRA SIMPLIFIED AUTHENTICATION - JUST PASSWORD, NO SSH KEYS
+          // After multiple iterations, we're simplifying to just password authentication
           
-          if (server.rootPassword) {
-            log(`Using password authentication for server ${server.id}`, 'terminal');
-            connectionConfig.password = server.rootPassword;
-            
-            // Completely disable SSH key authentication to avoid "too many authentication failures"
-            connectionConfig.privateKey = undefined;
-            
-            // Don't try keyboard-interactive initially
-            connectionConfig.tryKeyboard = false;
-          } else {
+          if (!server.rootPassword) {
             log('No root password available for authentication', 'terminal');
             socket.emit('error', 'No password is set for this server. Please set a root password to use the terminal.');
             throw new Error('Root password required for terminal access');
           }
+          
+          log(`Using password authentication for server ${server.id}`, 'terminal');
+          
+          // Configure for password auth only
+          connectionConfig.password = server.rootPassword;
+          connectionConfig.privateKey = undefined;  // Explicitly disable key auth
+          connectionConfig.tryKeyboard = true;     // Enable keyboard-interactive as backup
+          
+          // Completely remove any auth handlers to use default ssh2 behavior
+          connectionConfig.authHandler = undefined;
           
           // Tell client we're connecting with password authentication
           socket.emit('status', { 
             status: 'connecting',
             message: 'Connecting with password authentication...'
           });
-          
-          // Advanced auth handler to properly prioritize authentication methods
-          connectionConfig.authHandler = (methodsLeft: string[], partialSuccess: boolean, callback: Function) => {
-            if (!methodsLeft || !Array.isArray(methodsLeft)) {
-              log('Auth methods list is invalid, trying publickey auth', 'terminal');
-              return callback('publickey');
-            }
-            
-            log(`Authentication methods available: ${methodsLeft.join(', ')}`, 'terminal');
-            
-            // Try password auth first if the server accepts it and we have a password
-            if (methodsLeft.includes('password') && server.rootPassword) {
-              log('Using password authentication method with stored root password', 'terminal');
-              return callback('password');
-            }
-            // Then try publickey auth if available as a fallback
-            else if (methodsLeft.includes('publickey')) {
-              log('Using publickey authentication method with CloudRack key', 'terminal');
-              return callback('publickey');
-            }
-            // Then try keyboard-interactive which will also use the password
-            else if (methodsLeft.includes('keyboard-interactive') && server.rootPassword) {
-              log('Using keyboard-interactive authentication method with root password', 'terminal');
-              return callback('keyboard-interactive');
-            }
-            // None of the available methods work with our credentials
-            else {
-              log('No supported auth methods available', 'terminal');
-              socket.emit('error', 'Server does not support any authentication methods we can use. Please contact support.');
-              return callback(null);
-            }
-          };
           
           // Handle keyboard-interactive challenges
           sshClient.on('keyboard-interactive', (name: string, instructions: string, instructionsLang: string, prompts: any[], finish: Function) => {
