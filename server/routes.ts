@@ -1282,38 +1282,66 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.status(400).json({ message: "Current password is incorrect" });
       }
 
+      // Validate new password if provided
+      if (newPassword && newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+      }
+
       // Prepare updates
       const updates: Partial<User> = { username };
       
+      // Check if we need to upgrade the password format
+      if (!newPassword && !currentUser.password.includes('.')) {
+        console.log(`Upgrading password format for user ${currentUser.id} during account update`);
+        try {
+          updates.password = await hashPassword(currentPassword);
+        } catch (error) {
+          console.error("Error upgrading password format:", error);
+          // Continue with other updates even if password upgrade fails
+        }
+      }
+      
       // Hash new password if provided
       if (newPassword) {
-        updates.password = await hashPassword(newPassword);
+        try {
+          updates.password = await hashPassword(newPassword);
+        } catch (error) {
+          console.error("Error hashing new password:", error);
+          return res.status(500).json({ message: "Error updating password. Please try again." });
+        }
       }
 
       // Update user
-      const user = await storage.updateUser(req.user.id, updates);
-      
-      // Log the user out if the password was changed
-      if (newPassword) {
-        req.logout((err) => {
-          if (err) {
-            console.error("Error logging out after password change:", err);
-          }
-          // Return success with a flag indicating logout happened
+      try {
+        const user = await storage.updateUser(req.user.id, updates);
+        
+        // Log the user out if the password was changed
+        if (newPassword) {
+          req.logout((err) => {
+            if (err) {
+              console.error("Error logging out after password change:", err);
+              return res.status(500).json({ message: "Error during logout process. Please log out manually." });
+            }
+            // Return success with a flag indicating logout happened
+            res.json({ 
+              username: user.username,
+              passwordChanged: true
+            });
+          });
+        } else {
+          // Return success without logout
           res.json({ 
             username: user.username,
-            passwordChanged: true
+            passwordChanged: false
           });
-        });
-      } else {
-        // Return success without logout
-        res.json({ 
-          username: user.username,
-          passwordChanged: false
-        });
+        }
+      } catch (error) {
+        console.error("Error updating user:", error);
+        return res.status(500).json({ message: "Error updating account. Please try again." });
       }
     } catch (error) {
-      res.status(400).json({ message: (error as Error).message });
+      console.error("Account update error:", error);
+      res.status(500).json({ message: (error as Error).message || "An unexpected error occurred" });
     }
   });
 
