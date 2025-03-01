@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import type { Server as HttpServer } from "http";
+import { WebSocketServer, WebSocket } from 'ws';
 import type { User } from "@shared/schema";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
@@ -12,7 +13,9 @@ import {
   users, 
   servers,
   type Server,
-  type IPBan
+  type IPBan,
+  type SupportTicket,
+  type SupportMessage
 } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@shared/schema";
@@ -1084,5 +1087,95 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   });
 
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server for real-time updates
+  const wss = new WebSocketServer({ server: httpServer });
+  
+  // Store connected clients by userId and ticketId
+  const clients: Map<number, Set<WebSocket>> = new Map();
+  const ticketClients: Map<number, Set<WebSocket>> = new Map();
+  
+  wss.on('connection', (ws: WebSocket) => {
+    let userId: number | null = null;
+    let subscribedTickets: Set<number> = new Set();
+    
+    ws.on('message', (message: string) => {
+      try {
+        const data = JSON.parse(message);
+        
+        // Handle authentication
+        if (data.type === 'auth' && data.userId) {
+          userId = data.userId;
+          
+          // Add this client to the user's client set
+          if (!clients.has(userId)) {
+            clients.set(userId, new Set());
+          }
+          clients.get(userId)?.add(ws);
+          
+          // Send confirmation
+          ws.send(JSON.stringify({ type: 'auth_success' }));
+        }
+        
+        // Handle ticket subscription
+        if (data.type === 'subscribe' && data.ticketId && userId) {
+          const ticketId = data.ticketId;
+          subscribedTickets.add(ticketId);
+          
+          // Add this client to the ticket's client set
+          if (!ticketClients.has(ticketId)) {
+            ticketClients.set(ticketId, new Set());
+          }
+          ticketClients.get(ticketId)?.add(ws);
+          
+          // Send confirmation
+          ws.send(JSON.stringify({ 
+            type: 'subscribe_success', 
+            ticketId 
+          }));
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+    
+    // Handle disconnection
+    ws.on('close', () => {
+      if (userId) {
+        // Remove from user clients
+        clients.get(userId)?.delete(ws);
+        if (clients.get(userId)?.size === 0) {
+          clients.delete(userId);
+        }
+        
+        // Remove from all ticket subscriptions
+        for (const ticketId of subscribedTickets) {
+          ticketClients.get(ticketId)?.delete(ws);
+          if (ticketClients.get(ticketId)?.size === 0) {
+            ticketClients.delete(ticketId);
+          }
+        }
+      }
+    });
+  });
+  
+  // Export function to notify clients about ticket updates
+  app.locals.notifyTicketUpdate = (ticketId: number, data: SupportTicket | SupportMessage) => {
+    // Notify all clients subscribed to this ticket
+    if (ticketClients.has(ticketId)) {
+      const message = JSON.stringify({
+        type: 'ticket_update',
+        ticketId,
+        data
+      });
+      
+      ticketClients.get(ticketId)?.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        }
+      });
+    }
+  };
+  
   return httpServer;
 }
