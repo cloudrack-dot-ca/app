@@ -962,7 +962,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   app.post("/api/ssh-keys", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
-    const { name, publicKey } = req.body;
+    const { name, publicKey, isCloudRackKey = false } = req.body;
     if (!name || !publicKey) {
       return res.status(400).json({ message: "Name and public key are required" });
     }
@@ -973,6 +973,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         name,
         publicKey,
         createdAt: new Date(),
+        isCloudRackKey
       });
       res.status(201).json(key);
     } catch (error) {
