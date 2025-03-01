@@ -32,6 +32,10 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   const { data: serverDetails } = useQuery<{ rootPassword?: string }>({
     queryKey: [`/api/servers/${serverId}/details`],
     enabled: !isNaN(serverId) && !!user,
+    // Add some stale time to avoid too many refreshes
+    staleTime: 10000,
+    // Add a refetchInterval to ensure we always have the latest password
+    refetchInterval: 30000
   });
 
   // Initialize terminal
