@@ -1156,10 +1156,10 @@ export default function ServerDetailPage() {
               {/* CloudRack Terminal Notice */}
               <CloudRackTerminalNotice />
               
-              {/* SSH Access Section - Updated for Password Authentication */}
+              {/* Server Access Section - Password Authentication */}
               <div className="mb-6">
-                <h3 className="text-lg font-medium mb-2">SSH Access</h3>
-                <p className="text-sm mb-4">Connect to your server via SSH using the following command:</p>
+                <h3 className="text-lg font-medium mb-2">Remote Access</h3>
+                <p className="text-sm mb-4">Connect to your server using SSH with password authentication:</p>
                 <div className="bg-muted p-3 rounded-md font-mono text-sm flex justify-between items-center">
                   <code>ssh root@{server.ipAddress}</code>
                   <Button 
@@ -1243,7 +1243,7 @@ export default function ServerDetailPage() {
                     <span className="text-sm font-medium">Terminal Access</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    This is a real SSH terminal with full Linux command support. No need for external SSH clients.
+                    This terminal uses secure password authentication with your root password. Full Linux command support with no external clients needed.
                   </p>
                 </div>
                 
