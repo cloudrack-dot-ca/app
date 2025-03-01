@@ -13,7 +13,7 @@ import VolumesPage from "@/pages/volumes-page";
 import ServerDetailPage from "@/pages/server-detail";
 import SSHKeysPage from "@/pages/ssh-keys";
 import AccountPage from "@/pages/account-page";
-import AdminDashboard from "@/pages/admin-dashboard";
+import AdminDashboard from "@/pages/admin/dashboard";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";

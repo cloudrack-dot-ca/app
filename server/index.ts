@@ -6,6 +6,7 @@ import { db, pool } from "./db";
 import { users } from "@shared/schema";
 import { setupAuth, hashPassword } from "./auth";
 import { eq } from "drizzle-orm";
+import { registerAdminRoutes } from "./admin/routes";
 
 const app = express();
 app.use(express.json());
@@ -83,7 +84,8 @@ async function createTestData() {
           vcpus: 1,
           disk: 25
         },
-        application: null
+        application: null,
+        lastMonitored: new Date()
       });
       
       // Create a test support ticket
@@ -121,6 +123,9 @@ async function createTestData() {
     
     // Set up authentication before routes
     setupAuth(app);
+    
+    // Register admin routes before regular routes
+    registerAdminRoutes(app);
     
     const server = await registerRoutes(app);
 

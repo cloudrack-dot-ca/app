@@ -1,0 +1,894 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/use-auth';
+import { Input } from '@/components/ui/input';
+import { 
+  BarChart, 
+  LineChart, 
+  PieChart, 
+  ResponsiveContainer, 
+  Bar, 
+  Cell, 
+  Line, 
+  Pie, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  Legend, 
+  CartesianGrid 
+} from 'recharts';
+import { 
+  BadgeCheck, 
+  BadgeX, 
+  Ban, 
+  CircleDollarSign, 
+  Laptop, 
+  Server, 
+  Settings, 
+  ShieldCheck, 
+  Ticket, 
+  User, 
+  Users 
+} from 'lucide-react';
+
+interface AdminUser {
+  id: number;
+  username: string;
+  balance: number;
+  isAdmin: boolean;
+  apiKey: string | null;
+}
+
+interface AdminServer {
+  id: number;
+  userId: number;
+  name: string;
+  dropletId: string;
+  region: string;
+  size: string;
+  status: string;
+  ipAddress: string | null;
+}
+
+interface AdminTicket {
+  id: number;
+  userId: number;
+  serverId: number | null;
+  subject: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+  updatedAt: string;
+  originalDropletId: string | null;
+}
+
+interface Transaction {
+  id: number;
+  userId: number;
+  amount: number;
+  type: string;
+  description: string;
+  status: string;
+  createdAt: string;
+}
+
+interface IPBan {
+  id: number;
+  ipAddress: string;
+  reason: string;
+  createdAt: string;
+  expiresAt: string | null;
+}
+
+interface AdminStats {
+  users: {
+    total: number;
+    active: number;
+    admins: number;
+  };
+  servers: {
+    total: number;
+    active: number;
+    byRegion: Record<string, number>;
+    bySize: Record<string, number>;
+  };
+  tickets: {
+    total: number;
+    open: number;
+    closed: number;
+    critical: number;
+  };
+  billing: {
+    totalDeposits: number;
+    totalSpending: number;
+  };
+}
+
+export default function AdminDashboard() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [selectedTab, setSelectedTab] = useState('overview');
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [editUserBalance, setEditUserBalance] = useState<string>('');
+  const [ipBanData, setIpBanData] = useState({ ipAddress: '', reason: '', expiresAt: '' });
+  const [ipBanDialogOpen, setIpBanDialogOpen] = useState(false);
+
+  // Redirect if not an admin
+  if (user && !user.isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <ShieldCheck className="h-16 w-16 mb-4 text-red-500" />
+        <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+        <p className="text-gray-500">You do not have permission to access the admin dashboard.</p>
+      </div>
+    );
+  }
+
+  // Fetch admin stats
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['/api/admin/stats'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/admin/stats', { method: 'GET' });
+      return response as AdminStats;
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to load admin stats: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Fetch users
+  const { data: users, isLoading: usersLoading } = useQuery({
+    queryKey: ['/api/admin/users'],
+    queryFn: async () => {
+      const response = await apiRequest<AdminUser[]>('/api/admin/users', { method: 'GET' });
+      return response;
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to load users: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Fetch servers
+  const { data: servers, isLoading: serversLoading } = useQuery({
+    queryKey: ['/api/admin/servers'],
+    queryFn: async () => {
+      const response = await apiRequest<AdminServer[]>('/api/admin/servers', { method: 'GET' });
+      return response;
+    }
+  });
+
+  // Fetch tickets
+  const { data: tickets, isLoading: ticketsLoading } = useQuery({
+    queryKey: ['/api/admin/tickets'],
+    queryFn: async () => {
+      const response = await apiRequest<AdminTicket[]>('/api/admin/tickets', { method: 'GET' });
+      return response;
+    }
+  });
+
+  // Fetch transactions
+  const { data: transactions, isLoading: transactionsLoading } = useQuery({
+    queryKey: ['/api/admin/transactions'],
+    queryFn: async () => {
+      const response = await apiRequest<Transaction[]>('/api/admin/transactions', { method: 'GET' });
+      return response;
+    }
+  });
+
+  // Fetch IP bans
+  const { data: ipBans, isLoading: ipBansLoading, refetch: refetchIpBans } = useQuery({
+    queryKey: ['/api/admin/ip-bans'],
+    queryFn: async () => {
+      const response = await apiRequest<IPBan[]>('/api/admin/ip-bans', { method: 'GET' });
+      return response;
+    }
+  });
+
+  // Update user balance mutation
+  const updateUserBalanceMutation = useMutation({
+    mutationFn: async ({ userId, amount }: { userId: number, amount: number }) => {
+      const response = await apiRequest<AdminUser>(`/api/admin/users/${userId}/balance`, {
+        method: 'PATCH',
+        body: { amount },
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'User balance updated successfully',
+      });
+      setEditingUser(null);
+    }
+  });
+
+  // Create IP ban mutation
+  const createIpBanMutation = useMutation({
+    mutationFn: async (data: { ipAddress: string, reason: string, expiresAt: string | null }) => {
+      const response = await apiRequest('/api/admin/ip-bans', {
+        method: 'POST',
+        body: data,
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'IP address banned successfully',
+      });
+      setIpBanDialogOpen(false);
+      setIpBanData({ ipAddress: '', reason: '', expiresAt: '' });
+      refetchIpBans();
+    }
+  });
+
+  // Remove IP ban mutation
+  const removeIpBanMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest(`/api/admin/ip-bans/${id}`, {
+        method: 'DELETE',
+      });
+      return id;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'IP ban removed successfully',
+      });
+      refetchIpBans();
+    }
+  });
+
+  const chartData = stats ? Object.entries(stats.servers.byRegion).map(([name, value]) => ({
+    name,
+    value,
+  })) : [];
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+  const renderPieChart = (
+    <ResponsiveContainer width="100%" height={300}>
+      <PieChart>
+        <Pie
+          data={chartData}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          outerRadius={80}
+          fill="#8884d8"
+          dataKey="value"
+          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+        >
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+
+  // Prepare data for server status chart
+  const serverStatusData = stats ? [
+    { name: 'Active', value: stats.servers.active },
+    { name: 'Inactive', value: stats.servers.total - stats.servers.active },
+  ] : [];
+
+  const renderServerStatusChart = (
+    <ResponsiveContainer width="100%" height={300}>
+      <PieChart>
+        <Pie
+          data={serverStatusData}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          outerRadius={80}
+          fill="#8884d8"
+          dataKey="value"
+          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+        >
+          <Cell fill="#4CAF50" />
+          <Cell fill="#F44336" />
+        </Pie>
+        <Tooltip />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6 flex items-center">
+        <Settings className="h-8 w-8 mr-2" />
+        Admin Dashboard
+      </h1>
+
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
+        <TabsList className="grid grid-cols-6 w-full">
+          <TabsTrigger value="overview" className="flex items-center">
+            <Laptop className="h-4 w-4 mr-2" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center">
+            <Users className="h-4 w-4 mr-2" />
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="servers" className="flex items-center">
+            <Server className="h-4 w-4 mr-2" />
+            Servers
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="flex items-center">
+            <CircleDollarSign className="h-4 w-4 mr-2" />
+            Billing
+          </TabsTrigger>
+          <TabsTrigger value="tickets" className="flex items-center">
+            <Ticket className="h-4 w-4 mr-2" />
+            Support
+          </TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center">
+            <Ban className="h-4 w-4 mr-2" />
+            Security
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4">
+          {statsLoading ? (
+            <div className="text-center py-8">Loading statistics...</div>
+          ) : stats ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center">
+                    <Users className="h-4 w-4 mr-2" />
+                    Total Users
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.users.total}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stats.users.admins} admins, {stats.users.total - stats.users.admins} regular users
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center">
+                    <Server className="h-4 w-4 mr-2" />
+                    Active Servers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.servers.active}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stats.servers.active} of {stats.servers.total} servers online
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center">
+                    <Ticket className="h-4 w-4 mr-2" />
+                    Open Tickets
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.tickets.open}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stats.tickets.critical} critical issues
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center">
+                    <CircleDollarSign className="h-4 w-4 mr-2" />
+                    Total Revenue
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">${stats.billing.totalDeposits.toFixed(2)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ${stats.billing.totalSpending.toFixed(2)} in spending
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Servers by Region</CardTitle>
+                  <CardDescription>Distribution of servers across regions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {renderPieChart}
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Server Status</CardTitle>
+                  <CardDescription>Active vs Inactive servers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {renderServerStatusChart}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-red-500">Failed to load statistics</div>
+          )}
+        </TabsContent>
+
+        {/* Users Tab */}
+        <TabsContent value="users" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>Manage all user accounts on the platform</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {usersLoading ? (
+                <div className="text-center py-8">Loading users...</div>
+              ) : users ? (
+                <Table>
+                  <TableCaption>List of all registered users on the platform</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Username</TableHead>
+                      <TableHead>Balance</TableHead>
+                      <TableHead>Admin</TableHead>
+                      <TableHead>API Key</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>{user.id}</TableCell>
+                        <TableCell>{user.username}</TableCell>
+                        <TableCell>${(user.balance / 100).toFixed(2)}</TableCell>
+                        <TableCell>
+                          {user.isAdmin ? (
+                            <BadgeCheck className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <BadgeX className="h-5 w-5 text-gray-400" />
+                          )}
+                        </TableCell>
+                        <TableCell>{user.apiKey ? 'Set' : 'Not Set'}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setEditingUser(user);
+                              setEditUserBalance((user.balance / 100).toString());
+                            }}
+                          >
+                            Edit Balance
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-red-500">Failed to load users</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Edit User Balance Dialog */}
+          {editingUser && (
+            <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit User Balance</DialogTitle>
+                  <DialogDescription>
+                    Update balance for user {editingUser.username}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="flex items-center gap-4">
+                    <label htmlFor="balance" className="text-right">
+                      Balance ($):
+                    </label>
+                    <Input
+                      id="balance"
+                      type="number"
+                      step="0.01"
+                      value={editUserBalance}
+                      onChange={(e) => setEditUserBalance(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setEditingUser(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      const balanceInCents = Math.round(parseFloat(editUserBalance) * 100);
+                      updateUserBalanceMutation.mutate({
+                        userId: editingUser.id,
+                        amount: balanceInCents
+                      });
+                    }}
+                    disabled={updateUserBalanceMutation.isPending}
+                  >
+                    {updateUserBalanceMutation.isPending ? 'Updating...' : 'Update Balance'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+        </TabsContent>
+
+        {/* Servers Tab */}
+        <TabsContent value="servers" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Server Management</CardTitle>
+              <CardDescription>View and manage all servers on the platform</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {serversLoading ? (
+                <div className="text-center py-8">Loading servers...</div>
+              ) : servers ? (
+                <Table>
+                  <TableCaption>List of all servers on the platform</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>User ID</TableHead>
+                      <TableHead>Region</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>IP Address</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {servers.map((server) => (
+                      <TableRow key={server.id}>
+                        <TableCell>{server.id}</TableCell>
+                        <TableCell>{server.name}</TableCell>
+                        <TableCell>{server.userId}</TableCell>
+                        <TableCell>{server.region}</TableCell>
+                        <TableCell>{server.size}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            server.status === 'active' ? 'bg-green-100 text-green-800' : 
+                            server.status === 'new' ? 'bg-blue-100 text-blue-800' :
+                            'bg-amber-100 text-amber-800'
+                          }`}>
+                            {server.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{server.ipAddress || 'Not assigned'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-red-500">Failed to load servers</div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Billing Tab */}
+        <TabsContent value="billing" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Billing & Transactions</CardTitle>
+              <CardDescription>View all financial transactions on the platform</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {transactionsLoading ? (
+                <div className="text-center py-8">Loading transactions...</div>
+              ) : transactions ? (
+                <Table>
+                  <TableCaption>List of all financial transactions</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>User ID</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell>{transaction.id}</TableCell>
+                        <TableCell>{transaction.userId}</TableCell>
+                        <TableCell className={transaction.type === 'deposit' ? 'text-green-600' : 'text-red-600'}>
+                          {transaction.type === 'deposit' ? '+' : '-'}${(transaction.amount / 100).toFixed(2)}
+                        </TableCell>
+                        <TableCell>{transaction.type}</TableCell>
+                        <TableCell>{transaction.description}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                            transaction.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {transaction.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{new Date(transaction.createdAt).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-red-500">Failed to load transactions</div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Support Tickets Tab */}
+        <TabsContent value="tickets" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Support Tickets</CardTitle>
+              <CardDescription>Manage customer support tickets</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {ticketsLoading ? (
+                <div className="text-center py-8">Loading tickets...</div>
+              ) : tickets ? (
+                <Table>
+                  <TableCaption>List of all support tickets</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>User ID</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Updated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tickets.map((ticket) => (
+                      <TableRow key={ticket.id}>
+                        <TableCell>{ticket.id}</TableCell>
+                        <TableCell>{ticket.userId}</TableCell>
+                        <TableCell>{ticket.subject}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            ticket.status === 'open' ? 'bg-green-100 text-green-800' : 
+                            ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {ticket.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            ticket.priority === 'critical' ? 'bg-red-100 text-red-800' : 
+                            ticket.priority === 'high' ? 'bg-amber-100 text-amber-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {ticket.priority}
+                          </span>
+                        </TableCell>
+                        <TableCell>{new Date(ticket.createdAt).toLocaleString()}</TableCell>
+                        <TableCell>{new Date(ticket.updatedAt).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-red-500">Failed to load tickets</div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Security Tab */}
+        <TabsContent value="security" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Ban className="h-5 w-5 mr-2" />
+                  IP Ban Management
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={() => setIpBanDialogOpen(true)}
+                >
+                  Ban New IP
+                </Button>
+              </CardTitle>
+              <CardDescription>Block malicious IP addresses from accessing the platform</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {ipBansLoading ? (
+                <div className="text-center py-8">Loading IP bans...</div>
+              ) : ipBans && ipBans.length > 0 ? (
+                <Table>
+                  <TableCaption>List of all banned IP addresses</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>IP Address</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Banned On</TableHead>
+                      <TableHead>Expires</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ipBans.map((ban) => (
+                      <TableRow key={ban.id}>
+                        <TableCell>{ban.id}</TableCell>
+                        <TableCell>{ban.ipAddress}</TableCell>
+                        <TableCell>{ban.reason}</TableCell>
+                        <TableCell>{new Date(ban.createdAt).toLocaleString()}</TableCell>
+                        <TableCell>{ban.expiresAt ? new Date(ban.expiresAt).toLocaleString() : 'Never'}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => removeIpBanMutation.mutate(ban.id)}
+                            disabled={removeIpBanMutation.isPending}
+                          >
+                            {removeIpBanMutation.isPending ? 'Removing...' : 'Remove Ban'}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8">No IP bans found</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Ban IP Dialog */}
+          <Dialog open={ipBanDialogOpen} onOpenChange={setIpBanDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Ban IP Address</DialogTitle>
+                <DialogDescription>
+                  Block an IP address from accessing the platform
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="ipAddress" className="text-right">
+                    IP Address:
+                  </label>
+                  <Input
+                    id="ipAddress"
+                    placeholder="e.g. 192.168.1.1"
+                    value={ipBanData.ipAddress}
+                    onChange={(e) => setIpBanData({ ...ipBanData, ipAddress: e.target.value })}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="reason" className="text-right">
+                    Reason:
+                  </label>
+                  <Input
+                    id="reason"
+                    placeholder="Why is this IP being banned?"
+                    value={ipBanData.reason}
+                    onChange={(e) => setIpBanData({ ...ipBanData, reason: e.target.value })}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="expiresAt" className="text-right">
+                    Expires:
+                  </label>
+                  <Input
+                    id="expiresAt"
+                    type="datetime-local"
+                    value={ipBanData.expiresAt}
+                    onChange={(e) => setIpBanData({ ...ipBanData, expiresAt: e.target.value })}
+                    className="col-span-3"
+                  />
+                  <div className="col-start-2 col-span-3 text-xs text-gray-500">
+                    Leave empty for permanent ban
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIpBanDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    createIpBanMutation.mutate({
+                      ipAddress: ipBanData.ipAddress,
+                      reason: ipBanData.reason,
+                      expiresAt: ipBanData.expiresAt ? ipBanData.expiresAt : null
+                    });
+                  }}
+                  disabled={createIpBanMutation.isPending || !ipBanData.ipAddress || !ipBanData.reason}
+                >
+                  {createIpBanMutation.isPending ? 'Banning...' : 'Ban IP'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
