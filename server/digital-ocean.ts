@@ -61,14 +61,9 @@ export class DigitalOceanClient {
 
   constructor() {
     this.apiKey = process.env.DIGITAL_OCEAN_API_KEY || '';
-    
-    // Force mock mode for development/testing
-    this.useMock = true;
-    
-    if (!this.apiKey) {
+    this.useMock = !this.apiKey;
+    if (this.useMock) {
       console.warn('DigitalOcean API key not found. Using mock data.');
-    } else {
-      console.warn('DigitalOcean API key found, but still using mock data for development consistency.');
     }
   }
 
@@ -614,18 +609,18 @@ export class DigitalOceanClient {
   }
 
   async getApplications(): Promise<Application[]> {
-    // Always use mock applications data for consistency
     if (this.useMock) {
       return this.mockApplications;
     }
     
     try {
-      // For real production use, we would fetch from DO's API here
-      // But for now even in live mode, we use mock applications
-      // since DO doesn't have a direct API for this use case
+      // In a real implementation, we would fetch from the DigitalOcean API
+      // Due to complex structure of DO's API for applications, we'll use mock data
+      // instead of trying to parse their complex response format
+      console.log('DigitalOcean API available, but using mock applications data for consistency');
       return this.mockApplications;
     } catch (error) {
-      console.error('Error fetching applications:', error);
+      console.error('Error fetching applications, falling back to mock data:', error);
       return this.mockApplications;
     }
   }
