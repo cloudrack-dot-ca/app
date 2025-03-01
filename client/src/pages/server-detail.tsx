@@ -770,78 +770,149 @@ export default function ServerDetailPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium mb-2">IP Addresses</h3>
+                <h3 className="text-lg font-medium mb-2">Network Configuration</h3>
                 <div className="space-y-4">
-                  <div className="flex flex-col space-y-1">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="text-sm font-medium">IPv4 Address</span>
-                        <div className="flex items-center gap-2">
-                          <code className="bg-muted px-2 py-1 rounded text-sm">{server.ipAddress}</code>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => {
-                              navigator.clipboard.writeText(server.ipAddress || "");
-                              toast({
-                                title: "Copied",
-                                description: "IP address copied to clipboard",
-                              });
-                            }}
-                          >
-                            <CopyPlus className="h-3 w-3" />
-                          </Button>
+                  {/* IPv4 Configuration */}
+                  <Card>
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-base flex items-center">
+                        <Globe className="h-4 w-4 mr-2" />
+                        IPv4 Configuration
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-xs text-muted-foreground">Public IPv4 Address</span>
+                          <div className="flex items-center gap-2">
+                            <code className="bg-muted px-2 py-1 rounded text-sm">{server.ipAddress}</code>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0"
+                              onClick={() => {
+                                navigator.clipboard.writeText(server.ipAddress || "");
+                                toast({
+                                  title: "Copied",
+                                  description: "IP address copied to clipboard",
+                                });
+                              }}
+                            >
+                              <CopyPlus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-xs text-muted-foreground">IPv4 Gateway</span>
+                          <div className="flex items-center gap-2">
+                            <code className="bg-muted px-2 py-1 rounded text-sm">
+                              {server.ipAddress ? server.ipAddress.split('.').slice(0, 3).join('.') + '.1' : 'Unavailable'}
+                            </code>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col space-y-1">
-                    <div className="flex justify-between items-center">
+
                       <div>
-                        <span className="text-sm font-medium">IPv6 Address</span>
+                        <span className="text-xs text-muted-foreground">IPv4 Subnet Mask</span>
                         <div>
-                          {ipv6Enabled && server.ipv6Address ? (
-                            <div className="flex items-center gap-2">
-                              <code className="bg-muted px-2 py-1 rounded text-sm">{server.ipv6Address}</code>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => {
-                                  navigator.clipboard.writeText(server.ipv6Address || "");
-                                  toast({
-                                    title: "Copied",
-                                    description: "IPv6 address copied to clipboard",
-                                  });
-                                }}
-                              >
-                                <CopyPlus className="h-3 w-3" />
-                              </Button>
-                            </div>
+                          <code className="bg-muted px-2 py-1 rounded text-sm">255.255.255.0</code>
+                          <span className="ml-2 text-xs text-muted-foreground">(CIDR: /24)</span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        <p>Your server has a static public IPv4 address assigned to the eth0 interface.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* IPv6 Configuration */}
+                  <Card>
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-base flex items-center justify-between">
+                        <div className="flex items-center">
+                          <Globe className="h-4 w-4 mr-2" />
+                          IPv6 Configuration
+                        </div>
+                        <Button 
+                          variant={ipv6Enabled ? "default" : "outline"}
+                          size="sm" 
+                          onClick={() => toggleIPv6Mutation.mutate(!ipv6Enabled)}
+                          disabled={toggleIPv6Mutation.isPending}
+                        >
+                          {ipv6Enabled ? (
+                            <>
+                              <Wifi className="h-4 w-4 mr-2" />
+                              Disable IPv6
+                            </>
                           ) : (
-                            <span className="text-sm text-muted-foreground">Not enabled</span>
+                            <>
+                              <Wifi className="h-4 w-4 mr-2" />
+                              Enable IPv6
+                            </>
+                          )}
+                        </Button>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 space-y-3">
+                      {ipv6Enabled && server.ipv6Address ? (
+                        <>
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <span className="text-xs text-muted-foreground">Public IPv6 Address</span>
+                              <div className="flex items-center gap-2">
+                                <code className="bg-muted px-2 py-1 rounded text-sm overflow-x-auto max-w-full">
+                                  {server.ipv6Address}
+                                </code>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(server.ipv6Address || "");
+                                    toast({
+                                      title: "Copied",
+                                      description: "IPv6 address copied to clipboard",
+                                    });
+                                  }}
+                                >
+                                  <CopyPlus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-xs text-muted-foreground">IPv6 Prefix Length</span>
+                            <div>
+                              <code className="bg-muted px-2 py-1 rounded text-sm">/64</code>
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-muted-foreground">
+                            <p>Your server has a static public IPv6 address assigned. IPv6 connectivity is available for all outgoing and incoming connections.</p>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-sm py-2">
+                          {toggleIPv6Mutation.isPending ? (
+                            <p>Updating IPv6 configuration...</p>
+                          ) : (
+                            <p>IPv6 is currently disabled. Enable IPv6 to get a public IPv6 address assigned to your server.</p>
                           )}
                         </div>
-                      </div>
-                      <Button 
-                        variant={ipv6Enabled ? "default" : "outline"}
-                        size="sm" 
-                        onClick={() => toggleIPv6Mutation.mutate(!ipv6Enabled)}
-                        disabled={toggleIPv6Mutation.isPending}
-                      >
-                        {ipv6Enabled ? (
-                          <>
-                            <Wifi className="h-4 w-4 mr-2" />
-                            Disable IPv6
-                          </>
-                        ) : (
-                          <>
-                            <Wifi className="h-4 w-4 mr-2" />
-                            Enable IPv6
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Network Performance Hint */}
+                  <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md p-3 text-xs">
+                    <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Network Performance</p>
+                    <p className="text-blue-600 dark:text-blue-400">
+                      Your server includes {server.size.includes('g-') ? '1Gbps' : '500Mbps'} network throughput. 
+                      Outbound data transfer is limited to {server.specs?.disk ? Math.max(1, Math.floor(server.specs.disk/25)) : 1}TB per month.
+                    </p>
                   </div>
                 </div>
               </div>
