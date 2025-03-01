@@ -911,8 +911,7 @@ runcmd:
   }
   
   // Mock firewall data
-  private mockFirewalls: Record<string, Firewall> = {};
-  
+  public mockFirewalls: Record<string, Firewall> = {};
   // Create default firewall for a droplet - this is public so it can be called from routes
   public setupDefaultFirewall(dropletId: string): Firewall {
     // Always create a default firewall regardless of mock mode
