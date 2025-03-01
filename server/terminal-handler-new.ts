@@ -3,6 +3,8 @@ import { Server as HttpServer } from 'http';
 import { Client, ClientChannel, ConnectConfig } from 'ssh2';
 import { storage } from './storage';
 import { log } from './vite';
+import { cloudRackKeyManager } from './cloudrack-key-manager';
+import * as fs from 'fs';
 
 // Extend the Server type to include rootPassword
 interface ExtendedServer {
@@ -29,7 +31,8 @@ export function setupTerminalSocket(server: HttpServer) {
     }
   });
   
-  io.of('/terminal').on('connection', async (socket) => {
+  // Use default namespace for simpler client connection
+  io.on('connection', async (socket) => {
     const serverId = socket.handshake.query.serverId as string;
     const userId = socket.handshake.query.userId as string;
     
@@ -62,11 +65,11 @@ export function setupTerminalSocket(server: HttpServer) {
         return;
       }
       
-      if (!server.rootPassword) {
-        socket.emit('error', 'Root password not set. Terminal access requires root password.');
-        socket.disconnect();
-        return;
-      }
+      // Get server details to check for root password
+      const serverDetails = await storage.getServer(parseInt(serverId));
+      const hasRootPassword = !!(serverDetails as any)?.rootPassword;
+      
+      log(`Server ${serverId} root password status: ${hasRootPassword ? 'Available' : 'Not available'}`, 'terminal');
       
       // Create a new SSH client
       const sshClient = new Client();
@@ -83,7 +86,9 @@ export function setupTerminalSocket(server: HttpServer) {
         log(`SSH connection established for server ${server.id}`, 'terminal');
         socket.emit('status', { 
           status: 'connected',
-          message: 'SSH connection established. Creating shell...'
+          message: hasRootPassword ? 
+            'Connected using password authentication' : 
+            'Connected using CloudRack Terminal Key'
         });
         
         // Create a shell session
@@ -117,7 +122,19 @@ export function setupTerminalSocket(server: HttpServer) {
       
       sshClient.on('error', (err) => {
         log(`SSH error for server ${server.id}: ${err.message}`, 'terminal');
-        socket.emit('error', `SSH error: ${err.message}`);
+        
+        // Create more user-friendly error messages
+        let userMessage = `SSH error: ${err.message}`;
+        
+        if (err.message.includes('All configured authentication methods failed')) {
+          userMessage = 'Authentication failed. Please check your password or SSH key settings.';
+        } else if (err.message.includes('connect ETIMEDOUT')) {
+          userMessage = 'Connection timed out. Server may be starting up or behind a firewall.';
+        } else if (err.message.includes('connect ECONNREFUSED')) {
+          userMessage = 'Connection refused. SSH service may not be running on the server.';
+        }
+        
+        socket.emit('error', userMessage);
         socket.disconnect();
       });
       
@@ -129,6 +146,20 @@ export function setupTerminalSocket(server: HttpServer) {
       sshClient.on('close', () => {
         log(`SSH connection closed for server ${server.id}`, 'terminal');
         socket.emit('status', { status: 'disconnected' });
+      });
+      
+      // Handle keyboard-interactive authentication
+      sshClient.on('keyboard-interactive', (name, instructions, lang, prompts, finish) => {
+        // If it's a password prompt and we have the root password, use it
+        if (prompts.length > 0 && hasRootPassword) {
+          log(`Responding to keyboard-interactive with stored password`, 'terminal');
+          finish([(serverDetails as any).rootPassword]);
+        } else {
+          // Otherwise inform the user authentication failed
+          log(`Keyboard-interactive auth failed - no password available`, 'terminal');
+          socket.emit('error', 'Authentication failed - password required');
+          sshClient.end();
+        }
       });
       
       // Forward data from client to SSH
@@ -157,18 +188,65 @@ export function setupTerminalSocket(server: HttpServer) {
         }
       });
       
-      // Connect to the SSH server
+      // Connect to the SSH server - try password auth first, fallback to key auth
       try {
         const config: ConnectConfig = {
           host: server.ipAddress,
           port: 22,
           username: 'root',
-          password: server.rootPassword,
           readyTimeout: 30000, // 30 seconds
-          keepaliveInterval: 10000
+          keepaliveInterval: 10000,
+          tryKeyboard: true // Enable keyboard-interactive auth as fallback
         };
         
-        log(`Connecting to SSH server at ${server.ipAddress} with password auth`, 'terminal');
+        // If we have a root password, use it
+        if (hasRootPassword) {
+          config.password = (serverDetails as any).rootPassword;
+          log(`Connecting to SSH server at ${server.ipAddress} with password auth`, 'terminal');
+          socket.emit('status', { 
+            status: 'auth_in_progress',
+            message: 'Attempting password authentication'
+          });
+        } else {
+          // Otherwise try to use the CloudRack Terminal Key
+          try {
+            // Check if the user has the CloudRack key
+            const hasTerminalKey = await cloudRackKeyManager.hasCloudRackKey(parseInt(userId));
+            if (!hasTerminalKey) {
+              log(`User ${userId} does not have the CloudRack Terminal Key`, 'terminal');
+              socket.emit('error', 'CloudRack Terminal Key not found. Please set a root password for your server.');
+              socket.disconnect();
+              return;
+            }
+            
+            // Get the CloudRack key path
+            const keyPath = cloudRackKeyManager.getCloudRackPrivateKeyPath();
+            if (!fs.existsSync(keyPath)) {
+              log(`CloudRack Terminal Key file not found at ${keyPath}`, 'terminal');
+              socket.emit('error', 'CloudRack Terminal Key file not found. Please contact support.');
+              socket.disconnect();
+              return;
+            }
+            
+            // Use the CloudRack Terminal Key
+            config.privateKey = fs.readFileSync(keyPath);
+            log(`Connecting to SSH server at ${server.ipAddress} with CloudRack Terminal Key`, 'terminal');
+            socket.emit('status', { 
+              status: 'auth_in_progress',
+              message: 'Attempting SSH key authentication'
+            });
+          } catch (keyError) {
+            log(`Error with CloudRack Terminal Key: ${(keyError as Error).message}`, 'terminal');
+            socket.emit('error', 'Error with CloudRack Terminal Key. Please set a root password for your server.');
+            socket.disconnect();
+            return;
+          }
+        }
+        
+        // Add debug for hostname verification to avoid common SSH errors
+        config.hostVerifier = () => true;
+        
+        // Connect to the SSH server
         sshClient.connect(config);
       } catch (error) {
         log(`SSH connection failed: ${(error as Error).message}`, 'terminal');
