@@ -270,14 +270,19 @@ export function setupTerminalSocket(server: HttpServer) {
             // Safely log available methods
             log(`SSH auth methods left: ${methodsLeft.join ? methodsLeft.join(', ') : String(methodsLeft)}`, 'terminal');
             
-            if (methodsLeft.includes('keyboard-interactive')) {
+            // PRIORITY ORDER FOR AUTHENTICATION METHODS:
+            // 1. Password auth if we have a root password
+            // 2. Keyboard-interactive with password fallback
+            // 3. Public key authentication
+            
+            if (server.rootPassword && methodsLeft.includes('password')) {
+              log('Using password auth method with stored root password', 'terminal');
+              return callback('password');
+            } else if (methodsLeft.includes('keyboard-interactive')) {
               log('Using keyboard-interactive auth method', 'terminal');
               
-              // If we have root password, use it automatically
+              // Keyboard-interactive will use the root password if available
               return callback('keyboard-interactive');
-            } else if (methodsLeft.includes('password') && server.rootPassword) {
-              log('Using password auth method', 'terminal');
-              return callback('password');
             } else if (methodsLeft.includes('publickey')) {
               log('Using publickey auth method', 'terminal');
               return callback('publickey');

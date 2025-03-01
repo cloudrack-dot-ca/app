@@ -107,6 +107,35 @@ const getPortDescription = (port: string) => {
         : `Port ${port}`;
 };
 
+// ActiveFirewallCheck component to check if a firewall exists
+function ActiveFirewallCheck({ serverId, children }: { serverId: number, children: (exists: boolean) => JSX.Element }) {
+  const { data: firewall, isLoading } = useQuery({
+    queryKey: ['/api/servers', serverId, 'firewall'],
+    queryFn: () => fetch(`/api/servers/${serverId}/firewall`)
+      .then(res => {
+        if (res.status === 404) {
+          return null;
+        }
+        if (!res.ok) {
+          throw new Error(`Failed to fetch firewall`);
+        }
+        return res.json();
+      }),
+    refetchOnWindowFocus: false
+  });
+
+  if (isLoading) {
+    return (
+      <Button variant="outline" size="sm" disabled>
+        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+        Checking Firewall...
+      </Button>
+    );
+  }
+
+  return children(!!firewall);
+}
+
 // Active Firewall Rules Component
 function ActiveFirewallRules({ serverId }: { serverId: number }) {
   const { toast } = useToast();
@@ -828,48 +857,103 @@ export default function ServerDetailPage() {
                     
                     {/* Create/Manage Firewall Button Group */}
                     <div className="flex gap-2">
-                      {/* Direct Create Default Firewall Button */}
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            const response = await apiRequest(
-                              'PUT',
-                              `/api/servers/${serverId}/firewall`,
-                              {
-                                inbound_rules: [
-                                  { protocol: 'tcp', ports: '22', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
-                                  { protocol: 'tcp', ports: '80', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
-                                  { protocol: 'tcp', ports: '443', sources: { addresses: ['0.0.0.0/0', '::/0'] } }
-                                ],
-                                outbound_rules: [
-                                  { protocol: 'tcp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } },
-                                  { protocol: 'udp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } }
-                                ]
-                              }
-                            );
-                            
-                            toast({
-                              title: "Firewall Created",
-                              description: "Default firewall rules have been applied successfully.",
-                            });
-                            
-                            // Refresh the firewall display
-                            queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/firewall`] });
-                            
-                          } catch (error) {
-                            toast({
-                              title: "Failed to create firewall",
-                              description: error instanceof Error ? error.message : "An unknown error occurred",
-                              variant: "destructive"
-                            });
-                          }
-                        }}
-                      >
-                        <Shield className="h-4 w-4 mr-2" />
-                        Create Default Firewall
-                      </Button>
+                      <ActiveFirewallCheck serverId={serverId}>
+                        {(firewallExists: boolean) => (
+                          <>
+                            {!firewallExists ? (
+                                // Create Default Firewall Button
+                                <Button 
+                                  variant="default" 
+                                  size="sm"
+                                  onClick={async () => {
+                                    try {
+                                      const response = await apiRequest(
+                                        'PUT',
+                                        `/api/servers/${serverId}/firewall`,
+                                        {
+                                          inbound_rules: [
+                                            { protocol: 'tcp', ports: '22', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
+                                            { protocol: 'tcp', ports: '80', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
+                                            { protocol: 'tcp', ports: '443', sources: { addresses: ['0.0.0.0/0', '::/0'] } }
+                                          ],
+                                          outbound_rules: [
+                                            { protocol: 'tcp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } },
+                                            { protocol: 'udp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } }
+                                          ]
+                                        }
+                                      );
+                                      
+                                      toast({
+                                        title: "Firewall Created",
+                                        description: "Default firewall rules have been applied successfully.",
+                                      });
+                                      
+                                      // Refresh the firewall display
+                                      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/firewall`] });
+                                      
+                                    } catch (error) {
+                                      toast({
+                                        title: "Failed to create firewall",
+                                        description: error instanceof Error ? error.message : "An unknown error occurred",
+                                        variant: "destructive"
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Shield className="h-4 w-4 mr-2" />
+                                  Create Default Firewall
+                                </Button>
+                              ) : (
+                                // Delete Firewall Button with Confirmation
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button 
+                                      variant="destructive" 
+                                      size="sm"
+                                    >
+                                      <Shield className="h-4 w-4 mr-2" />
+                                      Disable Firewall
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Disable Firewall Protection</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to disable the firewall? This will delete all firewall rules
+                                        and leave your server exposed to all network traffic. This is a security risk.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        onClick={async () => {
+                                          try {
+                                            await apiRequest('DELETE', `/api/servers/${serverId}/firewall`);
+                                            toast({
+                                              title: "Firewall Disabled",
+                                              description: "All firewall rules have been removed.",
+                                            });
+                                            // Refresh the firewall display
+                                            queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/firewall`] });
+                                          } catch (error) {
+                                            toast({
+                                              title: "Failed to disable firewall",
+                                              description: error instanceof Error ? error.message : "An unknown error occurred",
+                                              variant: "destructive"
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        Disable Firewall
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                            </>
+                          )}
+                        </ActiveFirewallCheck>
                       
                       {/* Open Firewall Manager Dialog */}
                       <Dialog>

@@ -4,8 +4,10 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
+import { RefreshCw, Maximize2, Minimize2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import 'xterm/css/xterm.css';
 
 interface ServerTerminalProps {
@@ -21,8 +23,16 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [authStatus, setAuthStatus] = useState<string | null>(null);
+  const [waitingForPassword, setWaitingForPassword] = useState(false);
   const socketRef = useRef<any>(null);
   const { user } = useAuth();
+  
+  // Get the server's root password from the API
+  const { data: serverDetails } = useQuery<{ rootPassword?: string }>({
+    queryKey: [`/api/servers/${serverId}/details`],
+    enabled: !isNaN(serverId) && !!user,
+  });
 
   // Initialize terminal
   useEffect(() => {
@@ -182,7 +192,18 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       // Handle authentication request (server asking for password)
       socket.on('auth_request', (data: { prompt: string }) => {
         term.writeln('\x1b[1;33mServer requesting authentication...\x1b[0m');
+        
+        // If we have a root password stored, use it automatically
+        if (serverDetails?.rootPassword) {
+          term.writeln('\x1b[1;32mUsing stored root password for authentication\x1b[0m');
+          socket.emit('data', serverDetails.rootPassword + '\n');
+          return;
+        }
+        
+        // Otherwise, show the prompt and let the user enter password
+        setWaitingForPassword(true);
         term.write(data.prompt);
+        setAuthStatus('Waiting for password input...');
       });
       
       // Handle user input in the terminal
