@@ -58,7 +58,7 @@ interface TicketDetails {
 export default function SupportPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { subscribeToTicket, unsubscribeFromTicket, ticketUpdates } = useWebSocket();
+  const { subscribeToTicket, unsubscribeFromTicket, ticketUpdates, connected } = useWebSocket();
   const params = useParams();
   const [location, setLocation] = useLocation();
   const [selectedTicket, setSelectedTicket] = React.useState<number | null>(null);
@@ -484,8 +484,8 @@ export default function SupportPage() {
               <h2 className="text-xl font-semibold">Conversation</h2>
               {selectedTicket && (
                 <div className="flex items-center text-xs text-muted-foreground">
-                  <div className={`w-2 h-2 rounded-full mr-1 ${useWebSocket().connected ? "bg-green-500" : "bg-red-500"}`}></div>
-                  {useWebSocket().connected ? "Connected" : "Disconnected"}
+                  <div className={`w-2 h-2 rounded-full mr-1 ${connected ? "bg-green-500" : "bg-red-500"}`}></div>
+                  {connected ? "Connected" : "Disconnected"}
                 </div>
               )}
             </div>
