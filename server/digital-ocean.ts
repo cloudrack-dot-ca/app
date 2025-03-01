@@ -256,6 +256,12 @@ export class DigitalOceanClient {
       description: "Drupal CMS on LAMP stack",
       type: "cms",
     },
+    {
+      slug: "joomla",
+      name: "Joomla",
+      description: "Joomla CMS on LAMP stack",
+      type: "cms",
+    },
     
     // E-commerce
     {
@@ -270,6 +276,12 @@ export class DigitalOceanClient {
       description: "Magento e-commerce platform",
       type: "ecommerce",
     },
+    {
+      slug: "prestashop",
+      name: "PrestaShop",
+      description: "PrestaShop e-commerce platform",
+      type: "ecommerce",
+    },
     
     // Data Science
     {
@@ -282,6 +294,12 @@ export class DigitalOceanClient {
       slug: "rstudio",
       name: "R Studio Server",
       description: "R Studio for statistical computing",
+      type: "data-science",
+    },
+    {
+      slug: "tensorflow",
+      name: "TensorFlow",
+      description: "TensorFlow with Python for machine learning",
       type: "data-science",
     },
     
@@ -310,6 +328,12 @@ export class DigitalOceanClient {
       description: "Redis in-memory data store",
       type: "database",
     },
+    {
+      slug: "couchdb",
+      name: "CouchDB",
+      description: "Apache CouchDB document database",
+      type: "database",
+    },
     
     // CI/CD and DevOps
     {
@@ -324,6 +348,64 @@ export class DigitalOceanClient {
       description: "GitLab Community Edition",
       type: "devops",
     },
+    {
+      slug: "prometheus",
+      name: "Prometheus",
+      description: "Prometheus monitoring system",
+      type: "devops",
+    },
+    {
+      slug: "grafana",
+      name: "Grafana",
+      description: "Grafana analytics & monitoring",
+      type: "devops",
+    },
+    
+    // Game Servers
+    {
+      slug: "minecraft",
+      name: "Minecraft Server",
+      description: "Ready-to-play Minecraft Java Edition server",
+      type: "game-server",
+    },
+    {
+      slug: "csgo",
+      name: "CS:GO Server",
+      description: "Counter-Strike: Global Offensive game server",
+      type: "game-server",
+    },
+    {
+      slug: "valheim",
+      name: "Valheim Server",
+      description: "Valheim dedicated server for multiplayer",
+      type: "game-server",
+    },
+    {
+      slug: "rust",
+      name: "Rust Server",
+      description: "Rust dedicated game server",
+      type: "game-server",
+    },
+    {
+      slug: "ark",
+      name: "ARK: Survival Evolved",
+      description: "ARK: Survival Evolved dedicated server",
+      type: "game-server",
+    },
+    
+    // Discord Bots
+    {
+      slug: "discordjs",
+      name: "Discord.js Bot",
+      description: "Node.js environment optimized for Discord.js bots",
+      type: "bot",
+    },
+    {
+      slug: "discordpy",
+      name: "Discord.py Bot",
+      description: "Python environment for Discord.py bots",
+      type: "bot",
+    }
   ];
 
   // Helper method to map application slugs to valid image IDs
