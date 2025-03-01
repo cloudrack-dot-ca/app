@@ -710,8 +710,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         company: {
           name: "CloudRack Services",
           address: "123 Server Avenue, Cloud City",
-          email: "billing@cloudrack.io",
-          website: "https://cloudrack.io"
+          email: "billing@cloudrack.ca",
+          website: "https://cloudrack.ca"
         },
         customer: {
           id: req.user.id,
