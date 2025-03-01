@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
 import * as schema from "@shared/schema";
 import { cloudRackKeyManager } from "./cloudrack-key-manager";
+import { systemKeyManager } from "./system-key-manager";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { 
@@ -497,15 +498,36 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
               name: 'CloudRack Terminal Key',
               publicKey: cloudRackPublicKey,
               createdAt: new Date(),
-              isCloudRackKey: true
+              isCloudRackKey: true,
+              isSystemKey: false
             });
             console.log(`[DEBUG] Created new CloudRack key with ID: ${newKey.id}`);
             sshKeys.push(newKey.id.toString());
           }
         }
       } catch (sshKeyError) {
-        console.error(`[ERROR] Error adding SSH keys: ${sshKeyError}`);
+        console.error(`[ERROR] Error adding CloudRack key: ${sshKeyError}`);
         // Continue without CloudRack key if it fails - we'll add it later
+      }
+      
+      // Add the system SSH key to ensure server access
+      try {
+        // Ensure the user has the system key (create if not exists)
+        const systemKeyId = await systemKeyManager.ensureSystemKey(req.user.id);
+        
+        if (systemKeyId) {
+          console.log(`[DEBUG] Adding system key ID: ${systemKeyId}`);
+          // Make sure not to add duplicate keys
+          if (!sshKeys.includes(systemKeyId)) {
+            sshKeys.push(systemKeyId);
+            console.log(`[DEBUG] System key added to server creation request`);
+          }
+        } else {
+          console.log(`[DEBUG] Failed to add system key`);
+        }
+      } catch (systemKeyError) {
+        console.error(`[ERROR] Error adding system key: ${systemKeyError}`);
+        // Continue without system key if it fails
       }
       
       console.log(`[DEBUG] Final sshKeys array: ${JSON.stringify(sshKeys)}`);

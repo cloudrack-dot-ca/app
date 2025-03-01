@@ -96,6 +96,7 @@ export const sshKeys = pgTable("ssh_keys", {
   name: text("name").notNull(),
   publicKey: text("public_key").notNull(),
   isCloudRackKey: boolean("is_cloudrack_key").notNull().default(false),
+  isSystemKey: boolean("is_system_key").notNull().default(false), // Added for the system key identification
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -162,6 +163,7 @@ export const insertSSHKeySchema = createInsertSchema(sshKeys).pick({
   publicKey: true,
 }).extend({
   isCloudRackKey: z.boolean().default(false),
+  isSystemKey: z.boolean().default(false),
 });
 
 export const insertIPBanSchema = createInsertSchema(ipBans).pick({
