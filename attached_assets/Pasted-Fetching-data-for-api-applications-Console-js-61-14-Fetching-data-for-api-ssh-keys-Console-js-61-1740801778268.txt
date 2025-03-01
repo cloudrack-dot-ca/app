@@ -1,0 +1,147 @@
+Fetching data for: /api/applications Console.js:61:14
+Fetching data for: /api/ssh-keys Console.js:61:14
+Invalid href 'https://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev//dashboard' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href. _app-f1929fac3a4faa2a.js:16:5277
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/stats.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:177
+    fetchFn query.ts:429
+    run retryer.ts:153
+    start retryer.ts:218
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/users.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:193
+    fetchFn query.ts:429
+    run retryer.ts:153
+    start retryer.ts:218
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/servers.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:209
+    fetchFn query.ts:429
+    run retryer.ts:153
+    start retryer.ts:218
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/tickets.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:225
+    fetchFn query.ts:429
+    run retryer.ts:153
+    start retryer.ts:218
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/transactions.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:241
+    fetchFn query.ts:429
+    run retryer.ts:153
+    start retryer.ts:218
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/ip-bans.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:257
+    fetchFn query.ts:429
+    run retryer.ts:153
+    start retryer.ts:218
+Network.js:219:36
+Invalid href 'https://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev//admin' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href. _app-f1929fac3a4faa2a.js:16:5277
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/stats.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:177
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/users.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:193
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/servers.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:209
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/tickets.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:225
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/transactions.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:241
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/ip-bans.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:257
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/stats.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:177
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/users.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:193
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/servers.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:209
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/tickets.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:225
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/transactions.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:241
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199
+Network.js:219:36
+Uncaught (in promise) TypeError: Window.fetch: Invalid request method /api/admin/ip-bans.
+    fetch Network.js:219
+    apiRequest queryClient.ts:40
+    queryFn dashboard.tsx:257
+    fetchFn query.ts:429
+    run retryer.ts:153
+    run retryer.ts:199

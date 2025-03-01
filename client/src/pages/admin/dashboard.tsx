@@ -171,50 +171,54 @@ export default function AdminDashboard() {
   }
 
   // Fetch admin stats
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['/api/admin/stats'],
     queryFn: async () => {
-      const response = await apiRequest('/api/admin/stats', { method: 'GET' });
-      return response as unknown as AdminStats;
-    },
-    onError: () => {
+      const response = await apiRequest('GET', '/api/admin/stats');
+      const data = await response.json();
+      return data as AdminStats;
+    }
+  });
+
+  // Show toast on error
+  React.useEffect(() => {
+    if (statsError) {
       toast({
         title: 'Error',
         description: `Failed to load admin stats`,
         variant: 'destructive',
       });
     }
-  });
+  }, [statsError, toast]);
 
   // Fetch users
-  const { data: users, isLoading: usersLoading } = useQuery({
+  const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['/api/admin/users'],
     queryFn: async () => {
-      const response = await apiRequest('/api/admin/users', { method: 'GET' });
-      return response as unknown as AdminUser[];
-    },
-    onError: () => {
+      const response = await apiRequest('GET', '/api/admin/users');
+      const data = await response.json();
+      return data as AdminUser[];
+    }
+  });
+  
+  // Show toast on error
+  React.useEffect(() => {
+    if (usersError) {
       toast({
         title: 'Error',
         description: `Failed to load users`,
         variant: 'destructive',
       });
     }
-  });
+  }, [usersError, toast]);
 
   // Fetch servers
   const { data: servers, isLoading: serversLoading } = useQuery({
     queryKey: ['/api/admin/servers'],
     queryFn: async () => {
-      const response = await apiRequest('/api/admin/servers', { method: 'GET' });
-      return response as unknown as AdminServer[];
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: `Failed to load servers`,
-        variant: 'destructive',
-      });
+      const response = await apiRequest('GET', '/api/admin/servers');
+      const data = await response.json();
+      return data as AdminServer[];
     }
   });
 
@@ -222,15 +226,9 @@ export default function AdminDashboard() {
   const { data: tickets, isLoading: ticketsLoading } = useQuery({
     queryKey: ['/api/admin/tickets'],
     queryFn: async () => {
-      const response = await apiRequest('/api/admin/tickets', { method: 'GET' });
-      return response as unknown as AdminTicket[];
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: `Failed to load tickets`,
-        variant: 'destructive',
-      });
+      const response = await apiRequest('GET', '/api/admin/tickets');
+      const data = await response.json();
+      return data as AdminTicket[];
     }
   });
 
@@ -238,15 +236,9 @@ export default function AdminDashboard() {
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
     queryKey: ['/api/admin/transactions'],
     queryFn: async () => {
-      const response = await apiRequest('/api/admin/transactions', { method: 'GET' });
-      return response as unknown as Transaction[];
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: `Failed to load transactions`,
-        variant: 'destructive',
-      });
+      const response = await apiRequest('GET', '/api/admin/transactions');
+      const data = await response.json();
+      return data as Transaction[];
     }
   });
 
@@ -254,26 +246,18 @@ export default function AdminDashboard() {
   const { data: ipBans, isLoading: ipBansLoading, refetch: refetchIpBans } = useQuery({
     queryKey: ['/api/admin/ip-bans'],
     queryFn: async () => {
-      const response = await apiRequest('/api/admin/ip-bans', { method: 'GET' });
-      return response as unknown as IPBan[];
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: `Failed to load IP bans`,
-        variant: 'destructive',
-      });
+      const response = await apiRequest('GET', '/api/admin/ip-bans');
+      const data = await response.json();
+      return data as IPBan[];
     }
   });
 
   // Update user balance mutation
   const updateUserBalanceMutation = useMutation({
     mutationFn: async ({ userId, amount }: { userId: number, amount: number }) => {
-      const response = await apiRequest(`/api/admin/users/${userId}/balance`, {
-        method: 'PATCH',
-        body: { amount },
-      });
-      return response as unknown as AdminUser;
+      const response = await apiRequest('PATCH', `/api/admin/users/${userId}/balance`, { amount });
+      const data = await response.json();
+      return data as AdminUser;
     },
     onSuccess: () => {
       toast({
@@ -287,10 +271,7 @@ export default function AdminDashboard() {
   // Create IP ban mutation
   const createIpBanMutation = useMutation({
     mutationFn: async (data: { ipAddress: string, reason: string, expiresAt: string | null }) => {
-      const response = await apiRequest('/api/admin/ip-bans', {
-        method: 'POST',
-        body: data,
-      });
+      const response = await apiRequest('POST', '/api/admin/ip-bans', data);
       return response;
     },
     onSuccess: () => {
@@ -307,9 +288,7 @@ export default function AdminDashboard() {
   // Remove IP ban mutation
   const removeIpBanMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/admin/ip-bans/${id}`, {
-        method: 'DELETE',
-      });
+      await apiRequest('DELETE', `/api/admin/ip-bans/${id}`);
       return id;
     },
     onSuccess: () => {
