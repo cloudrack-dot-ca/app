@@ -1128,6 +1128,61 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
+  
+  // Test SSH connection to a server - for debugging purposes
+  app.get("/api/servers/:id/test-ssh", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const serverId = parseInt(req.params.id);
+      
+      // Check server ownership
+      const server = await storage.getServer(serverId);
+      if (!server) {
+        return res.status(404).json({ message: "Server not found" });
+      }
+      
+      if (server.userId !== req.user.id && !req.user.isAdmin) {
+        return res.status(403).json({ message: "Not authorized to access this server" });
+      }
+      
+      if (!server.ipAddress) {
+        return res.status(400).json({ message: "Server IP address not available" });
+      }
+      
+      if (!server.rootPassword) {
+        return res.status(400).json({ message: "Server has no root password set" });
+      }
+      
+      // Import the SSH test function
+      const { testSSHConnection } = await import('./test-ssh-connection');
+      
+      try {
+        const testResult = await testSSHConnection(
+          server.ipAddress,
+          'root',
+          server.rootPassword,
+          null
+        );
+        
+        // Success!
+        res.json({
+          message: "SSH connection test successful",
+          result: testResult,
+          password: `${server.rootPassword.substring(0, 3)}...` // Show only first 3 chars for security
+        });
+      } catch (sshError) {
+        res.status(400).json({
+          message: "SSH connection test failed",
+          error: (sshError as Error).message,
+          password: `${server.rootPassword.substring(0, 3)}...` // Show only first 3 chars for security
+        });
+      }
+    } catch (error) {
+      console.error('Error testing SSH connection:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
 
   app.patch("/api/servers/:id/ipv6", async (req, res) => {
     if (!req.user) return res.sendStatus(401);

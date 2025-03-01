@@ -2,39 +2,130 @@ import { Client, ClientChannel, ConnectConfig } from 'ssh2';
 import { log } from './vite';
 import * as fs from 'fs';
 import * as path from 'path';
+import { cloudRackKeyManager } from './cloudrack-key-manager';
 
 // Function to test SSH connection with a server
 export async function testSSHConnection(
   host: string,
   username: string = 'root',
   password: string | null = null,
-  privateKeyPath: string | null = null
+  privateKeyPath: string | null = null,
+  options: {
+    detailedLogs?: boolean;
+    useKeyboardInteractive?: boolean;
+    timeoutMs?: number;
+  } = {}
 ): Promise<string> {
+  // Set default options
+  const defaultOptions = {
+    detailedLogs: true,
+    useKeyboardInteractive: true,
+    timeoutMs: 30000, // 30 second timeout
+  };
+  
+  const opts = { ...defaultOptions, ...options };
+  
   return new Promise((resolve, reject) => {
+    // Detailed log function that respects the detailed logging option
+    const detailLog = (message: string) => {
+      if (opts.detailedLogs) {
+        log(`SSH Debug: ${message}`, 'test-ssh');
+      }
+    };
+    
     const sshClient = new Client();
+    
+    // Normalize password - remove leading/trailing whitespace
+    if (password) {
+      password = password.trim();
+      
+      // Intelligent password sanitizing for common issues
+      // For example, sometimes passwords might have special characters escaped incorrectly when passed
+      const sanitizedPassword = password
+        .replace(/\\n/g, '') // Remove any newlines
+        .replace(/^["']|["']$/g, ''); // Remove any surrounding quotes
+      
+      if (sanitizedPassword !== password) {
+        detailLog('Password was sanitized to remove potential encoding issues');
+        password = sanitizedPassword;
+      }
+    }
     
     // Configure connection
     const config: ConnectConfig = {
       host,
       port: 22,
       username,
-      readyTimeout: 10000,
-      tryKeyboard: true,
-      debug: (message: string) => log(`SSH Debug: ${message}`, 'test-ssh'),
+      readyTimeout: opts.timeoutMs,
+      tryKeyboard: opts.useKeyboardInteractive,
+      debug: opts.detailedLogs ? (message: string) => detailLog(message) : undefined,
+      // Set explicit algorithms for better compatibility with older servers
+      algorithms: {
+        kex: [
+          'diffie-hellman-group-exchange-sha256',
+          'diffie-hellman-group14-sha256',
+          'diffie-hellman-group14-sha1',
+          'diffie-hellman-group1-sha1'
+        ],
+        cipher: [
+          'aes128-ctr',
+          'aes192-ctr',
+          'aes256-ctr',
+          'aes128-gcm',
+          'aes256-gcm',
+          'aes128-cbc',
+          'aes256-cbc'
+        ],
+        serverHostKey: [
+          'ssh-rsa',
+          'ssh-dss',
+          'ecdsa-sha2-nistp256',
+          'ecdsa-sha2-nistp384',
+          'ecdsa-sha2-nistp521'
+        ],
+        hmac: [
+          'hmac-sha2-256',
+          'hmac-sha2-512',
+          'hmac-sha1'
+        ]
+      }
     };
     
     // Add authentication methods
     if (password) {
       config.password = password;
-      log(`Using password authentication`, 'test-ssh');
+      detailLog(`Using password authentication (${password.substring(0, 2)}****)`);
     }
     
-    if (privateKeyPath && fs.existsSync(privateKeyPath)) {
-      config.privateKey = fs.readFileSync(privateKeyPath);
-      log(`Using private key authentication from ${privateKeyPath}`, 'test-ssh');
+    if (privateKeyPath) {
+      // Check if explicit key path was provided
+      if (fs.existsSync(privateKeyPath)) {
+        try {
+          const keyData = fs.readFileSync(privateKeyPath, 'utf8');
+          config.privateKey = keyData;
+          detailLog(`Using private key authentication from ${privateKeyPath}`);
+        } catch (err) {
+          detailLog(`Error reading private key file: ${err}`);
+        }
+      } else {
+        detailLog(`Private key file not found at ${privateKeyPath}`);
+      }
+    } 
+    // If no explicit key path but also no password, try to use CloudRack key
+    else if (!password) {
+      try {
+        const cloudRackKeyPath = cloudRackKeyManager.getCloudRackPrivateKeyPath();
+        if (fs.existsSync(cloudRackKeyPath)) {
+          const keyData = fs.readFileSync(cloudRackKeyPath, 'utf8');
+          config.privateKey = keyData;
+          detailLog(`Using CloudRack Terminal Key for authentication`);
+        }
+      } catch (err) {
+        detailLog(`Error getting CloudRack key: ${err}`);
+      }
     }
     
-    if (!password && !privateKeyPath) {
+    if (!password && !config.privateKey) {
       reject('No authentication method provided');
       return;
     }
