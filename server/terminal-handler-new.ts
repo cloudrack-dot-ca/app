@@ -65,9 +65,17 @@ export function setupTerminalSocket(server: HttpServer) {
         return;
       }
       
-      // Get server details to check for root password
-      const serverDetails = await storage.getServer(parseInt(serverId));
-      const hasRootPassword = !!(serverDetails as any)?.rootPassword;
+      // Get server details with sensitive data to check for root password
+      // Need to fetch details directly from API endpoint to get the actual password
+      // storage.getServer() doesn't return the raw password for security
+      const response = await fetch(`http://localhost:5000/api/servers/${serverId}/details`, {
+        headers: {
+          'Cookie': socket.handshake.headers.cookie || ''
+        }
+      });
+      
+      const serverDetails = await response.json();
+      const hasRootPassword = !!serverDetails?.rootPassword;
       
       log(`Server ${serverId} root password status: ${hasRootPassword ? 'Available' : 'Not available'}`, 'terminal');
       
