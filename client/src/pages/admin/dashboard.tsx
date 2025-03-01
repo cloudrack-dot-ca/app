@@ -642,7 +642,7 @@ export default function AdminDashboard() {
                           <TableCell>{user.id}</TableCell>
                           <TableCell>{user.username}</TableCell>
                           <TableCell>
-                            ${(user.balance / 100).toFixed(2)} USD
+                            <CurrencyDisplay amount={user.balance} showPrefix={true} />
                           </TableCell>
                           <TableCell>
                             {user.isAdmin ? (
@@ -942,9 +942,11 @@ export default function AdminDashboard() {
                           <TableCell>{transaction.id}</TableCell>
                           <TableCell>{transaction.userId}</TableCell>
                           <TableCell className={transaction.type === 'deposit' ? 'text-green-600' : 'text-red-600'}>
-                            {transaction.type === 'deposit' 
-                              ? `+$${(transaction.amount / 100).toFixed(2)} USD` 
-                              : `-$${(transaction.amount / 100).toFixed(2)} USD`}
+                            <CurrencyDisplay 
+                              amount={transaction.type === 'deposit' ? transaction.amount : -transaction.amount} 
+                              showPrefix={true} 
+                              showSign={true} 
+                            />
                           </TableCell>
                           <TableCell>{transaction.type}</TableCell>
                           <TableCell>{transaction.description}</TableCell>

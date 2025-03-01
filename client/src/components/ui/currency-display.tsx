@@ -40,28 +40,36 @@ export function CurrencyDisplay({
     ? Math.round(absoluteValue).toString()
     : absoluteValue.toFixed(2);
   
-  // Determine the sign to show
-  let sign = '';
-  if (isNegative) {
-    sign = '-';
-  } else if (showSign && dollars > 0) {
-    sign = '+';
+  // Build the display string parts separately to avoid formatting issues
+  let prefix = '';
+  let currencySuffix = showPrefix ? ` ${currency}` : '';
+  
+  // Handle positive amounts
+  if (!isNegative) {
+    prefix = showSign && dollars > 0 ? '+$' : '$';
+    return (
+      <span 
+        className={cn(
+          "font-mono tabular-nums", 
+          dollars > 0 ? "text-green-600" : "text-muted-foreground",
+          className
+        )}
+      >
+        {prefix}{formattedValue}{currencySuffix}
+      </span>
+    );
   }
   
-  // Format with the currency symbol and sign
-  const displayValue = isNegative 
-    ? `-$${formattedValue}${showPrefix ? ` ${currency}` : ''}` 
-    : `${showSign ? '+' : ''}$${formattedValue}${showPrefix ? ` ${currency}` : ''}`;
-  
+  // Handle negative amounts
   return (
     <span 
       className={cn(
         "font-mono tabular-nums", 
-        isNegative ? "text-red-600" : (dollars > 0 ? "text-green-600" : "text-muted-foreground"),
+        "text-red-600",
         className
       )}
     >
-      {displayValue}
+      -${formattedValue}{currencySuffix}
     </span>
   );
 }

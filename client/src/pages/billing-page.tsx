@@ -123,7 +123,7 @@ export default function BillingPage() {
       new Date(tx.createdAt).toLocaleString(),
       escapeCSV(tx.type),
       escapeCSV(tx.description || ''),
-      tx.type === 'deposit' ? `+$${(tx.amount / 100).toFixed(2)}` : `-$${(tx.amount / 100).toFixed(2)}`,
+      tx.type === 'deposit' ? `+$${(tx.amount / 100).toFixed(2)} USD` : `-$${(tx.amount / 100).toFixed(2)} USD`,
       tx.status
     ]);
     
