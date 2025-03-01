@@ -943,9 +943,9 @@ export default function AdminDashboard() {
                           <TableCell>{transaction.userId}</TableCell>
                           <TableCell className={transaction.type === 'deposit' ? 'text-green-600' : 'text-red-600'}>
                             <CurrencyDisplay 
-                              amount={transaction.type === 'deposit' ? transaction.amount : -transaction.amount} 
+                              amount={transaction.amount} 
                               showPrefix={true} 
-                              showSign={true} 
+                              showSign={transaction.type === 'deposit'}
                             />
                           </TableCell>
                           <TableCell>{transaction.type}</TableCell>

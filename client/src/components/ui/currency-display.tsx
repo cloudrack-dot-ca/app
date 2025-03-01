@@ -41,17 +41,21 @@ export function CurrencyDisplay({
     : absoluteValue.toFixed(2);
   
   // Build the display string parts separately to avoid formatting issues
-  let prefix = '';
   let currencySuffix = showPrefix ? ` ${currency}` : '';
   
-  // Handle positive amounts
+  // Determine text color based on amount
+  const textColorClass = isNegative 
+    ? "text-red-600" 
+    : (dollars >= 5 ? "text-green-600" : "text-muted-foreground");
+  
+  // For positive values
   if (!isNegative) {
-    prefix = showSign && dollars > 0 ? '+$' : '$';
+    const prefix = showSign && dollars > 0 ? '+$' : '$';
     return (
       <span 
         className={cn(
           "font-mono tabular-nums", 
-          dollars > 0 ? "text-green-600" : "text-muted-foreground",
+          textColorClass,
           className
         )}
       >
@@ -60,12 +64,12 @@ export function CurrencyDisplay({
     );
   }
   
-  // Handle negative amounts
+  // For negative values - IMPORTANT: only ONE negative sign at the beginning
   return (
     <span 
       className={cn(
         "font-mono tabular-nums", 
-        "text-red-600",
+        textColorClass,
         className
       )}
     >

@@ -367,8 +367,8 @@ export default function BillingPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <CurrencyDisplay
-                          amount={tx.type === 'deposit' ? tx.amount : -tx.amount}
-                          showSign={true}
+                          amount={tx.amount}
+                          showSign={tx.type === 'deposit'}
                           className="text-lg"
                         />
                         <Badge variant={tx.status === "completed" ? "default" : "secondary"}>
