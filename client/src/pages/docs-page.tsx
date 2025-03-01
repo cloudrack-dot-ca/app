@@ -578,6 +578,185 @@ export default function DocsPage() {
   // Check for admin access to show the editor tab
   const isAdmin = user?.isAdmin;
   
+  // Helper function to generate a simple ID
+  const generateId = (prefix: string) => {
+    return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  };
+  
+  // Current date formatter for last updated field
+  const getCurrentDate = () => {
+    const date = new Date();
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+  
+  // Handler for saving a section
+  const handleSaveSection = () => {
+    if (!sectionTitle.trim()) return;
+    
+    if (isNewSection) {
+      // Create a new section
+      const newSection: DocSection = {
+        id: generateId('section'),
+        title: sectionTitle,
+        order: sections.length + 1,
+        children: []
+      };
+      
+      setSections([...sections, newSection]);
+      toast({
+        title: "Section Created",
+        description: `The section "${sectionTitle}" has been created.`,
+      });
+    } else if (currentSection) {
+      // Update existing section
+      const updatedSections = sections.map(section => 
+        section.id === currentSection.id 
+          ? { ...section, title: sectionTitle }
+          : section
+      );
+      
+      setSections(updatedSections);
+      toast({
+        title: "Section Updated",
+        description: `The section has been updated.`,
+      });
+    }
+    
+    setEditSectionDialogOpen(false);
+  };
+  
+  // Handler for saving an article
+  const handleSaveArticle = () => {
+    if (!articleTitle.trim() || !articleContent.trim() || !articleSectionId) return;
+    
+    const currentDate = getCurrentDate();
+    
+    if (isNewArticle) {
+      // Create a new article
+      const newArticle: DocArticle = {
+        id: generateId('article'),
+        sectionId: articleSectionId,
+        title: articleTitle,
+        content: articleContent,
+        order: sections.find(s => s.id === articleSectionId)?.children.length ?? 0 + 1,
+        lastUpdated: currentDate
+      };
+      
+      const updatedSections = sections.map(section => 
+        section.id === articleSectionId
+          ? { ...section, children: [...section.children, newArticle] }
+          : section
+      );
+      
+      setSections(updatedSections);
+      toast({
+        title: "Article Created",
+        description: `The article "${articleTitle}" has been created.`,
+      });
+    } else if (currentArticle) {
+      // Update existing article
+      const updatedSections = sections.map(section => {
+        // If this is the section that currently contains the article
+        if (section.id === currentArticle.sectionId) {
+          // Handle case where article is moved to a different section
+          if (articleSectionId !== currentArticle.sectionId) {
+            // Remove article from its current section
+            return {
+              ...section,
+              children: section.children.filter(a => a.id !== currentArticle.id)
+            };
+          }
+          
+          // Update article in its current section
+          return {
+            ...section,
+            children: section.children.map(article => 
+              article.id === currentArticle.id
+                ? { 
+                    ...article, 
+                    title: articleTitle, 
+                    content: articleContent, 
+                    lastUpdated: currentDate 
+                  }
+                : article
+            )
+          };
+        } 
+        // If this is the target section for article to be moved to
+        else if (section.id === articleSectionId && articleSectionId !== currentArticle.sectionId) {
+          // Add the article to its new section
+          return {
+            ...section,
+            children: [
+              ...section.children,
+              { 
+                ...currentArticle, 
+                sectionId: articleSectionId,
+                title: articleTitle, 
+                content: articleContent, 
+                lastUpdated: currentDate 
+              }
+            ]
+          };
+        }
+        // Other sections remain unchanged
+        return section;
+      });
+      
+      setSections(updatedSections);
+      toast({
+        title: "Article Updated",
+        description: `The article has been updated.`,
+      });
+    }
+    
+    setEditArticleDialogOpen(false);
+  };
+  
+  // Handler for deleting a section
+  const handleDeleteSection = (sectionId: string) => {
+    if (confirm("Are you sure you want to delete this section? All articles in this section will also be deleted.")) {
+      const updatedSections = sections.filter(section => section.id !== sectionId);
+      setSections(updatedSections);
+      
+      // If the active article was in this section, reset active article
+      const sectionArticleIds = sections
+        .find(s => s.id === sectionId)
+        ?.children.map(a => a.id) || [];
+      
+      if (activeArticleId && sectionArticleIds.includes(activeArticleId)) {
+        setActiveArticleId(updatedSections[0]?.children[0]?.id || null);
+      }
+      
+      toast({
+        title: "Section Deleted",
+        description: "The section and all its articles have been deleted.",
+      });
+    }
+  };
+  
+  // Handler for deleting an article
+  const handleDeleteArticle = (articleId: string) => {
+    if (confirm("Are you sure you want to delete this article?")) {
+      const updatedSections = sections.map(section => ({
+        ...section,
+        children: section.children.filter(article => article.id !== articleId)
+      }));
+      
+      setSections(updatedSections);
+      
+      // If this was the active article, reset active article
+      if (activeArticleId === articleId) {
+        setActiveArticleId(updatedSections[0]?.children[0]?.id || null);
+      }
+      
+      toast({
+        title: "Article Deleted",
+        description: "The article has been deleted.",
+      });
+    }
+  };
+  
   return (
     <div className="container py-8">
       <div className="flex items-center mb-6">
@@ -608,7 +787,7 @@ export default function DocsPage() {
               <Card>
                 <CardContent className="p-4">
                   <DocSidebar 
-                    sections={mockSections} 
+                    sections={sections} 
                     activeArticleId={activeArticleId}
                     setActiveArticleId={setActiveArticleId}
                   />
@@ -648,14 +827,19 @@ export default function DocsPage() {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <h3 className="text-lg font-medium">Documentation Sections</h3>
-                        <Button>
+                        <Button onClick={() => {
+                          setIsNewSection(true);
+                          setCurrentSection(null);
+                          setSectionTitle("");
+                          setEditSectionDialogOpen(true);
+                        }}>
                           <Plus className="h-4 w-4 mr-2" />
                           Add Section
                         </Button>
                       </div>
                       
                       <div className="border rounded-md divide-y">
-                        {mockSections.map(section => (
+                        {sections.map(section => (
                           <div key={section.id} className="p-4 flex justify-between items-center">
                             <div>
                               <h4 className="font-medium">{section.title}</h4>
@@ -664,11 +848,25 @@ export default function DocsPage() {
                               </p>
                             </div>
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setIsNewSection(false);
+                                  setCurrentSection(section);
+                                  setSectionTitle(section.title);
+                                  setEditSectionDialogOpen(true);
+                                }}
+                              >
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
                               </Button>
-                              <Button variant="outline" size="sm" className="text-red-500">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-red-500"
+                                onClick={() => handleDeleteSection(section.id)}
+                              >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
                               </Button>
@@ -683,14 +881,21 @@ export default function DocsPage() {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <h3 className="text-lg font-medium">Documentation Articles</h3>
-                        <Button>
+                        <Button onClick={() => {
+                          setIsNewArticle(true);
+                          setCurrentArticle(null);
+                          setArticleTitle("");
+                          setArticleContent("");
+                          setArticleSectionId(sections[0]?.id || "");
+                          setEditArticleDialogOpen(true);
+                        }}>
                           <Plus className="h-4 w-4 mr-2" />
                           Add Article
                         </Button>
                       </div>
                       
                       <div className="border rounded-md divide-y">
-                        {mockSections.flatMap(section => 
+                        {sections.flatMap(section => 
                           section.children.map(article => (
                             <div key={article.id} className="p-4 flex justify-between items-center">
                               <div>
@@ -700,11 +905,27 @@ export default function DocsPage() {
                                 </p>
                               </div>
                               <div className="flex gap-2">
-                                <Button variant="outline" size="sm">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => {
+                                    setIsNewArticle(false);
+                                    setCurrentArticle(article);
+                                    setArticleTitle(article.title);
+                                    setArticleContent(article.content);
+                                    setArticleSectionId(article.sectionId);
+                                    setEditArticleDialogOpen(true);
+                                  }}
+                                >
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit
                                 </Button>
-                                <Button variant="outline" size="sm" className="text-red-500">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="text-red-500"
+                                  onClick={() => handleDeleteArticle(article.id)}
+                                >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete
                                 </Button>
@@ -718,6 +939,109 @@ export default function DocsPage() {
                 </Tabs>
               </CardContent>
             </Card>
+            
+            {/* Section Edit Dialog */}
+            <Dialog open={editSectionDialogOpen} onOpenChange={setEditSectionDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{isNewSection ? "Add Section" : "Edit Section"}</DialogTitle>
+                  <DialogDescription>
+                    {isNewSection ? "Create a new documentation section" : "Update section details"}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="section-title">Section Title</Label>
+                    <Input 
+                      id="section-title" 
+                      value={sectionTitle} 
+                      onChange={(e) => setSectionTitle(e.target.value)}
+                      placeholder="e.g., Getting Started"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditSectionDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    onClick={handleSaveSection}
+                    disabled={!sectionTitle.trim()}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {isNewSection ? "Create Section" : "Update Section"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            {/* Article Edit Dialog */}
+            <Dialog open={editArticleDialogOpen} onOpenChange={setEditArticleDialogOpen}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>{isNewArticle ? "Add Article" : "Edit Article"}</DialogTitle>
+                  <DialogDescription>
+                    {isNewArticle ? "Create a new documentation article" : "Update article content"}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="article-section">Section</Label>
+                    <select
+                      id="article-section"
+                      value={articleSectionId}
+                      onChange={(e) => setArticleSectionId(e.target.value)}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      {sections.map(section => (
+                        <option key={section.id} value={section.id}>
+                          {section.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="article-title">Article Title</Label>
+                    <Input 
+                      id="article-title" 
+                      value={articleTitle} 
+                      onChange={(e) => setArticleTitle(e.target.value)}
+                      placeholder="e.g., Getting Started with CloudHost"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="article-content">Content (Markdown Supported)</Label>
+                    <Textarea 
+                      id="article-content" 
+                      value={articleContent} 
+                      onChange={(e) => setArticleContent(e.target.value)}
+                      placeholder="# Your Article Title&#10;&#10;Write your content here. Markdown is supported."
+                      className="min-h-[300px] font-mono"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditArticleDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    onClick={handleSaveArticle}
+                    disabled={!articleTitle.trim() || !articleContent.trim() || !articleSectionId}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {isNewArticle ? "Create Article" : "Update Article"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         )}
       </Tabs>
