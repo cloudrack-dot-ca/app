@@ -99,7 +99,7 @@ export function setupTerminalSocket(server: HttpServer) {
           socket.emit('ready');
           
           // Forward data from SSH to the client
-          stream.on('data', (data) => {
+          stream.on('data', (data: Buffer) => {
             socket.emit('data', data.toString('utf-8'));
           });
           
@@ -109,7 +109,7 @@ export function setupTerminalSocket(server: HttpServer) {
             sshClient.end();
           });
           
-          stream.stderr.on('data', (data) => {
+          stream.stderr.on('data', (data: Buffer) => {
             socket.emit('data', data.toString('utf-8'));
           });
         });
@@ -132,7 +132,7 @@ export function setupTerminalSocket(server: HttpServer) {
       });
       
       // Forward data from client to SSH
-      socket.on('data', (data) => {
+      socket.on('data', (data: string) => {
         if (sshStream) {
           sshStream.write(data);
         }

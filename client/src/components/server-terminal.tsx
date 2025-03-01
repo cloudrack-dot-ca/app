@@ -5,6 +5,7 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 import 'xterm/css/xterm.css';
 
 interface ServerTerminalProps {
@@ -14,6 +15,7 @@ interface ServerTerminalProps {
 }
 
 export default function ServerTerminal({ serverId, serverName, ipAddress }: ServerTerminalProps) {
+  const { user } = useAuth();
   const terminalRef = useRef<HTMLDivElement>(null);
   const [terminal, setTerminal] = useState<Terminal | null>(null);
   const [fitAddon, setFitAddon] = useState<FitAddon | null>(null);
@@ -109,7 +111,12 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       term.writeln(`\x1b[1;34mConnecting to ${serverName} (${ipAddress})...\x1b[0m`);
       
       // Connect to real terminal socket server
-      const socket = io(`${window.location.origin}/terminal?serverId=${serverId}`);
+      const socket = io(`${window.location.origin}/terminal`, {
+        query: {
+          serverId: serverId.toString(),
+          userId: localStorage.getItem('userId') || ''
+        }
+      });
       socketRef.current = socket;
       
       // Handle successful connection
@@ -143,9 +150,10 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         setConnectionError(message);
       });
       
-      // Handle authentication requests
-      socket.on('auth_request', (data) => {
-        term.writeln(`\x1b[1;36m${data.prompt}\x1b[0m`);
+      // Handle ready event - terminal is ready to accept input
+      socket.on('ready', () => {
+        term.writeln('\x1b[1;32mTerminal ready!\x1b[0m');
+        term.writeln('\x1b[1;34mYou can start typing commands now.\x1b[0m');
       });
       
       // Handle disconnect

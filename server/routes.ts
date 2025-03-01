@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import type { Server as HttpServer } from "http";
-import { setupTerminalSocket } from "./terminal-handler";
+import { setupTerminalSocket } from "./terminal-handler-new";
 import type { User } from "@shared/schema";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { storage } from "./storage";
