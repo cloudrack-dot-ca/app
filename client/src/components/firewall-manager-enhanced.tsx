@@ -168,47 +168,86 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
     // Update the last refresh time
     setLastRefreshTime(now);
     
-    // Perform the refresh
-    refetch();
+    // Format a human-readable last updated time
+    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setLastUpdated(timeString);
+    
+    // If we know there's no firewall, temporarily enable fetching for just this one refresh
+    if (noFirewall) {
+      setShouldFetch(true);
+      
+      // Perform the refresh
+      refetch().then(() => {
+        // Disable fetching again after this refresh if there's still no firewall
+        if (noFirewall) {
+          setShouldFetch(false);
+        }
+      });
+    } else {
+      // Normal refresh if firewall exists
+      refetch();
+    }
   };
 
+  // Completely disable auto-fetching for this component
+  // We'll manage refetching manually to prevent excessive API calls
+  const [shouldFetch, setShouldFetch] = useState(true);
+  
   // Fetch current firewall configuration
   const { data: firewall, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/servers', serverId, 'firewall'],
-    queryFn: () => fetch(`/api/servers/${serverId}/firewall`)
-      .then(res => {
-        // Update the last refresh time regardless of outcome
-        const now = new Date();
-        setLastRefreshTime(now);
-        
-        // Format a human-readable last updated time
-        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        setLastUpdated(timeString);
-        
-        if (res.status === 404) {
-          // Firewall doesn't exist yet
-          setNoFirewall(true);
-          return {
-            name: `firewall-server-${serverId}`,
-            droplet_ids: [],
-            inbound_rules: [],
-            outbound_rules: []
-          };
-        }
-        if (!res.ok) {
-          throw new Error(`Error ${res.status}: ${res.statusText}`);
-        }
-        // We found a firewall, make sure to update the state
-        setNoFirewall(false);
-        return res.json();
-      }),
-    refetchOnWindowFocus: false,  // Disable auto-refetch on window focus
-    // Only poll very infrequently if a firewall exists (once per minute)
-    refetchInterval: noFirewall ? false : 60000, // Reduced polling to once per minute
-    staleTime: 55000,             // Consider data stale after 55 seconds
-    retry: false,                 // Don't retry on 404
-    retryOnMount: false,          // Don't retry when component mounts
-    gcTime: 0                     // Don't cache errors
+    queryFn: () => {
+      if (!shouldFetch) {
+        // Return mock data when fetching is disabled
+        return Promise.resolve({
+          name: `firewall-server-${serverId}`,
+          droplet_ids: [],
+          inbound_rules: [],
+          outbound_rules: []
+        });
+      }
+      
+      return fetch(`/api/servers/${serverId}/firewall`)
+        .then(res => {
+          // Update the last refresh time regardless of outcome
+          const now = new Date();
+          setLastRefreshTime(now);
+          
+          // Format a human-readable last updated time
+          const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          setLastUpdated(timeString);
+          
+          if (res.status === 404) {
+            // Firewall doesn't exist yet
+            setNoFirewall(true);
+            // Disable future auto-fetching when no firewall exists
+            setShouldFetch(false);
+            
+            // Return mock data
+            return {
+              name: `firewall-server-${serverId}`,
+              droplet_ids: [],
+              inbound_rules: [],
+              outbound_rules: []
+            };
+          }
+          
+          if (!res.ok) {
+            throw new Error(`Error ${res.status}: ${res.statusText}`);
+          }
+          
+          // We found a firewall, update the state
+          setNoFirewall(false);
+          return res.json();
+        });
+    },
+    // Completely disable auto-refetching
+    refetchOnWindowFocus: false,
+    refetchInterval: false,  // No automatic polling
+    staleTime: Infinity,     // Data never goes stale automatically
+    retry: false,            // Don't retry on errors
+    retryOnMount: false,     // Don't retry when component mounts
+    gcTime: 0                // Don't cache errors
   });
   
   // Effect to refetch when component mounts
@@ -233,7 +272,10 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
         title: "Firewall enabled",
         description: "Firewall has been created with default security rules for SSH, HTTP, and HTTPS.",
       });
+      // Update state
       setNoFirewall(false);
+      // Re-enable fetching since we now have a firewall
+      setShouldFetch(true);
       // Update both this component and any parent components
       refetch();
       queryClient.invalidateQueries({ queryKey: ['/api/servers', serverId, 'firewall'] });
