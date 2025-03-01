@@ -482,27 +482,24 @@ export default function ServerDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-2">
-                  {isRunning ? (
-                    <Button 
+                  <Button 
                       variant="default" 
-                      onClick={() => powerActionMutation.mutate("stop")}
+                      onClick={() => powerActionMutation.mutate(isRunning ? "stop" : "start")}
                       disabled={powerActionMutation.isPending}
-                      className="w-full"
+                      className={`w-full ${isRunning ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}`}
                     >
-                      <PowerOff className="h-4 w-4 mr-2" />
-                      Power Off
+                      {isRunning ? (
+                        <>
+                          <PowerOff className="h-4 w-4 mr-2" />
+                          Power Off
+                        </>
+                      ) : (
+                        <>
+                          <Power className="h-4 w-4 mr-2" />
+                          Power On
+                        </>
+                      )}
                     </Button>
-                  ) : (
-                    <Button 
-                      variant="default" 
-                      onClick={() => powerActionMutation.mutate("start")}
-                      disabled={powerActionMutation.isPending}
-                      className="w-full"
-                    >
-                      <Power className="h-4 w-4 mr-2" />
-                      Power On
-                    </Button>
-                  )}
                 </div>
                 
                 <Button 
