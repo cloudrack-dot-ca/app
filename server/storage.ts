@@ -11,12 +11,14 @@ const PostgresSessionStore = connectPg(session);
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>; // Added for admin dashboard
   createUser(user: InsertUser): Promise<User>;
   updateUserBalance(userId: number, amount: number): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
 
   getServer(id: number): Promise<Server | undefined>;
   getServersByUser(userId: number): Promise<Server[]>;
+  getAllServers(): Promise<Server[]>; // Already exists, confirmed
   createServer(server: Omit<Server, "id">): Promise<Server>;
   updateServer(id: number, updates: Partial<Server>): Promise<Server>;
   deleteServer(id: number): Promise<void>;
@@ -34,6 +36,7 @@ export interface IStorage {
   
   createTransaction(transaction: Omit<BillingTransaction, "id">): Promise<BillingTransaction>;
   getTransactionsByUser(userId: number): Promise<BillingTransaction[]>;
+  getAllTransactions(): Promise<BillingTransaction[]>; // Added for admin dashboard
 
   createTicket(ticket: Omit<SupportTicket, "id" | "createdAt" | "updatedAt">): Promise<SupportTicket>;
   getTicket(id: number): Promise<SupportTicket | undefined>;
@@ -92,6 +95,10 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
+  }
+  
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -186,6 +193,13 @@ export class DatabaseStorage implements IStorage {
       .from(billingTransactions)
       .where(eq(billingTransactions.userId, userId))
       .orderBy(billingTransactions.createdAt);
+  }
+  
+  async getAllTransactions(): Promise<BillingTransaction[]> {
+    return await db
+      .select()
+      .from(billingTransactions)
+      .orderBy(desc(billingTransactions.createdAt));
   }
 
   async createTicket(ticket: Omit<SupportTicket, "id" | "createdAt" | "updatedAt">): Promise<SupportTicket> {

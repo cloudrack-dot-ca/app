@@ -459,7 +459,19 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       return res.sendStatus(404);
     }
 
+    // First detach the volume before deletion
     try {
+      await digitalOcean.detachVolumeFromDroplet(
+        volume.volumeId,
+        server.dropletId,
+        server.region
+      );
+      console.log(`Successfully detached volume ${volume.volumeId} from droplet ${server.dropletId}`);
+      
+      // Wait a moment to ensure the detachment completes
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Now try to delete the volume
       await digitalOcean.deleteVolume(volume.volumeId);
     } catch (error) {
       console.warn(`Failed to delete volume ${volume.volumeId} from DigitalOcean, but proceeding with local deletion:`, error);
