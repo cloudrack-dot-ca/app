@@ -15,6 +15,9 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserBalance(userId: number, amount: number): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
+  deleteUser(id: number): Promise<void>;
+  suspendUser(id: number, reason: string): Promise<User>;
+  unsuspendUser(id: number): Promise<User>;
 
   getServer(id: number): Promise<Server | undefined>;
   getServersByUser(userId: number): Promise<Server[]>;
@@ -120,6 +123,49 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ balance: sql`balance + ${amount}` })
       .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+  
+  async deleteUser(id: number): Promise<void> {
+    // First delete all related data to avoid foreign key constraints
+    const userServers = await this.getServersByUser(id);
+    
+    // Delete all servers for this user
+    for (const server of userServers) {
+      await this.deleteServer(server.id);
+    }
+    
+    // Delete SSH keys
+    const userKeys = await this.getSSHKeysByUser(id);
+    for (const key of userKeys) {
+      await this.deleteSSHKey(key.id);
+    }
+    
+    // Delete the user
+    await db.delete(users).where(eq(users.id, id));
+  }
+  
+  async suspendUser(id: number, reason: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        isSuspended: true,
+        suspensionReason: reason
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+  
+  async unsuspendUser(id: number): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        isSuspended: false,
+        suspensionReason: null
+      })
+      .where(eq(users.id, id))
       .returning();
     return user;
   }

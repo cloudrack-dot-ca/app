@@ -117,6 +117,7 @@ export function registerAdminRoutes(app: Express) {
       // Create a transaction record
       const prevBalance = user.balance;
       const amountDifference = amount - prevBalance;
+  
       
       if (amountDifference !== 0) {
         const transactionType = amountDifference > 0 ? 'deposit' : 'charge';
@@ -231,6 +232,91 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       log(`Admin delete IP ban error: ${error}`, 'admin');
       res.status(500).json({ message: 'Failed to delete IP ban' });
+    }
+  });
+  
+  // Delete user
+  app.delete('/api/admin/users/:id', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Validate input
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      
+      // Get user to check if exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Prevent deleting the currently logged in admin
+      if (user.id === req.user!.id) {
+        return res.status(400).json({ message: 'Cannot delete your own account' });
+      }
+      
+      await storage.deleteUser(userId);
+      res.status(204).send();
+    } catch (error) {
+      log(`Admin delete user error: ${error}`, 'admin');
+      res.status(500).json({ message: 'Failed to delete user' });
+    }
+  });
+  
+  // Suspend user
+  app.post('/api/admin/users/:id/suspend', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { reason } = req.body;
+      
+      // Validate input
+      if (isNaN(userId) || !reason) {
+        return res.status(400).json({ message: 'Invalid user ID or reason not provided' });
+      }
+      
+      // Get user to check if exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Prevent suspending the currently logged in admin
+      if (user.id === req.user!.id) {
+        return res.status(400).json({ message: 'Cannot suspend your own account' });
+      }
+      
+      // Suspend the user
+      const updatedUser = await storage.suspendUser(userId, reason);
+      res.json(updatedUser);
+    } catch (error) {
+      log(`Admin suspend user error: ${error}`, 'admin');
+      res.status(500).json({ message: 'Failed to suspend user' });
+    }
+  });
+  
+  // Unsuspend user
+  app.post('/api/admin/users/:id/unsuspend', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Validate input
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      
+      // Get user to check if exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Unsuspend the user
+      const updatedUser = await storage.unsuspendUser(userId);
+      res.json(updatedUser);
+    } catch (error) {
+      log(`Admin unsuspend user error: ${error}`, 'admin');
+      res.status(500).json({ message: 'Failed to unsuspend user' });
     }
   });
   
