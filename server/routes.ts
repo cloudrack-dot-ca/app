@@ -324,7 +324,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         throw new Error(`Failed to create server: ${errorMessage}`);
       }
 
-      // First create the server without the password
+      // Create the server including rootPassword field (required by type)
+      // but we'll update it properly with db.update right after
       const server = await storage.createServer({
         ...parsed.data,
         userId: req.user.id,
@@ -339,6 +340,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         },
         application: parsed.data.application || null,
         lastMonitored: null,
+        rootPassword: "", // Include empty string to satisfy type, will update properly next
       });
       
       // Then update the root password directly using the same approach as the password update endpoint
