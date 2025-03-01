@@ -7,6 +7,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Server as SchemaServer, Volume } from "@shared/schema";
 import ServerTerminal from "@/components/server-terminal-real";
 import { CloudRackTerminalNotice } from "@/components/cloudrack-terminal-notice";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { DialogClose } from "@/components/ui/dialog";
 
 // Extended Server interface with additional properties for UI display
 // Don't extend SchemaServer since the rootPassword types don't match
@@ -252,10 +257,28 @@ const regionFlags: { [key: string]: string } = {
   'blr1': '🇮🇳 Bangalore',
 };
 
+// Schema for firewall confirmation dialog
+const confirmFirewallDisableSchema = z.object({
+  confirmationText: z.string()
+    .refine(val => val === "I CONFIRM DELETION OF RULES", {
+      message: "You must type 'I CONFIRM DELETION OF RULES' exactly to confirm."
+    })
+});
+
+type ConfirmFirewallDisableFormValues = z.infer<typeof confirmFirewallDisableSchema>;
+
 export default function ServerDetailPage() {
   // Extract and validate params - simplified approach for better compatibility
   const params = useParams<{ id: string }>();
   const pathId = params?.id;
+  
+  // Form for disabling firewall with confirmation text
+  const disableFirewallForm = useForm<ConfirmFirewallDisableFormValues>({
+    resolver: zodResolver(confirmFirewallDisableSchema),
+    defaultValues: {
+      confirmationText: ""
+    }
+  });
   
   // Debug info
   console.log("ServerDetailPage Params:", params);
