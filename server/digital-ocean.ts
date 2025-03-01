@@ -925,7 +925,8 @@ runcmd:
       return existingFirewall;
     }
     
-    // Create a new default firewall
+    // Create a new firewall with NO default rules as required
+    // Users must explicitly add rules through the UI
     const firewallId = `firewall-${Math.random().toString(36).substring(7)}`;
     const newFirewall: Firewall = {
       id: firewallId,
@@ -933,35 +934,9 @@ runcmd:
       status: 'active',
       created_at: new Date().toISOString(),
       droplet_ids: [parseInt(dropletId)],
-      inbound_rules: [
-        {
-          protocol: 'tcp',
-          ports: '22',
-          sources: { addresses: ['0.0.0.0/0', '::/0'] }
-        },
-        {
-          protocol: 'tcp',
-          ports: '80',
-          sources: { addresses: ['0.0.0.0/0', '::/0'] }
-        },
-        {
-          protocol: 'tcp',
-          ports: '443',
-          sources: { addresses: ['0.0.0.0/0', '::/0'] }
-        }
-      ],
-      outbound_rules: [
-        {
-          protocol: 'tcp',
-          ports: 'all',
-          destinations: { addresses: ['0.0.0.0/0', '::/0'] }
-        },
-        {
-          protocol: 'udp',
-          ports: 'all',
-          destinations: { addresses: ['0.0.0.0/0', '::/0'] }
-        }
-      ]
+      // Start with empty rule sets
+      inbound_rules: [],
+      outbound_rules: []
     };
     
     // Store the firewall in our mock collection

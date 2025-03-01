@@ -999,8 +999,8 @@ export default function ServerDetailPage() {
                                 </Button>
                               ) : (
                                 // Delete Firewall Button with Confirmation
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
+                                <Dialog>
+                                  <DialogTrigger asChild>
                                     <Button 
                                       variant="destructive" 
                                       size="sm"
@@ -1008,42 +1008,66 @@ export default function ServerDetailPage() {
                                       <Shield className="h-4 w-4 mr-2" />
                                       Disable Firewall
                                     </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Disable Firewall Protection</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to disable the firewall? This will delete all firewall rules
-                                        and leave your server exposed to all network traffic. This is a security risk.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                        onClick={async () => {
-                                          try {
-                                            await apiRequest('PUT', `/api/servers/${serverId}/firewall?action=disable`);
-                                            toast({
-                                              title: "Firewall Disabled",
-                                              description: "All firewall rules have been removed.",
-                                            });
-                                            // Refresh the firewall display
-                                            queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/firewall`] });
-                                          } catch (error) {
-                                            toast({
-                                              title: "Failed to disable firewall",
-                                              description: error instanceof Error ? error.message : "An unknown error occurred",
-                                              variant: "destructive"
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        Disable Firewall
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle className="text-destructive">
+                                        Disable Firewall Protection
+                                      </DialogTitle>
+                                      <div className="py-2">
+                                        <strong>Warning:</strong> This will delete all firewall rules and leave your server exposed 
+                                        to all network traffic. This is a significant security risk.
+                                      </div>
+                                      <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md my-3 text-sm">
+                                        To confirm, please type <span className="font-mono font-bold">I CONFIRM DELETION OF RULES</span> in the field below.
+                                      </div>
+                                    </DialogHeader>
+                                    
+                                    <Form {...disableFirewallForm}>
+                                      <form onSubmit={disableFirewallForm.handleSubmit(async (data) => {
+                                        try {
+                                          await apiRequest('PUT', `/api/servers/${serverId}/firewall?action=disable`);
+                                          toast({
+                                            title: "Firewall Disabled",
+                                            description: "All firewall rules have been removed.",
+                                          });
+                                          // Refresh the firewall display
+                                          queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/firewall`] });
+                                          disableFirewallForm.reset(); // Reset the form
+                                        } catch (error) {
+                                          toast({
+                                            title: "Failed to disable firewall",
+                                            description: error instanceof Error ? error.message : "An unknown error occurred",
+                                            variant: "destructive"
+                                          });
+                                        }
+                                      })}>
+                                        <FormField
+                                          control={disableFirewallForm.control}
+                                          name="confirmationText"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel>Confirmation Text</FormLabel>
+                                              <FormControl>
+                                                <Input placeholder="Type the confirmation phrase" {...field} />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        
+                                        <div className="flex justify-end gap-2 mt-4">
+                                          <DialogClose asChild>
+                                            <Button variant="outline" type="button">Cancel</Button>
+                                          </DialogClose>
+                                          <Button variant="destructive" type="submit">
+                                            Disable Firewall
+                                          </Button>
+                                        </div>
+                                      </form>
+                                    </Form>
+                                  </DialogContent>
+                                </Dialog>
                               )}
                             </>
                           )}
