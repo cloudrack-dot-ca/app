@@ -337,6 +337,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         },
         application: parsed.data.application || null,
         lastMonitored: null,
+        rootPassword: rootPassword, // Store the generated root password
       });
 
       // Deduct balance and create transaction

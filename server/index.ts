@@ -85,7 +85,8 @@ async function createTestData() {
           disk: 25
         },
         application: null,
-        lastMonitored: new Date()
+        lastMonitored: new Date(),
+        rootPassword: "Test123!" // Add default root password for test server
       });
       
       // Create a test support ticket
