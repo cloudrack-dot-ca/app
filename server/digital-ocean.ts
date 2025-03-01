@@ -220,6 +220,38 @@ export class DigitalOceanClient {
   ];
 
   private mockApplications: Application[] = [
+    // Distributions (Base operating systems)
+    {
+      slug: "none",
+      name: "Ubuntu 20.04",
+      description: "Clean Ubuntu 20.04 LTS installation",
+      type: "distribution",
+    },
+    {
+      slug: "debian-11",
+      name: "Debian 11",
+      description: "Clean Debian 11 installation",
+      type: "distribution",
+    },
+    {
+      slug: "centos-stream-9",
+      name: "CentOS Stream 9",
+      description: "Clean CentOS Stream 9 installation",
+      type: "distribution",
+    },
+    {
+      slug: "fedora-36",
+      name: "Fedora 36",
+      description: "Clean Fedora 36 installation",
+      type: "distribution",
+    },
+    {
+      slug: "rocky-linux-9",
+      name: "Rocky Linux 9",
+      description: "Clean Rocky Linux 9 installation",
+      type: "distribution",
+    },
+    
     // Web Development
     {
       slug: "nodejs",
@@ -437,7 +469,22 @@ export class DigitalOceanClient {
 
   // Helper method to map application slugs to valid image IDs
   private getImageForApplication(appSlug?: string): string {
-    if (!appSlug || appSlug === 'none') return 'ubuntu-20-04-x64';
+    if (!appSlug) return 'ubuntu-20-04-x64';
+    
+    // Handle distribution images (base OS images)
+    const distroMap: Record<string, string> = {
+      'none': 'ubuntu-20-04-x64',
+      'debian-11': 'debian-11-x64',
+      'centos-stream-9': 'centos-stream-9-x64',
+      'fedora-36': 'fedora-36-x64',
+      'rocky-linux-9': 'rockylinux-9-x64',
+    };
+    
+    // Check if it's a base distribution image
+    if (distroMap[appSlug]) {
+      console.log(`Distribution selected: ${appSlug}, Using image: ${distroMap[appSlug]}`);
+      return distroMap[appSlug];
+    }
     
     // In a real implementation, these would be actual DO application images
     // For our mock implementation, we'll still use proper naming but point to Ubuntu

@@ -473,15 +473,40 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           password: rootPassword // Always use password authentication
         } as any;
         
-        droplet = await digitalOcean.createDroplet(createOptions);
-        console.log(`[DEBUG] Droplet created successfully with ID: ${droplet.id}`);
+        // Try-catch with detailed error handling for server creation
+        try {
+          droplet = await digitalOcean.createDroplet(createOptions);
+          console.log(`[DEBUG] Droplet created successfully with ID: ${droplet.id}`);
+        } catch (doError) {
+          console.error(`[ERROR] DigitalOcean API error during createDroplet:`, doError);
+          
+          // Extract and clean up the error message for the user
+          let errorMessage = (doError as Error).message;
+          
+          // Check for common error patterns and provide more helpful messages
+          if (errorMessage.includes('422 Unprocessable Entity')) {
+            if (errorMessage.includes('application') || errorMessage.includes('image')) {
+              throw new Error(
+                "Application not available in this region. Please try selecting a different application or region. " +
+                "For maximum compatibility, try using a Base OS option instead of an application."
+              );
+            } else if (errorMessage.includes('size')) {
+              throw new Error(
+                "Selected size not available in this region. Please try a different server size or region."
+              );
+            } else if (errorMessage.includes('name')) {
+              throw new Error(
+                "Invalid server name. Server names must be valid hostnames containing only letters, numbers, hyphens, and periods."
+              );
+            }
+          }
+          
+          // Fall back to general error message
+          throw new Error(`Failed to create server: ${errorMessage}`);
+        }
       } catch (error) {
         console.error(`[ERROR] Failed to create server with DigitalOcean:`, error);
-        
-        // Extract and clean up the error message for the user
-        let errorMessage = (error as Error).message;
-        
-        throw new Error(`Failed to create server: ${errorMessage}`);
+        throw error;
       }
 
       // Create the server including rootPassword field and mark as active immediately for billing

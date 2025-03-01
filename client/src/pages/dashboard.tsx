@@ -269,6 +269,15 @@ export default function Dashboard() {
                         <Button 
                           type="button"
                           size="sm" 
+                          variant={applicationTypeFilter === "distribution" ? "default" : "outline"} 
+                          onClick={() => setApplicationTypeFilter("distribution")}
+                          className="text-xs h-8 bg-gradient-to-r from-gray-600 to-gray-800 text-white hover:from-gray-700 hover:to-gray-900 hover:text-white"
+                        >
+                          Base OS
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
                           variant={applicationTypeFilter === "game-server" ? "default" : "outline"} 
                           onClick={() => setApplicationTypeFilter("game-server")}
                           className="text-xs h-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:text-white"
