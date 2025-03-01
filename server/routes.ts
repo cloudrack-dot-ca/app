@@ -1054,7 +1054,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       return res.sendStatus(404);
     }
 
-    const { password, digital_ocean_integration } = req.body;
+    const { password, digital_ocean_integration, cloudrack_integration } = req.body;
     if (!password) {
       return res.status(400).json({ message: "Password is required" });
     }
@@ -1084,7 +1084,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // we would make an API call here to reset the server's root password.
       // For demonstration purposes, we are just storing it in our database.
       
-      if (cloudrack_integration || digital_ocean_integration) {
+      const useCloudRackApi = req.body.cloudrack_integration || req.body.digital_ocean_integration;
+      if (useCloudRackApi) {
         console.log(`CloudRack integration flag set for password update on server ${serverId}`);
         // This would be where we'd make the API call to CloudRack
       }

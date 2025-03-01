@@ -142,11 +142,18 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       term.writeln('\x1b[1;33mNote: Connection may take up to 30 seconds for new servers\x1b[0m');
       
       // Create a socket.io connection to the server with query parameters
+      // Add enhanced reconnection options to fix connection issues
       const socket = io(`${window.location.origin}`, {
         query: {
           serverId: serverId.toString(),
           userId: user?.id.toString()
-        }
+        },
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000, // Increase timeout for slower connections
+        forceNew: true  // Force a new connection to avoid socket reuse issues
       });
       
       socketRef.current = socket;

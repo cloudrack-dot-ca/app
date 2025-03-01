@@ -1,0 +1,70 @@
+[vite] connecting... client:495:8
+[vite] connected. client:618:14
+Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools react-dom.development.js:29895:16
+Fetching data for: /api/user queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Fetching data for: /api/servers/36 queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Fetching data for: /api/servers/36/volumes queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Fetching data for: /api/servers/36 queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Fetching data for: /api/servers/36/details queryClient.ts:59:14
+[Terminal Debug] Loading password data... server-terminal-real.tsx:52:14
+Terminal initializing, root password available: false server-terminal-real.tsx:63:12
+GET
+wss://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/socket.io/?serverId=36&userId=3&EIO=4&transport=websocket&sid=3OclXZ04tkNo75CzAAAA
+NS_ERROR_WEBSOCKET_CONNECTION_REFUSED
+
+[Terminal Debug] Server 36 password status: 
+Object { hasPassword: true, passwordLength: 17 }
+server-terminal-real.tsx:45:14
+Terminal initializing, root password available: true server-terminal-real.tsx:63:12
+Firefox can’t establish a connection to the server at wss://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/socket.io/?serverId=36&userId=3&EIO=4&transport=websocket&sid=3OclXZ04tkNo75CzAAAA. websocket.js:119:18
+The connection to wss://1d24ac8f-7163-4f30-b562-72fcc54a8736-00-3skk0g54n4ype.riker.replit.dev/socket.io/?serverId=36&userId=3&EIO=4&transport=websocket&sid=3OclXZ04tkNo75CzAAAA was interrupted while the page was loading. websocket.js:119:18
+Socket connected to backend server-terminal-real.tsx:156:16
+Fetching data for: /api/servers queryClient.ts:59:14
+Fetching data for: /api/regions queryClient.ts:59:14
+Fetching data for: /api/sizes queryClient.ts:59:14
+Fetching data for: /api/applications queryClient.ts:59:14
+Fetching data for: /api/ssh-keys queryClient.ts:59:14
+Fetching data for: /api/servers queryClient.ts:59:14
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. Dialog.tsx:540:35
+Fetching data for: /api/servers queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "38", id: "38" }
+server-detail.tsx:302:10
+Path ID: 38 server-detail.tsx:303:10
+URL Path: /servers/38 server-detail.tsx:304:10
+Valid server ID found: 38 server-detail.tsx:319:16
+Fetching data for: /api/servers/38 queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "38", id: "38" }
+server-detail.tsx:302:10
+Path ID: 38 server-detail.tsx:303:10
