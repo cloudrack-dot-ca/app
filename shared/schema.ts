@@ -61,9 +61,10 @@ export const billingTransactions = pgTable("billing_transactions", {
   amount: integer("amount").notNull(), // in cents
   currency: text("currency").notNull(),
   status: text("status").notNull(), // completed, pending, failed
-  type: text("type").notNull(), // deposit, server_charge, volume_charge
+  type: text("type").notNull(), // deposit, hourly_server_charge, hourly_volume_charge, bandwidth_overage, server_deleted_insufficient_funds
   paypalTransactionId: text("paypal_transaction_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  description: text("description"), // Optional description for the transaction
 });
 
 // Updated: Support Tickets with server relation
@@ -115,6 +116,17 @@ export const insertUserSchema = createInsertSchema(users).pick({
   isAdmin: true,
   balance: true,
   apiKey: true,
+});
+
+export const insertTransactionSchema = createInsertSchema(billingTransactions).pick({
+  userId: true,
+  amount: true,
+  currency: true,
+  status: true,
+  type: true,
+  paypalTransactionId: true,
+  createdAt: true,
+  description: true,
 });
 
 export const insertServerSchema = createInsertSchema(servers).pick({

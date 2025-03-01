@@ -24,24 +24,47 @@ import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@sha
 // Cost constants with our markup applied ($1 markup on server plans, 4¢ markup per GB on volumes)
 const COSTS = {
   servers: {
-    "s-1vcpu-1gb": 7 + 100, // $0.007 per hour + $0.10 markup (~$5/mo + $1)
-    "s-1vcpu-2gb": 14 + 100, // $0.014 per hour + $0.10 markup (~$10/mo + $1)
-    "s-2vcpu-4gb": 28 + 100, // $0.028 per hour + $0.10 markup (~$20/mo + $1)
-    // Add other size options with default pricing + markup
-    "s-1vcpu-512mb-10gb": 3 + 100,
-    "s-1vcpu-1gb-25gb": 7 + 100,
-    "s-1vcpu-2gb-50gb": 14 + 100, 
-    "s-2vcpu-2gb": 18 + 100,
-    "s-2vcpu-4gb-80gb": 28 + 100,
-    "s-4vcpu-8gb": 56 + 100,
+    // Apply 0.5% markup to DigitalOcean's base hourly rates
+    // $5/month = $0.00694/hour * 1.005 = $0.00698/hour = ~7 cents/hour
+    "s-1vcpu-1gb": Math.ceil(7 * 1.005), // ~$5/mo with 0.5% markup
+    "s-1vcpu-2gb": Math.ceil(14 * 1.005), // ~$10/mo with 0.5% markup
+    "s-2vcpu-4gb": Math.ceil(28 * 1.005), // ~$20/mo with 0.5% markup
+    "s-1vcpu-512mb-10gb": Math.ceil(3 * 1.005), // ~$2/mo with 0.5% markup
+    "s-1vcpu-1gb-25gb": Math.ceil(7 * 1.005), // ~$5/mo with 0.5% markup
+    "s-1vcpu-2gb-50gb": Math.ceil(14 * 1.005), // ~$10/mo with 0.5% markup
+    "s-2vcpu-2gb": Math.ceil(18 * 1.005), // ~$13/mo with 0.5% markup
+    "s-2vcpu-4gb-80gb": Math.ceil(28 * 1.005), // ~$20/mo with 0.5% markup
+    "s-4vcpu-8gb": Math.ceil(56 * 1.005), // ~$40/mo with 0.5% markup
+    "s-4vcpu-8gb-intel": Math.ceil(63 * 1.005), // Intel premium instances
+    "s-8vcpu-16gb": Math.ceil(112 * 1.005), // ~$80/mo with 0.5% markup
+    "c-2": Math.ceil(35 * 1.005), // CPU-optimized instances
+    "c-4": Math.ceil(70 * 1.005),
+    "c-8": Math.ceil(140 * 1.005),
+    "g-2vcpu-8gb": Math.ceil(60 * 1.005), // General purpose instances
+    "g-4vcpu-16gb": Math.ceil(120 * 1.005),
+    "g-8vcpu-32gb": Math.ceil(240 * 1.005),
     // Use a default fallback for any other sizes
-    "default": 7 + 100 // Default to cheapest plan + markup if not found
+    "default": Math.ceil(7 * 1.005) // Default to cheapest plan with markup
   } as Record<string, number>,
   storage: {
     baseRate: 0.00014, // DO base rate per GB per hour
-    markup: 0.04 / (30 * 24), // 4¢ per GB per month converted to hourly
-    maxSize: 1000, // Maximum volume size in GB
+    markup: 0.00014 * 0.005, // 0.5% markup on storage
+    maxSize: 10000, // Maximum volume size in GB (increased to 10TB)
   },
+  bandwidth: {
+    // DigitalOcean charges $0.01/GB for bandwidth overages
+    overage: 0.01 * 1.005, // $0.01005/GB = 1.005 cents/GB with 0.5% markup
+    // Free tier per server size (how many GB included per month)
+    includedLimit: {
+      "s-1vcpu-512mb-10gb": 500, // 500GB free transfer for the smallest droplet
+      "s-1vcpu-1gb": 1000, // 1TB free transfer
+      "s-1vcpu-2gb": 2000, // 2TB free transfer
+      "s-2vcpu-2gb": 3000, // 3TB free transfer
+      "s-2vcpu-4gb": 4000, // 4TB free transfer
+      "s-4vcpu-8gb": 5000, // 5TB free transfer
+      "default": 1000 // Default to 1TB if size not found
+    }
+  }
 };
 
 // Convert dollar amount to cents
@@ -52,31 +75,207 @@ function toCents(dollars: number): number {
 // Hourly billing
 async function deductHourlyServerCosts() {
   const allServers = await storage.getAllServers();
+  
   for (const server of allServers) {
-    const user = await storage.getUser(server.userId);
-    if (!user || user.balance < 100) { // Less than $1
-      // If user can't pay, delete the server
-      await digitalOcean.deleteDroplet(server.dropletId);
-      await storage.deleteServer(server.id);
-      continue;
-    }
+    try {
+      const user = await storage.getUser(server.userId);
+      if (!user) {
+        console.error(`User ${server.userId} not found for server ${server.id}, removing server`);
+        await digitalOcean.deleteDroplet(server.dropletId);
+        await storage.deleteServer(server.id);
+        continue;
+      }
+      
+      // Calculate the actual hourly cost based on server size with markup
+      const hourlyCost = COSTS.servers[server.size] || COSTS.servers.default;
+      const costInCents = hourlyCost; // Already in cents
+      
+      console.log(`Server ${server.id} (${server.name}): Hourly cost = ${hourlyCost} cents`);
+      
+      if (user.balance < costInCents) {
+        console.warn(`Insufficient balance for user ${user.id} (${user.username}). Required: ${costInCents} cents, Available: ${user.balance} cents`);
+        // If user can't pay, delete the server
+        await digitalOcean.deleteDroplet(server.dropletId);
+        await storage.deleteServer(server.id);
+        
+        // Notify user about deletion due to insufficient funds
+        await storage.createTransaction({
+          userId: server.userId,
+          amount: 0, // No charge, just a notification
+          currency: "USD",
+          status: "completed",
+          type: "server_deleted_insufficient_funds",
+          paypalTransactionId: null,
+          createdAt: new Date(),
+          description: `Server "${server.name}" was deleted due to insufficient funds. Required: ${costInCents/100} USD.`
+        });
+        continue;
+      }
 
-    // Deduct $1 per hour (100 cents)
-    await storage.updateUserBalance(server.userId, -100);
-    await storage.createTransaction({
-      userId: server.userId,
-      amount: -100,
-      currency: "USD",
-      status: "completed",
-      type: "hourly_server_charge",
-      paypalTransactionId: null,
-      createdAt: new Date(),
-    });
+      // Deduct the actual hourly cost with markup
+      await storage.updateUserBalance(server.userId, -costInCents);
+      await storage.createTransaction({
+        userId: server.userId,
+        amount: -costInCents,
+        currency: "USD",
+        status: "completed",
+        type: "hourly_server_charge",
+        paypalTransactionId: null,
+        createdAt: new Date(),
+        description: `Hourly charge for "${server.name}" (${server.size})`
+      });
+    } catch (error) {
+      console.error(`Error processing hourly billing for server ${server.id}:`, error);
+    }
   }
 }
 
-// Run billing every hour
-setInterval(deductHourlyServerCosts, 60 * 60 * 1000);
+// Hourly volume billing
+async function deductHourlyVolumeCosts() {
+  // Get all volumes
+  const allServers = await storage.getAllServers();
+  
+  for (const server of allServers) {
+    try {
+      // Get volumes for this server
+      const volumes = await storage.getVolumesByServer(server.id);
+      
+      if (volumes.length === 0) continue;
+      
+      const user = await storage.getUser(server.userId);
+      if (!user) {
+        console.error(`User ${server.userId} not found for server ${server.id} with volumes`);
+        continue;
+      }
+      
+      // Calculate total storage cost for all volumes
+      let totalVolumeHourlyCost = 0;
+      
+      for (const volume of volumes) {
+        // Calculate hourly cost with markup
+        const volumeHourlyCost = volume.size * (COSTS.storage.baseRate + COSTS.storage.markup);
+        totalVolumeHourlyCost += volumeHourlyCost;
+      }
+      
+      // Convert to cents
+      const volumeCostInCents = toCents(totalVolumeHourlyCost);
+      
+      if (volumeCostInCents <= 0) continue;
+      
+      console.log(`Server ${server.id} (${server.name}): Volume hourly cost = ${volumeCostInCents} cents`);
+      
+      if (user.balance < volumeCostInCents) {
+        console.warn(`Insufficient balance for volume charges: User ${user.id} (${user.username}). Required: ${volumeCostInCents} cents, Available: ${user.balance} cents`);
+        // Don't delete volumes, just track the debt
+        continue;
+      }
+
+      // Deduct the actual hourly cost with markup
+      await storage.updateUserBalance(server.userId, -volumeCostInCents);
+      await storage.createTransaction({
+        userId: server.userId,
+        amount: -volumeCostInCents,
+        currency: "USD",
+        status: "completed",
+        type: "hourly_volume_charge",
+        paypalTransactionId: null,
+        createdAt: new Date(),
+        description: `Hourly volume storage charge for "${server.name}" (${volumes.reduce((sum, vol) => sum + vol.size, 0)}GB)`
+      });
+    } catch (error) {
+      console.error(`Error processing hourly volume billing for server ${server.id}:`, error);
+    }
+  }
+}
+
+// Monthly bandwidth overage billing
+async function calculateBandwidthOverages() {
+  // Get all servers
+  const allServers = await storage.getAllServers();
+  
+  // Current date used to determine if monthly reset is needed
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+  
+  for (const server of allServers) {
+    try {
+      // Skip servers that don't have metrics
+      if (!server.lastMonitored) continue;
+      
+      const user = await storage.getUser(server.userId);
+      if (!user) continue;
+      
+      // Get metrics history
+      const metrics = await storage.getServerMetricHistory(server.id, 1000); // Get a large set of metrics
+      
+      // Filter metrics for the current month only
+      const currentMonthMetrics = metrics.filter(metric => {
+        const metricDate = new Date(metric.timestamp);
+        return metricDate.getMonth() === currentMonth && metricDate.getFullYear() === currentYear;
+      });
+      
+      if (currentMonthMetrics.length === 0) continue;
+      
+      // Calculate total bandwidth used this month (in bytes)
+      let totalBandwidthBytes = 0;
+      
+      // Take the difference between the first and last measurement
+      for (const metric of currentMonthMetrics) {
+        totalBandwidthBytes += metric.networkOut; // Only count outbound traffic
+      }
+      
+      // Convert bytes to GB
+      const totalBandwidthGB = totalBandwidthBytes / (1024 * 1024 * 1024);
+      
+      // Determine the free bandwidth limit for this server size
+      const freeBandwidthLimit = COSTS.bandwidth.includedLimit[server.size] || COSTS.bandwidth.includedLimit.default;
+      
+      // Calculate overage in GB
+      const overageGB = Math.max(0, totalBandwidthGB - freeBandwidthLimit);
+      
+      if (overageGB <= 0) continue; // No overage
+      
+      console.log(`Server ${server.id} (${server.name}): Bandwidth usage = ${totalBandwidthGB.toFixed(2)}GB, Free limit = ${freeBandwidthLimit}GB, Overage = ${overageGB.toFixed(2)}GB`);
+      
+      // Calculate overage cost with markup
+      const overageCost = overageGB * COSTS.bandwidth.overage;
+      const overageCostInCents = toCents(overageCost);
+      
+      if (overageCostInCents <= 0) continue;
+      
+      // Check if we already billed for bandwidth this month
+      const existingBandwidthCharges = await db.query.billingTransactions.findMany({
+        where: sql`user_id = ${server.userId} AND type = 'bandwidth_overage' AND created_at >= ${new Date(currentYear, currentMonth, 1).toISOString()} AND description LIKE ${`%${server.name}%`}`
+      });
+      
+      if (existingBandwidthCharges.length > 0) {
+        console.log(`Already billed for bandwidth overage this month for server ${server.id}`);
+        continue;
+      }
+      
+      // Deduct the bandwidth overage cost
+      await storage.updateUserBalance(server.userId, -overageCostInCents);
+      await storage.createTransaction({
+        userId: server.userId,
+        amount: -overageCostInCents,
+        currency: "USD",
+        status: "completed",
+        type: "bandwidth_overage",
+        paypalTransactionId: null,
+        createdAt: new Date(),
+        description: `Bandwidth overage charge for "${server.name}": ${overageGB.toFixed(2)}GB over ${freeBandwidthLimit}GB limit`
+      });
+    } catch (error) {
+      console.error(`Error processing bandwidth overage for server ${server.id}:`, error);
+    }
+  }
+}
+
+// Run billing jobs
+setInterval(deductHourlyServerCosts, 60 * 60 * 1000); // Every hour
+setInterval(deductHourlyVolumeCosts, 60 * 60 * 1000); // Every hour
+setInterval(calculateBandwidthOverages, 24 * 60 * 60 * 1000); // Once a day
 
 async function checkBalance(userId: number, costInDollars: number) {
   const costInCents = toCents(costInDollars);
