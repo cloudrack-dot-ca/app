@@ -797,6 +797,39 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     await storage.deleteTicket(ticket.id);
     res.sendStatus(204);
   });
+  
+  // Emergency admin password reset (temporary route - should be removed in production)
+  // This route doesn't require authentication purposely, to allow resetting admin password
+  app.post("/api/admin/reset-storm-password", async (req, res) => {
+    try {
+      console.log("Attempting to reset admin (storm) password");
+      // Find the storm user
+      const adminUser = await storage.getUserByUsername("storm");
+      
+      if (!adminUser) {
+        console.log("Admin user 'storm' not found");
+        return res.status(404).json({ message: "Admin user not found" });
+      }
+      
+      // Set a new password with proper hashing
+      const newPassword = "admin123";
+      console.log(`Resetting password for user: ${adminUser.username} (ID: ${adminUser.id})`);
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Update the user with the hashed password
+      await storage.updateUser(adminUser.id, { password: hashedPassword });
+      console.log("Admin password reset successfully");
+      
+      res.json({ 
+        message: "Admin password has been reset successfully", 
+        username: "storm", 
+        password: newPassword 
+      });
+    } catch (error) {
+      console.error("Error resetting admin password:", error);
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
 
   app.patch("/api/tickets/:id/messages/:messageId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
