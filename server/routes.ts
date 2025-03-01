@@ -1240,16 +1240,38 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.status(404).json({ message: "No firewall found for this server" });
       }
       
-      // Remove the rule
-      if (rule_type === 'inbound') {
-        await digitalOcean.removeRulesFromFirewall(firewall.id!, [rule], []);
-      } else {
-        await digitalOcean.removeRulesFromFirewall(firewall.id!, [], [rule]);
+      // For now, we'll work around the Digital Ocean API limitation by replacing the entire rule set
+      // This is more reliable than trying to delete individual rules which can be problematic
+      try {
+        // Create new arrays excluding the rule we want to delete
+        const updatedInboundRules = rule_type === 'inbound' 
+          ? firewall.inbound_rules.filter(r => 
+              !(r.protocol === rule.protocol && 
+                r.ports === rule.ports && 
+                JSON.stringify(r.sources) === JSON.stringify(rule.sources)))
+          : firewall.inbound_rules;
+          
+        const updatedOutboundRules = rule_type === 'outbound' 
+          ? firewall.outbound_rules.filter(r => 
+              !(r.protocol === rule.protocol && 
+                r.ports === rule.ports && 
+                JSON.stringify(r.destinations) === JSON.stringify(rule.destinations)))
+          : firewall.outbound_rules;
+        
+        // Update the firewall with the new rule sets
+        const updatedFirewall = await digitalOcean.updateFirewall(
+          firewall.id!, 
+          {
+            inbound_rules: updatedInboundRules,
+            outbound_rules: updatedOutboundRules
+          }
+        );
+        
+        res.json(updatedFirewall);
+      } catch (updateError) {
+        console.error("Error updating firewall rules:", updateError);
+        res.status(500).json({ message: "Failed to delete firewall rule - update method failed" });
       }
-      
-      // Get the updated firewall
-      const updatedFirewall = await digitalOcean.getFirewallByDropletId(server.dropletId);
-      res.json(updatedFirewall);
     } catch (error) {
       console.error("Error deleting firewall rule:", error);
       res.status(500).json({ message: "Failed to delete firewall rule" });
