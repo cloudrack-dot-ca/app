@@ -4,23 +4,22 @@ import { AlertTriangle } from "lucide-react";
 /**
  * CloudRack Terminal Notice Component
  * 
- * This component shows an informational banner about the CloudRack Terminal Key.
- * It explains how the web terminal works and what happens if the key is removed.
+ * This component shows an informational banner about the transition from CloudRack Terminal Key
+ * to the new System Key approach.
  */
 export function CloudRackTerminalNotice() {
   return (
-    <Alert className="mb-6 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
-      <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500" />
-      <AlertTitle className="text-amber-800 dark:text-amber-400">CloudRack Terminal Access</AlertTitle>
-      <AlertDescription className="text-amber-700 dark:text-amber-300">
+    <Alert className="mb-6 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+      <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-500" />
+      <AlertTitle className="text-blue-800 dark:text-blue-400">SSH System Key Update</AlertTitle>
+      <AlertDescription className="text-blue-700 dark:text-blue-300">
         <p className="mt-2">
-          CloudRack uses a managed SSH key to provide secure web terminal access to your servers. 
-          This key is automatically added to your servers during creation.
+          CloudRack has upgraded the SSH key system to provide more secure and standardized access to your servers.
+          The System Key is now used for web terminal access and is automatically added to your servers during creation.
         </p>
         <p className="mt-2">
-          <strong>Important:</strong> If you delete the "CloudRack Terminal Key" from your SSH keys, 
-          you will lose web terminal access to all of your servers. You will still be able to connect 
-          via your own SSH keys.
+          <strong>Transition Notice:</strong> The legacy "CloudRack Terminal Key" is being phased out.
+          If you're still using it, please ensure you have the System Key installed to maintain terminal access.
         </p>
       </AlertDescription>
     </Alert>

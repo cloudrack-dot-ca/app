@@ -142,7 +142,7 @@ export function setupTerminalSocket(server: HttpServer) {
           status: 'connected',
           message: hasRootPassword ? 
             'Connected using password authentication' : 
-            'Connected using CloudRack Terminal Key'
+            'Connected using System SSH Key'
         });
         
         // Create a shell session
@@ -290,36 +290,59 @@ export function setupTerminalSocket(server: HttpServer) {
             message: 'Attempting password authentication'
           });
         } else {
-          // Otherwise try to use the CloudRack Terminal Key
+          // Try to use the System SSH Key first, fallback to CloudRack Terminal Key for backward compatibility
           try {
-            // Check if the user has the CloudRack key
-            const hasTerminalKey = await cloudRackKeyManager.hasCloudRackKey(parseInt(userId));
-            if (!hasTerminalKey) {
-              log(`User ${userId} does not have the CloudRack Terminal Key`, 'terminal');
-              socket.emit('error', 'CloudRack Terminal Key not found. Please set a root password for your server.');
-              socket.disconnect();
-              return;
-            }
+            // Check if user has the System key
+            const hasSystemKey = await systemKeyManager.hasSystemKey(parseInt(userId));
             
-            // Get the CloudRack key path
-            const keyPath = cloudRackKeyManager.getCloudRackPrivateKeyPath();
-            if (!fs.existsSync(keyPath)) {
-              log(`CloudRack Terminal Key file not found at ${keyPath}`, 'terminal');
-              socket.emit('error', 'CloudRack Terminal Key file not found. Please contact support.');
-              socket.disconnect();
-              return;
+            if (hasSystemKey) {
+              // System Key approach - use the system public key content for authentication
+              // Note: in SSH key authentication, we need to configure with known keys on the server
+              log(`User ${userId} has System SSH Key, using it for authentication`, 'terminal');
+              
+              // For System Key approach, we send the key fingerprint for server-side authentication
+              // The actual key is expected to be already in ~/.ssh/authorized_keys on the server
+              socket.emit('status', { 
+                status: 'auth_in_progress',
+                message: 'Attempting System SSH Key authentication'
+              });
+              
+              // No private key needed here, the server should recognize the system key
+              // We rely on the fact that this key is pre-authorized on the server during creation
+              
+            } else {
+              // Fallback to CloudRack key (temporary backward compatibility)
+              log(`System SSH Key not found for user ${userId}, falling back to CloudRack key`, 'terminal');
+              
+              // Check if user has the CloudRack key as fallback
+              const hasTerminalKey = await cloudRackKeyManager.hasCloudRackKey(parseInt(userId));
+              if (!hasTerminalKey) {
+                log(`User ${userId} does not have the CloudRack Terminal Key either`, 'terminal');
+                socket.emit('error', 'No SSH keys found. Please set a root password for your server or add the System SSH Key.');
+                socket.disconnect();
+                return;
+              }
+              
+              // Get the CloudRack key path
+              const keyPath = cloudRackKeyManager.getCloudRackPrivateKeyPath();
+              if (!fs.existsSync(keyPath)) {
+                log(`CloudRack Terminal Key file not found at ${keyPath}`, 'terminal');
+                socket.emit('error', 'CloudRack Terminal Key file not found. Please contact support.');
+                socket.disconnect();
+                return;
+              }
+              
+              // Use the CloudRack Terminal Key
+              config.privateKey = fs.readFileSync(keyPath);
+              log(`Connecting to SSH server at ${server.ipAddress} with CloudRack Terminal Key (fallback)`, 'terminal');
+              socket.emit('status', { 
+                status: 'auth_in_progress',
+                message: 'Attempting SSH key authentication (fallback mode)'
+              });
             }
-            
-            // Use the CloudRack Terminal Key
-            config.privateKey = fs.readFileSync(keyPath);
-            log(`Connecting to SSH server at ${server.ipAddress} with CloudRack Terminal Key`, 'terminal');
-            socket.emit('status', { 
-              status: 'auth_in_progress',
-              message: 'Attempting SSH key authentication'
-            });
           } catch (keyError) {
-            log(`Error with CloudRack Terminal Key: ${(keyError as Error).message}`, 'terminal');
-            socket.emit('error', 'Error with CloudRack Terminal Key. Please set a root password for your server.');
+            log(`Error with SSH key authentication: ${(keyError as Error).message}`, 'terminal');
+            socket.emit('error', 'Error with SSH key authentication. Please set a root password for your server.');
             socket.disconnect();
             return;
           }

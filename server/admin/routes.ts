@@ -235,6 +235,45 @@ export function registerAdminRoutes(app: Express) {
     }
   });
   
+  // CloudRack Terminal Key Cleanup Endpoint
+  app.delete('/api/admin/cloudrack-terminal-keys', async (req: Request, res: Response) => {
+    try {
+      // Find all SSH keys that are marked as CloudRack Terminal keys
+      const allUsers = await storage.getAllUsers();
+      let totalRemoved = 0;
+      let userCount = 0;
+      
+      // For each user, find and remove their CloudRack keys
+      for (const user of allUsers) {
+        const keys = await storage.getSSHKeysByUser(user.id);
+        const cloudRackKeys = keys.filter(key => key.isCloudRackKey && !key.isSystemKey);
+        
+        if (cloudRackKeys.length > 0) {
+          userCount++;
+          
+          // Delete each CloudRack key
+          for (const key of cloudRackKeys) {
+            await storage.deleteSSHKey(key.id);
+            totalRemoved++;
+            log(`Removed CloudRack Terminal Key ${key.id} for user ${user.id}`, 'admin');
+          }
+        }
+      }
+      
+      return res.status(200).json({
+        message: `Successfully cleaned up CloudRack Terminal Keys. Removed ${totalRemoved} keys from ${userCount} users.`,
+        keysRemoved: totalRemoved,
+        usersAffected: userCount
+      });
+    } catch (error) {
+      log(`Error cleaning up CloudRack Terminal Keys: ${error}`, 'admin');
+      return res.status(500).json({
+        message: "Error cleaning up CloudRack Terminal Keys",
+        error: (error as Error).message
+      });
+    }
+  });
+
   // Log that routes were registered
   log('Admin routes registered', 'admin');
 }
