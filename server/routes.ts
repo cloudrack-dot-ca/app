@@ -514,8 +514,96 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   app.get("/api/billing/transactions", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
-    const transactions = await storage.getTransactionsByUser(req.user.id);
-    res.json(transactions);
+    // Parse query parameters for pagination and filtering
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
+    
+    // Get all transactions for this user
+    const allTransactions = await storage.getTransactionsByUser(req.user.id);
+    
+    // Apply date filtering if provided
+    let filteredTransactions = allTransactions;
+    if (startDate || endDate) {
+      filteredTransactions = allTransactions.filter(tx => {
+        const txDate = new Date(tx.createdAt);
+        
+        // Check if transaction date is after startDate (if provided)
+        const afterStartDate = startDate ? txDate >= startDate : true;
+        
+        // Check if transaction date is before endDate (if provided)
+        const beforeEndDate = endDate ? txDate <= endDate : true;
+        
+        return afterStartDate && beforeEndDate;
+      });
+    }
+    
+    // Calculate pagination values
+    const totalItems = filteredTransactions.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const offset = (page - 1) * limit;
+    
+    // Get the paginated subset of transactions
+    const paginatedTransactions = filteredTransactions
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) // Sort by date descending
+      .slice(offset, offset + limit);
+    
+    // Return transactions with pagination metadata
+    res.json({
+      transactions: paginatedTransactions,
+      pagination: {
+        total: totalItems,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
+  });
+  
+  // Get invoice for a specific transaction
+  app.get("/api/billing/transactions/:id/invoice", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const transactionId = parseInt(req.params.id);
+      
+      // Get all user transactions
+      const userTransactions = await storage.getTransactionsByUser(req.user.id);
+      
+      // Find the specific transaction
+      const transaction = userTransactions.find(tx => tx.id === transactionId);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      // For now, we'll just return transaction details in JSON format
+      // In a real implementation, you would generate a PDF invoice here
+      res.json({
+        invoiceNumber: `INV-${transaction.id.toString().padStart(6, '0')}`,
+        date: transaction.createdAt,
+        customer: {
+          id: req.user.id,
+          name: req.user.username,
+        },
+        transaction: {
+          id: transaction.id,
+          type: transaction.type,
+          amount: transaction.amount,
+          description: transaction.description,
+          status: transaction.status,
+        }
+      });
+      
+      // Note: In a real implementation, we would use a library like PDFKit to generate 
+      // a PDF invoice and return it with the appropriate content-type header
+      
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
   });
 
   // Support Ticket Routes
