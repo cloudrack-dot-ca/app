@@ -75,6 +75,15 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 // Firewall Rule interface (simplified from the full interface in firewall-manager.tsx)
+// Schema for firewall disable confirmation
+const confirmFirewallDisableSchema = z.object({
+  confirmationText: z.literal("I CONFIRM DELETION OF RULES", {
+    errorMap: () => ({ message: "Please type the exact confirmation phrase" }),
+  }),
+});
+
+type ConfirmFirewallDisableFormValues = z.infer<typeof confirmFirewallDisableSchema>;
+
 interface FirewallRule {
   protocol: 'tcp' | 'udp' | 'icmp';
   ports: string;
@@ -257,15 +266,7 @@ const regionFlags: { [key: string]: string } = {
   'blr1': '🇮🇳 Bangalore',
 };
 
-// Schema for firewall confirmation dialog
-const confirmFirewallDisableSchema = z.object({
-  confirmationText: z.string()
-    .refine(val => val === "I CONFIRM DELETION OF RULES", {
-      message: "You must type 'I CONFIRM DELETION OF RULES' exactly to confirm."
-    })
-});
-
-type ConfirmFirewallDisableFormValues = z.infer<typeof confirmFirewallDisableSchema>;
+// Schema already defined above
 
 export default function ServerDetailPage() {
   // Extract and validate params - simplified approach for better compatibility
