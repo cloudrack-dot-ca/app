@@ -135,11 +135,33 @@ export function setupTerminalSocket(server: HttpServer) {
           }
           
           // Read the CloudRack SSH private key
-          const privateKey = fs.readFileSync(keyPath, 'utf8');
+          let privateKey = fs.readFileSync(keyPath, 'utf8');
           
           // Check private key format
-          if (!privateKey.includes('-----BEGIN') || !privateKey.includes('PRIVATE KEY-----')) {
-            throw new Error('Invalid SSH private key format. Please regenerate CloudRack keys.');
+          if (!privateKey.includes('-----BEGIN RSA PRIVATE KEY-----') || !privateKey.includes('-----END RSA PRIVATE KEY-----')) {
+            log('Invalid SSH private key format. Attempting to regenerate CloudRack keys.', 'terminal');
+            
+            // Force regeneration of keys - we need to access the private method
+            try {
+              await (cloudRackKeyManager as any).regenerateKeys();
+              
+              // Re-read the private key after regeneration
+              if (fs.existsSync(keyPath)) {
+                const newPrivateKey = fs.readFileSync(keyPath, 'utf8');
+                if (newPrivateKey.includes('-----BEGIN RSA PRIVATE KEY-----')) {
+                  log('Successfully regenerated CloudRack keys with correct format', 'terminal');
+                  // Use the new key
+                  privateKey = newPrivateKey;
+                } else {
+                  throw new Error('Failed to generate key in correct format after retry');
+                }
+              } else {
+                throw new Error('Key file not found after regeneration attempt');
+              }
+            } catch (regenerationError) {
+              log(`Failed to regenerate keys: ${regenerationError}`, 'terminal');
+              throw new Error('Invalid SSH private key format. Terminal functionality is unavailable.');
+            }
           }
           
           // Log connection attempt with key format info (masked)
