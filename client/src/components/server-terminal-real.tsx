@@ -4,16 +4,37 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Maximize2, Minimize2, Lock, Key } from 'lucide-react';
+import { RefreshCw, Maximize2, Minimize2, Lock, Key, Type } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery } from '@tanstack/react-query';
 import 'xterm/css/xterm.css';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ServerTerminalProps {
   serverId: number;
   serverName: string;
   ipAddress: string;
 }
+
+// Available terminal fonts
+const TERMINAL_FONTS = [
+  { 
+    name: "Default Monospace", 
+    value: 'Menlo, Monaco, "Courier New", "DejaVu Sans Mono", "Lucida Console", monospace'
+  },
+  { name: "Courier New", value: '"Courier New", monospace' },
+  { name: "DejaVu Sans Mono", value: '"DejaVu Sans Mono", monospace' },
+  { name: "Fira Code", value: '"Fira Code", monospace' },
+  { name: "Inconsolata", value: '"Inconsolata", monospace' },
+  { name: "JetBrains Mono", value: '"JetBrains Mono", monospace' },
+  { name: "Source Code Pro", value: '"Source Code Pro", monospace' },
+  { name: "Ubuntu Mono", value: '"Ubuntu Mono", monospace' },
+];
 
 export default function ServerTerminal({ serverId, serverName, ipAddress }: ServerTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -25,6 +46,24 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   const [connectionStatus, setConnectionStatus] = useState<string>('Disconnected');
   const socketRef = useRef<any>(null);
   const { user } = useAuth();
+  const [currentFont, setCurrentFont] = useState<string>(TERMINAL_FONTS[0].value);
+  
+  // Function to change terminal font
+  const changeTerminalFont = (newFont: string) => {
+    setCurrentFont(newFont);
+    
+    // If terminal exists, update its font
+    if (terminal) {
+      terminal.options.fontFamily = newFont;
+      
+      // Force a redraw by updating the terminal size
+      if (fitAddon) {
+        setTimeout(() => {
+          fitAddon.fit();
+        }, 50);
+      }
+    }
+  };
   
   // Get the server's root password from the API
   const { data: serverDetails } = useQuery<{ rootPassword?: string, id: number }>({
