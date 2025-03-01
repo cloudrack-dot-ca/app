@@ -129,7 +129,8 @@ export function registerAdminRoutes(app: Express) {
           status: 'completed',
           currency: 'USD',
           paypalTransactionId: null,
-          createdAt: new Date()
+          createdAt: new Date(),
+          description: `Admin adjustment: ${amountDifference > 0 ? 'Added' : 'Deducted'} ${absAmount/100} USD`
         });
       }
       
