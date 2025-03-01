@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Server } from "@shared/schema";
+import { Server, Volume } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import {
   BarChart,
   Bar
 } from "recharts";
-import { Activity, Database, HardDrive, Cpu, MemoryStick, Router, Wifi } from "lucide-react";
+import { Activity, Database, HardDrive, Cpu, MemoryStick, Router, Wifi, Clock, Server as ServerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ServerMetricsProps {
@@ -82,6 +82,13 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
   const { data: server } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
     enabled: !isNaN(serverId)
+  });
+  
+  // Query to get volumes attached to this server
+  const { data: volumes } = useQuery<Volume[]>({
+    queryKey: [`/api/servers/${serverId}/volumes`],
+    enabled: !isNaN(serverId),
+    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined
   });
 
   // Safe access to metrics data with fallbacks
@@ -210,8 +217,69 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
         </div>
       </div>
 
+      {/* Server Info */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <ServerIcon className="h-5 w-5 mr-2 text-blue-600" />
+              Server Information
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Server Uptime and Created Time */}
+            <div className="space-y-2">
+              <div className="flex items-center text-sm font-medium">
+                <Clock className="h-4 w-4 mr-2 text-slate-600" />
+                Server Uptime
+              </div>
+              <div className="text-sm">
+                <div className="font-semibold">{formatUptime(currentMetrics.uptimeSeconds)}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Created {server?.name ? new Date(parseInt(server.dropletId) * 1000).toLocaleString() : "Unknown"}
+                </div>
+              </div>
+            </div>
+            
+            {/* Volume Information */}
+            <div className="space-y-2">
+              <div className="flex items-center text-sm font-medium">
+                <Database className="h-4 w-4 mr-2 text-slate-600" />
+                Attached Volumes
+              </div>
+              <div className="text-sm">
+                <div className="font-semibold">{volumes?.length || 0} volumes</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {volumes?.length 
+                    ? `Total: ${volumes.reduce((sum, vol) => sum + vol.sizeGb, 0)} GB` 
+                    : "No volumes attached"}
+                </div>
+              </div>
+            </div>
+            
+            {/* Network Info */}
+            <div className="space-y-2">
+              <div className="flex items-center text-sm font-medium">
+                <Router className="h-4 w-4 mr-2 text-slate-600" />
+                Network Traffic
+              </div>
+              <div className="text-sm">
+                <div className="text-xs">
+                  <span className="text-green-500">▲</span> Out: {formatBytes(currentMetrics.networkOut)}/s
+                </div>
+                <div className="text-xs">
+                  <span className="text-blue-500">▼</span> In: {formatBytes(currentMetrics.networkIn)}/s
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Current Metrics Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
@@ -256,26 +324,10 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
             <Progress value={currentMetrics.diskUsage} className="h-2" />
             <div className="text-xs text-muted-foreground mt-1">
               {Math.round((specs.disk * currentMetrics.diskUsage) / 100)} GB of {specs.disk} GB
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <Wifi className="h-4 w-4 mr-2 text-purple-500" />
-              Network
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs mb-1">
-              <span className="text-green-500">▲</span> Out: {formatBytes(currentMetrics.networkOut)}/s
-            </div>
-            <div className="text-xs mb-2">
-              <span className="text-blue-500">▼</span> In: {formatBytes(currentMetrics.networkIn)}/s
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Uptime: {formatUptime(currentMetrics.uptimeSeconds)}
+              {volumes?.length ? 
+                <span className="ml-1">+ {volumes.reduce((sum, vol) => sum + vol.sizeGb, 0)} GB external</span> 
+                : null
+              }
             </div>
           </CardContent>
         </Card>
