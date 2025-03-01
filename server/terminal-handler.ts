@@ -193,11 +193,13 @@ export function setupTerminalSocket(server: HttpServer) {
             host: server.ipAddress,
             port: 22,
             username: 'root',
-            readyTimeout: 40000, // Extended timeout even further
+            readyTimeout: 60000, // Extended timeout even further
             keepaliveInterval: 5000,
-            // Retry connection attempts
-            retries: 2,
+            // Don't retry too many times to avoid auth lockouts
+            retries: 1,
             retry_delay: 2000,
+            // Explicitly set authentication method to password 
+            authHandler: null, // We will set our own auth handler
             // Set explicit algorithms for better compatibility with older servers
             algorithms: {
               kex: [
@@ -234,10 +236,13 @@ export function setupTerminalSocket(server: HttpServer) {
             }
           };
           
-          // If the server has a root password, use password authentication instead of key
+          // Only use password authentication for improved reliability
           if (server.rootPassword) {
             log(`Using password authentication for server ${server.id}`, 'terminal');
             connectionConfig.password = server.rootPassword;
+            
+            // Remove options that may interfere with password auth
+            connectionConfig.privateKey = undefined;
             
             // Tell client we're using password auth
             socket.emit('status', { 
@@ -245,15 +250,9 @@ export function setupTerminalSocket(server: HttpServer) {
               message: 'Using stored root password for authentication'
             });
           } else {
-            // Use SSH key authentication with explicit PEM format
-            log(`Using key-based authentication for server ${server.id}`, 'terminal');
-            connectionConfig.privateKey = privateKey;
-            
-            // Tell client we're using key auth
-            socket.emit('status', { 
-              status: 'connecting',
-              message: 'Using CloudRack Terminal Key for authentication'
-            });
+            log('No root password available for authentication', 'terminal');
+            socket.emit('error', 'No password is set for this server. Please set a root password to use the terminal.');
+            throw new Error('Root password required for terminal access');
           }
           
           // Always try keyboard-interactive as fallback
@@ -263,37 +262,44 @@ export function setupTerminalSocket(server: HttpServer) {
           connectionConfig.authHandler = (methodsLeft: string[], partialSuccess: boolean, callback: Function) => {
             // Guard against null or undefined methodsLeft
             if (!methodsLeft || !Array.isArray(methodsLeft)) {
-              log('Warning: Auth methods list is invalid, defaulting to publickey', 'terminal');
-              return callback('publickey');
+              log('Warning: Auth methods list is invalid', 'terminal');
+              if (server.rootPassword) {
+                return callback('password');
+              }
+              socket.emit('error', 'No authentication methods available. Please set a root password for your server.');
+              return callback(null);
             }
             
             // Safely log available methods
             log(`SSH auth methods left: ${methodsLeft.join ? methodsLeft.join(', ') : String(methodsLeft)}`, 'terminal');
             
-            // PRIORITY ORDER FOR AUTHENTICATION METHODS:
-            // 1. Password auth if we have a root password
-            // 2. Keyboard-interactive with password fallback
-            // 3. Public key authentication
+            // SIMPLIFIED AUTHENTICATION - ONLY USE PASSWORD
+            // Only proceed if we have a root password set for the server
+            if (!server.rootPassword) {
+              log('No root password available for authentication', 'terminal');
+              socket.emit('error', 'No password is set for this server. Please set a root password to use the terminal.');
+              return callback(null);
+            }
             
-            if (server.rootPassword && methodsLeft.includes('password')) {
+            // Try password auth first if available
+            if (methodsLeft.includes('password')) {
               log('Using password auth method with stored root password', 'terminal');
               return callback('password');
-            } else if (methodsLeft.includes('keyboard-interactive')) {
-              log('Using keyboard-interactive auth method', 'terminal');
-              
-              // Keyboard-interactive will use the root password if available
+            } 
+            // Then try keyboard-interactive which will also use the password
+            else if (methodsLeft.includes('keyboard-interactive')) {
+              log('Using keyboard-interactive auth method with root password', 'terminal');
               return callback('keyboard-interactive');
-            } else if (methodsLeft.includes('publickey')) {
-              log('Using publickey auth method', 'terminal');
-              return callback('publickey');
-            } else {
-              // No supported methods left - try password as last resort if we have one
-              if (server.rootPassword) {
-                log('No standard methods available, trying password as last resort', 'terminal');
-                return callback('password');
-              }
-              // Otherwise, give up
-              log('No authentication methods available', 'terminal');
+            }
+            // As a last resort, try none - just in case the server allows it
+            else if (methodsLeft.includes('none')) {
+              log('Trying none auth method (unlikely to work)', 'terminal');
+              return callback('none');
+            }
+            // Otherwise, report that no suitable auth methods are available
+            else {
+              log('No supported auth methods available', 'terminal');
+              socket.emit('error', 'Server does not support password authentication. Please contact support.');
               return callback(null);
             }
           };
