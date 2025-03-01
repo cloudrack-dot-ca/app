@@ -22,21 +22,37 @@ export async function hashPassword(password: string) {
 }
 
 export async function comparePasswords(supplied: string, stored: string) {
-  // Check if the stored password has the expected format
-  if (!stored || !stored.includes(".")) {
-    console.error("Invalid password format in database");
-    return false;
+  // Handle plaintext passwords - TEMPORARY SOLUTION
+  // This is for compatibility with existing accounts that might have plaintext passwords
+  // First check if password is stored in plaintext format (not recommended!)
+  if (!stored.includes(".")) {
+    console.log("WARNING: Plaintext password detected, comparing directly");
+    // If the password is stored in plaintext, check if it matches directly
+    const match = supplied === stored;
+    
+    // Automatically upgrade to secure hash if plaintext password matches
+    if (match) {
+      console.log("Password matches plaintext - password should be upgraded");
+    }
+    
+    return match;
   }
   
-  const [hashed, salt] = stored.split(".");
-  if (!hashed || !salt) {
-    console.error("Invalid password hash or salt");
+  // Normal case - password is stored with proper hash format
+  try {
+    const [hashed, salt] = stored.split(".");
+    if (!hashed || !salt) {
+      console.error("Invalid password hash or salt format");
+      return false;
+    }
+    
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error("Error comparing passwords:", error);
     return false;
   }
-  
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
 export function setupAuth(app: Express) {
@@ -60,11 +76,35 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
+      if (!user) {
         return done(null, false);
-      } else {
-        return done(null, user);
       }
+      
+      const passwordMatches = await comparePasswords(password, user.password);
+      
+      if (!passwordMatches) {
+        return done(null, false);
+      }
+      
+      // Automatic password upgrade if plain text password was detected
+      if (!user.password.includes(".")) {
+        try {
+          console.log(`Upgrading password hash for user ${user.id}`);
+          const hashedPassword = await hashPassword(password);
+          await storage.updateUser(user.id, { password: hashedPassword });
+          
+          // Get the updated user
+          const updatedUser = await storage.getUser(user.id);
+          if (updatedUser) {
+            return done(null, updatedUser);
+          }
+        } catch (error) {
+          console.error("Error upgrading password hash:", error);
+          // Continue login even if upgrade fails
+        }
+      }
+      
+      return done(null, user);
     }),
   );
 
