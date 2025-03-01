@@ -329,14 +329,14 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         droplet = await digitalOcean.createDroplet(createOptions);
         console.log(`[DEBUG] Droplet created successfully with ID: ${droplet.id}`);
       } catch (error) {
-        console.error(`[ERROR] Failed to create server with CloudRack:`, error);
+        console.error(`[ERROR] Failed to create server with DigitalOcean:`, error);
         
         // Extract and clean up the error message for the user
         let errorMessage = (error as Error).message;
         
         // Look for specific error patterns related to SSH keys
         if (errorMessage.includes("ssh_keys")) {
-          errorMessage = "SSH key validation failed. Please check if your SSH key is properly formatted and registered with CloudRack.";
+          errorMessage = "SSH key validation failed. Please check if your SSH key is properly formatted and registered with DigitalOcean.";
         }
         
         throw new Error(`Failed to create server: ${errorMessage}`);
