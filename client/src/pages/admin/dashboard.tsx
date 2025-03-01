@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -66,6 +67,7 @@ import {
   BadgeX, 
   Ban, 
   CircleDollarSign, 
+  Home,
   Laptop, 
   Server, 
   Settings, 
@@ -351,10 +353,20 @@ export default function AdminDashboard() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 flex items-center">
-        <Settings className="h-8 w-8 mr-2" />
-        Admin Dashboard
-      </h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold flex items-center">
+          <Settings className="h-8 w-8 mr-2" />
+          Admin Dashboard
+        </h1>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard">
+            <Button variant="outline" size="sm">
+              <Home className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
+          </Link>
+        </div>
+      </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
         <TabsList className="grid grid-cols-6 w-full">
