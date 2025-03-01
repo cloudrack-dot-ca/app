@@ -78,18 +78,35 @@ export default function ServerCard({ server }: ServerCardProps) {
             <Button 
               variant="default" 
               className="flex-1"
-              asChild
               onClick={() => {
-                // Pre-load server data into cache if possible to avoid loading issues
-                queryClient.prefetchQuery({
-                  queryKey: [`/api/servers/${server.id}`],
-                });
+                try {
+                  // Ensure it's a valid server ID
+                  const validId = server.id ? parseInt(String(server.id)) : 0;
+                  if (isNaN(validId) || validId <= 0) {
+                    throw new Error("Invalid server ID");
+                  }
+                  
+                  console.log("Navigating to server detail, ID:", validId);
+                  
+                  // Pre-load server data into cache if possible to avoid loading issues
+                  queryClient.prefetchQuery({
+                    queryKey: [`/api/servers/${validId}`],
+                  });
+                  
+                  // Force navigation to ensure consistent routing
+                  window.location.href = `/servers/${validId}`;
+                } catch (err) {
+                  console.error("Navigation error:", err);
+                  toast({
+                    title: "Navigation Error",
+                    description: "Could not navigate to server details. Please try again.",
+                    variant: "destructive"
+                  });
+                }
               }}
             >
-              <Link href={`/servers/${server.id}`}>
-                <ServerIcon className="h-4 w-4 mr-2" />
-                Manage Server
-              </Link>
+              <ServerIcon className="h-4 w-4 mr-2" />
+              Manage Server
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>

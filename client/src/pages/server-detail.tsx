@@ -56,8 +56,12 @@ const regionFlags: { [key: string]: string } = {
 };
 
 export default function ServerDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const serverId = parseInt(id);
+  const params = useParams<{ id: string }>();
+  const id = params?.id || '';
+  const serverId = parseInt(id || '0');
+  
+  // Add debug logging to help diagnose routing issues
+  console.log("ServerDetailPage: Loaded with params:", { id, params }, "serverId:", serverId, "isNaN:", isNaN(serverId));
   const { user, refetchUser } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
