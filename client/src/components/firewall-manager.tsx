@@ -19,6 +19,9 @@ interface FirewallRule {
   sources?: {
     addresses?: string[];
   };
+  destinations?: {
+    addresses?: string[];
+  };
 }
 
 // Define Firewall interface to match the server implementation
@@ -54,8 +57,8 @@ const defaultInboundRules: FirewallRule[] = [
 ];
 
 const defaultOutboundRules: FirewallRule[] = [
-  { protocol: 'tcp', ports: 'all', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
-  { protocol: 'udp', ports: 'all', sources: { addresses: ['0.0.0.0/0', '::/0'] } }
+  { protocol: 'tcp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } },
+  { protocol: 'udp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } }
 ];
 
 // Helper to format port description
@@ -243,11 +246,15 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
       ports: newRule.ports,
     };
 
-    // Add sources if provided
+    // Add sources or destinations based on rule type
     if (newRule.sourceAddresses.trim()) {
-      rule.sources = {
-        addresses: newRule.sourceAddresses.split(',').map(addr => addr.trim()).filter(Boolean)
-      };
+      const addresses = newRule.sourceAddresses.split(',').map(addr => addr.trim()).filter(Boolean);
+      
+      if (activeTab === 'inbound') {
+        rule.sources = { addresses };
+      } else {
+        rule.destinations = { addresses };
+      }
     }
 
     // Submit to API
@@ -267,16 +274,18 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
 
   // Render a rule item with delete option
   const renderRuleItem = (rule: FirewallRule, ruleType: 'inbound' | 'outbound') => {
-    const sourceText = rule.sources?.addresses?.join(', ') || 'Any';
+    const addressText = ruleType === 'inbound' 
+      ? rule.sources?.addresses?.join(', ') || 'Any'
+      : rule.destinations?.addresses?.join(', ') || 'Any';
     
     return (
-      <div key={`${rule.protocol}-${rule.ports}-${sourceText}`} className="flex justify-between items-center p-3 bg-muted rounded-lg mb-2">
+      <div key={`${rule.protocol}-${rule.ports}-${addressText}`} className="flex justify-between items-center p-3 bg-muted rounded-lg mb-2">
         <div className="flex-1">
           <div className="font-medium">
             {rule.protocol.toUpperCase()} {getPortDescription(rule.ports)}
           </div>
           <div className="text-sm text-muted-foreground flex items-center mt-1">
-            <span>{ruleType === 'inbound' ? 'From' : 'To'}: {sourceText}</span>
+            <span>{ruleType === 'inbound' ? 'From' : 'To'}: {addressText}</span>
             {ruleType === 'inbound' && (
               <>
                 <ArrowRight className="h-3 w-3 mx-1" />
