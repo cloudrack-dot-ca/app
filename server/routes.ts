@@ -248,6 +248,11 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
       // Create the actual droplet via DigitalOcean API
       let droplet;
+      
+      // Generate a random password for the server - define it outside try block so it's accessible in the response
+      const rootPassword = Math.random().toString(36).slice(-10) + 
+                           Math.random().toString(36).toUpperCase().slice(-2) + '!';
+      
       try {
         console.log(`[DEBUG] Creating droplet with params:
           name: ${parsed.data.name},
@@ -266,11 +271,6 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           application: parsed.data.application,
         } as any;
         
-        // IMPORTANT FIX: Always set a random password as a backup authentication method
-        // This ensures server creation works even if SSH keys fail
-        // Define this variable in the wider scope so it's accessible later
-        let generatedPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).toUpperCase().slice(-2) + '!';
-        
         // Set the primary authentication method
         if (auth.type === "password" && auth.value) {
           // If password auth is explicitly chosen, use the provided password
@@ -280,11 +280,11 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           // Try to use SSH keys but also set a fallback password
           console.log(`[DEBUG] Using SSH key authentication with fallback password`);
           createOptions.ssh_keys = sshKeys;
-          createOptions.password = generatedPassword;
+          createOptions.password = rootPassword;
         } else {
           // No auth provided, use the generated password
           console.log(`[DEBUG] No authentication method provided, using generated password`);
-          createOptions.password = generatedPassword;
+          createOptions.password = rootPassword;
         }
         
         droplet = await digitalOcean.createDroplet(createOptions);
@@ -334,9 +334,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Return both the server and the password we generated earlier
       const responseObj = {
         ...server,
-        rootPassword: generatedPassword
+        rootPassword: rootPassword
       };
-      console.log(`[DEBUG] Returning server with root password (masked): ${generatedPassword.substring(0, 3)}***`);
+      console.log(`[DEBUG] Returning server with root password (masked): ${rootPassword.substring(0, 3)}***`);
       res.status(201).json(responseObj);
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
