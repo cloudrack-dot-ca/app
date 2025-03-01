@@ -72,6 +72,8 @@ export default function ServerDetailPage() {
       if (isNaN(serverId) || serverId <= 0) {
         console.error("Invalid server ID in URL:", pathId);
         serverId = -1; // Use an invalid ID that will be caught by the error handling
+      } else {
+        console.log("Valid server ID found:", serverId);
       }
     } catch (err) {
       console.error("Error parsing server ID:", err);
@@ -81,8 +83,11 @@ export default function ServerDetailPage() {
     console.error("No server ID provided in URL");
   }
   
-  // Comprehensive debug logging
-  console.log("ServerDetailPage: Loaded with path ID:", pathId, "Resolved server ID:", serverId);
+  useEffect(() => {
+    // Log the current URL to help with debugging
+    console.log("Current URL:", window.location.pathname);
+    console.log("Params:", params);
+  }, [params]);
   const { user, refetchUser } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();

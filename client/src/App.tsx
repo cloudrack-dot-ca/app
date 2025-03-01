@@ -71,9 +71,8 @@ function Router() {
         <ProtectedRoute path="/ssh-keys" component={SSHKeysPage} />
         <ProtectedRoute path="/account" component={AccountPage} />
         <ProtectedRoute path="/admin" component={AdminDashboard} />
+        {/* Make sure this is the only server route to avoid conflicts */}
         <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />
-        {/* Add specific server route for ID 10 for better routing */}
-        <ProtectedRoute path="/servers/10" component={ServerDetailPage} />
         <Route component={NotFound} />
       </Switch>
     </>

@@ -79,30 +79,12 @@ export default function ServerCard({ server }: ServerCardProps) {
             <Button 
               variant="default" 
               className="flex-1"
-              onClick={() => {
-                try {
-                  // Ensure it's a valid server ID
-                  const validId = server.id;
-                  if (!validId) {
-                    throw new Error("Invalid server ID");
-                  }
-                  
-                  console.log("Navigating to server detail, ID:", validId);
-                  
-                  // Use navigate from wouter instead of directly modifying location
-                  navigate(`/servers/${validId}`);
-                } catch (err) {
-                  console.error("Navigation error:", err);
-                  toast({
-                    title: "Navigation Error",
-                    description: "Could not navigate to server details. Please try again.",
-                    variant: "destructive"
-                  });
-                }
-              }}
+              asChild
             >
-              <ServerIcon className="h-4 w-4 mr-2" />
-              Manage Server
+              <Link href={`/servers/${server.id}`}>
+                <ServerIcon className="h-4 w-4 mr-2" />
+                Manage Server
+              </Link>
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
