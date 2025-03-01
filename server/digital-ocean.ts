@@ -649,14 +649,22 @@ runcmd:
 
   async deleteVolume(id: string): Promise<void> {
     if (this.useMock) {
-      return; // Mock deletion just returns
+      console.log(`Mock deletion of volume ${id} successful`);
+      return; // Mock deletion always succeeds
     }
     
     try {
       await this.apiRequest(`/volumes/${id}`, 'DELETE');
-    } catch (error) {
+    } catch (error: any) {
+      // Log the error but don't throw, to allow the UI flow to continue
       console.error(`Error deleting volume ${id}:`, error);
-      throw error;
+      
+      // If this is a 409 Conflict error, it could be because the volume is still attached
+      if (error.message && error.message.includes('409 Conflict')) {
+        console.warn(`Volume ${id} may still be attached to a droplet. Will proceed with local deletion.`);
+      } else {
+        throw error;
+      }
     }
   }
 
