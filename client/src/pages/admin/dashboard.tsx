@@ -188,10 +188,10 @@ export default function AdminDashboard() {
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['/api/admin/users'],
     queryFn: async () => {
-      const response = await apiRequest<AdminUser[]>('/api/admin/users', { method: 'GET' });
-      return response;
+      const response = await apiRequest('/api/admin/users', { method: 'GET' });
+      return response as AdminUser[];
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: `Failed to load users: ${error.message}`,
@@ -204,8 +204,8 @@ export default function AdminDashboard() {
   const { data: servers, isLoading: serversLoading } = useQuery({
     queryKey: ['/api/admin/servers'],
     queryFn: async () => {
-      const response = await apiRequest<AdminServer[]>('/api/admin/servers', { method: 'GET' });
-      return response;
+      const response = await apiRequest('/api/admin/servers', { method: 'GET' });
+      return response as AdminServer[];
     }
   });
 
@@ -213,8 +213,8 @@ export default function AdminDashboard() {
   const { data: tickets, isLoading: ticketsLoading } = useQuery({
     queryKey: ['/api/admin/tickets'],
     queryFn: async () => {
-      const response = await apiRequest<AdminTicket[]>('/api/admin/tickets', { method: 'GET' });
-      return response;
+      const response = await apiRequest('/api/admin/tickets', { method: 'GET' });
+      return response as AdminTicket[];
     }
   });
 
@@ -222,8 +222,8 @@ export default function AdminDashboard() {
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
     queryKey: ['/api/admin/transactions'],
     queryFn: async () => {
-      const response = await apiRequest<Transaction[]>('/api/admin/transactions', { method: 'GET' });
-      return response;
+      const response = await apiRequest('/api/admin/transactions', { method: 'GET' });
+      return response as Transaction[];
     }
   });
 
@@ -231,19 +231,19 @@ export default function AdminDashboard() {
   const { data: ipBans, isLoading: ipBansLoading, refetch: refetchIpBans } = useQuery({
     queryKey: ['/api/admin/ip-bans'],
     queryFn: async () => {
-      const response = await apiRequest<IPBan[]>('/api/admin/ip-bans', { method: 'GET' });
-      return response;
+      const response = await apiRequest('/api/admin/ip-bans', { method: 'GET' });
+      return response as IPBan[];
     }
   });
 
   // Update user balance mutation
   const updateUserBalanceMutation = useMutation({
     mutationFn: async ({ userId, amount }: { userId: number, amount: number }) => {
-      const response = await apiRequest<AdminUser>(`/api/admin/users/${userId}/balance`, {
+      const response = await apiRequest(`/api/admin/users/${userId}/balance`, {
         method: 'PATCH',
         body: { amount },
       });
-      return response;
+      return response as AdminUser;
     },
     onSuccess: () => {
       toast({

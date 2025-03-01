@@ -17,7 +17,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
-import { Home, ShieldAlert } from "lucide-react";
+import { Home, ShieldCheck, Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useEffect } from "react";
 
@@ -50,6 +50,14 @@ function Nav() {
           </Link>
         )}
         <div className="flex items-center gap-2">
+          {user && user.isAdmin && (
+            <Link href="/admin">
+              <Button variant="ghost" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            </Link>
+          )}
           <ThemeToggle />
         </div>
       </div>

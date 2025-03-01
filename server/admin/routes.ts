@@ -126,8 +126,9 @@ export function registerAdminRoutes(app: Express) {
           userId,
           amount: absAmount,
           type: transactionType,
-          description: `Admin balance adjustment (${transactionType})`,
           status: 'completed',
+          currency: 'USD',
+          paypalTransactionId: null,
           createdAt: new Date()
         });
       }
@@ -203,7 +204,9 @@ export function registerAdminRoutes(app: Express) {
       const ipBan = await storage.createIPBan({
         ipAddress,
         reason,
-        expiresAt: expiresAt ? new Date(expiresAt) : null
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        bannedBy: req.user!.id,
+        isActive: true
       });
       
       res.status(201).json(ipBan);
