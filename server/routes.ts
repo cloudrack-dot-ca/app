@@ -266,21 +266,28 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           application: parsed.data.application,
         } as any;
         
-        // Only add SSH keys if they exist and are valid
-        if (sshKeys.length > 0) {
-          createOptions.ssh_keys = sshKeys;
-        } else if (auth.type === "password" && auth.value) {
-          // If no SSH keys but password is provided, use password
+        // IMPORTANT FIX: Always set a random password as a backup authentication method
+        // This ensures server creation works even if SSH keys fail
+        const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).toUpperCase().slice(-2) + '!';
+        
+        // Store the random password to show to the user regardless of auth type
+        const serverData = parsed.data as any;
+        serverData.rootPassword = randomPassword;
+        
+        // Set the primary authentication method
+        if (auth.type === "password" && auth.value) {
+          // If password auth is explicitly chosen, use the provided password
+          console.log(`[DEBUG] Using provided password authentication`);
           createOptions.password = auth.value;
-        } else {
-          // If neither SSH keys nor password, generate a random password
-          const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).toUpperCase().slice(-2);
-          console.log(`[DEBUG] No SSH keys or password provided, using random password`);
+        } else if (sshKeys.length > 0) {
+          // Try to use SSH keys but also set a fallback password
+          console.log(`[DEBUG] Using SSH key authentication with fallback password`);
+          createOptions.ssh_keys = sshKeys;
           createOptions.password = randomPassword;
-          
-          // Store this password so we can show it to the user once
-          const serverData = parsed.data as any;
-          serverData.rootPassword = randomPassword;
+        } else {
+          // No auth provided, use the generated password
+          console.log(`[DEBUG] No authentication method provided, using generated password`);
+          createOptions.password = randomPassword;
         }
         
         droplet = await digitalOcean.createDroplet(createOptions);
@@ -328,16 +335,18 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
 
       // Check if we have a generated password to return
-      const serverData = parsed.data as any;
+      // We already set serverData earlier, just use that reference
       if (serverData.rootPassword) {
         // Return server with temporary root password
         const responseObj = {
           ...server,
           rootPassword: serverData.rootPassword
         };
+        console.log(`[DEBUG] Returning server with root password (masked): ${serverData.rootPassword.substring(0, 3)}***`);
         res.status(201).json(responseObj);
       } else {
         // Return just the server
+        console.log(`[DEBUG] Returning server without root password`);
         res.status(201).json(server);
       }
     } catch (error) {
