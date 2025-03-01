@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -626,6 +627,41 @@ export default function AdminDashboard() {
                     ))}
                   </TableBody>
                 </Table>
+                
+                {/* Pagination for users */}
+                {users.filter(user => user.username.toLowerCase().includes(userSearch.toLowerCase())).length > 0 && (
+                  <div className="flex items-center justify-center space-x-2 py-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUserPage(prev => Math.max(prev - 1, 1))}
+                      disabled={userPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <div className="text-sm">
+                      Page {userPage} of {Math.ceil(users.filter(user => 
+                        user.username.toLowerCase().includes(userSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUserPage(prev => 
+                        Math.min(prev + 1, Math.ceil(users.filter(user => 
+                          user.username.toLowerCase().includes(userSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE))
+                      )}
+                      disabled={userPage >= Math.ceil(users.filter(user => 
+                        user.username.toLowerCase().includes(userSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load users</div>
@@ -691,9 +727,23 @@ export default function AdminDashboard() {
               <CardDescription>View and manage all servers on the platform</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Search input for servers */}
+              <div className="mb-4">
+                <Input 
+                  placeholder="Search servers by name or region..."
+                  value={serverSearch}
+                  onChange={(e) => {
+                    setServerSearch(e.target.value);
+                    setServerPage(1); // Reset to first page when searching
+                  }}
+                  className="max-w-md"
+                />
+              </div>
+              
               {serversLoading ? (
                 <div className="text-center py-8">Loading servers...</div>
               ) : servers ? (
+                <div>
                 <Table>
                   <TableCaption>List of all servers on the platform</TableCaption>
                   <TableHeader>
@@ -709,7 +759,13 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {servers.map((server) => (
+                    {servers
+                      .filter(server => 
+                        server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                        server.region.toLowerCase().includes(serverSearch.toLowerCase())
+                      )
+                      .slice((serverPage - 1) * ITEMS_PER_PAGE, serverPage * ITEMS_PER_PAGE)
+                      .map((server) => (
                       <TableRow key={server.id}>
                         <TableCell>{server.id}</TableCell>
                         <TableCell>{server.name}</TableCell>
@@ -746,6 +802,48 @@ export default function AdminDashboard() {
                     ))}
                   </TableBody>
                 </Table>
+                
+                {/* Pagination for servers */}
+                {servers.filter(server => 
+                  server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                  server.region.toLowerCase().includes(serverSearch.toLowerCase())
+                ).length > 0 && (
+                  <div className="flex items-center justify-center space-x-2 py-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setServerPage(prev => Math.max(prev - 1, 1))}
+                      disabled={serverPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <div className="text-sm">
+                      Page {serverPage} of {Math.ceil(servers.filter(server => 
+                        server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                        server.region.toLowerCase().includes(serverSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setServerPage(prev => 
+                        Math.min(prev + 1, Math.ceil(servers.filter(server => 
+                          server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                          server.region.toLowerCase().includes(serverSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE))
+                      )}
+                      disabled={serverPage >= Math.ceil(servers.filter(server => 
+                        server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                        server.region.toLowerCase().includes(serverSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                </div>
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load servers</div>
               )}
@@ -761,9 +859,23 @@ export default function AdminDashboard() {
               <CardDescription>View all financial transactions on the platform</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Search input for transactions */}
+              <div className="mb-4">
+                <Input 
+                  placeholder="Search transactions by type or description..."
+                  value={transactionSearch}
+                  onChange={(e) => {
+                    setTransactionSearch(e.target.value);
+                    setTransactionPage(1); // Reset to first page when searching
+                  }}
+                  className="max-w-md"
+                />
+              </div>
+              
               {transactionsLoading ? (
                 <div className="text-center py-8">Loading transactions...</div>
               ) : transactions ? (
+                <div>
                 <Table>
                   <TableCaption>List of all financial transactions</TableCaption>
                   <TableHeader>
@@ -778,7 +890,13 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transactions.map((transaction) => (
+                    {transactions
+                      .filter(transaction => 
+                        transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
+                        transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
+                      )
+                      .slice((transactionPage - 1) * ITEMS_PER_PAGE, transactionPage * ITEMS_PER_PAGE)
+                      .map((transaction) => (
                       <TableRow key={transaction.id}>
                         <TableCell>{transaction.id}</TableCell>
                         <TableCell>{transaction.userId}</TableCell>
@@ -801,6 +919,48 @@ export default function AdminDashboard() {
                     ))}
                   </TableBody>
                 </Table>
+                
+                {/* Pagination for transactions */}
+                {transactions.filter(transaction => 
+                  transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
+                  transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
+                ).length > 0 && (
+                  <div className="flex items-center justify-center space-x-2 py-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTransactionPage(prev => Math.max(prev - 1, 1))}
+                      disabled={transactionPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <div className="text-sm">
+                      Page {transactionPage} of {Math.ceil(transactions.filter(transaction => 
+                        transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
+                        transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTransactionPage(prev => 
+                        Math.min(prev + 1, Math.ceil(transactions.filter(transaction => 
+                          transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
+                          transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE))
+                      )}
+                      disabled={transactionPage >= Math.ceil(transactions.filter(transaction => 
+                        transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
+                        transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                </div>
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load transactions</div>
               )}
@@ -816,9 +976,23 @@ export default function AdminDashboard() {
               <CardDescription>Manage customer support tickets</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Search input for tickets */}
+              <div className="mb-4">
+                <Input 
+                  placeholder="Search tickets by subject..."
+                  value={ticketSearch}
+                  onChange={(e) => {
+                    setTicketSearch(e.target.value);
+                    setTicketPage(1); // Reset to first page when searching
+                  }}
+                  className="max-w-md"
+                />
+              </div>
+              
               {ticketsLoading ? (
                 <div className="text-center py-8">Loading tickets...</div>
               ) : tickets ? (
+                <div>
                 <Table>
                   <TableCaption>List of all support tickets</TableCaption>
                   <TableHeader>
@@ -834,7 +1008,12 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tickets.map((ticket) => (
+                    {tickets
+                      .filter(ticket => 
+                        ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
+                      )
+                      .slice((ticketPage - 1) * ITEMS_PER_PAGE, ticketPage * ITEMS_PER_PAGE)
+                      .map((ticket) => (
                       <TableRow key={ticket.id}>
                         <TableCell>{ticket.id}</TableCell>
                         <TableCell>{ticket.userId}</TableCell>
@@ -894,6 +1073,44 @@ export default function AdminDashboard() {
                     ))}
                   </TableBody>
                 </Table>
+                
+                {/* Pagination for tickets */}
+                {tickets.filter(ticket => 
+                  ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
+                ).length > 0 && (
+                  <div className="flex items-center justify-center space-x-2 py-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTicketPage(prev => Math.max(prev - 1, 1))}
+                      disabled={ticketPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <div className="text-sm">
+                      Page {ticketPage} of {Math.ceil(tickets.filter(ticket => 
+                        ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTicketPage(prev => 
+                        Math.min(prev + 1, Math.ceil(tickets.filter(ticket => 
+                          ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE))
+                      )}
+                      disabled={ticketPage >= Math.ceil(tickets.filter(ticket => 
+                        ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                </div>
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load tickets</div>
               )}
@@ -920,9 +1137,23 @@ export default function AdminDashboard() {
               <CardDescription>Block malicious IP addresses from accessing the platform</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Search input for IP bans */}
+              <div className="mb-4">
+                <Input 
+                  placeholder="Search by IP address or reason..."
+                  value={ipBanSearch}
+                  onChange={(e) => {
+                    setIpBanSearch(e.target.value);
+                    setIpBanPage(1); // Reset to first page when searching
+                  }}
+                  className="max-w-md"
+                />
+              </div>
+              
               {ipBansLoading ? (
                 <div className="text-center py-8">Loading IP bans...</div>
               ) : ipBans && ipBans.length > 0 ? (
+                <div>
                 <Table>
                   <TableCaption>List of all banned IP addresses</TableCaption>
                   <TableHeader>
@@ -936,7 +1167,13 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {ipBans.map((ban) => (
+                    {ipBans
+                      .filter(ban => 
+                        ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
+                        ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
+                      )
+                      .slice((ipBanPage - 1) * ITEMS_PER_PAGE, ipBanPage * ITEMS_PER_PAGE)
+                      .map((ban) => (
                       <TableRow key={ban.id}>
                         <TableCell>{ban.id}</TableCell>
                         <TableCell>{ban.ipAddress}</TableCell>
@@ -957,6 +1194,48 @@ export default function AdminDashboard() {
                     ))}
                   </TableBody>
                 </Table>
+                
+                {/* Pagination for IP bans */}
+                {ipBans.filter(ban => 
+                  ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
+                  ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
+                ).length > 0 && (
+                  <div className="flex items-center justify-center space-x-2 py-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIpBanPage(prev => Math.max(prev - 1, 1))}
+                      disabled={ipBanPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <div className="text-sm">
+                      Page {ipBanPage} of {Math.ceil(ipBans.filter(ban => 
+                        ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
+                        ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIpBanPage(prev => 
+                        Math.min(prev + 1, Math.ceil(ipBans.filter(ban => 
+                          ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
+                          ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE))
+                      )}
+                      disabled={ipBanPage >= Math.ceil(ipBans.filter(ban => 
+                        ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
+                        ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
+                      ).length / ITEMS_PER_PAGE)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                </div>
               ) : (
                 <div className="text-center py-8">No IP bans found</div>
               )}
