@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Plus, Send, Edit2, Check, X, HardDrive, Trash2, CheckCircle } from "lucide-react";
 import { SupportTicket, SupportMessage, Server, Volume } from "@shared/schema";
-import { Link } from "wouter";
+import { Link, useLocation, useParams } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -57,9 +57,21 @@ interface TicketDetails {
 export default function SupportPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const params = useParams();
+  const [location, setLocation] = useLocation();
   const [selectedTicket, setSelectedTicket] = React.useState<number | null>(null);
   const [editingMessage, setEditingMessage] = React.useState<number | null>(null);
   const [editText, setEditText] = React.useState("");
+  
+  // Handle the case when accessing via /support/:id directly
+  React.useEffect(() => {
+    if (params && params.id) {
+      const ticketId = parseInt(params.id);
+      if (!isNaN(ticketId)) {
+        setSelectedTicket(ticketId);
+      }
+    }
+  }, [params]);
 
   const { data: tickets = [], isLoading: loadingTickets } = useQuery<SupportTicket[]>({
     queryKey: ["/api/tickets"],

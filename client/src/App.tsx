@@ -76,6 +76,7 @@ function Router() {
         <ProtectedRoute path="/volumes" component={VolumesPage} />
         <ProtectedRoute path="/billing" component={BillingPage} />
         <ProtectedRoute path="/support" component={SupportPage} />
+        <ProtectedRoute path="/support/:id" component={SupportPage} />
         <ProtectedRoute path="/ssh-keys" component={SSHKeysPage} />
         <ProtectedRoute path="/account" component={AccountPage} />
         <ProtectedRoute path="/admin" component={AdminDashboard} />
