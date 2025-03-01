@@ -4,7 +4,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Maximize2, Minimize2, Lock, Key, Type } from 'lucide-react';
+import { RefreshCw, Maximize2, Minimize2, Lock, Key, Type, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery } from '@tanstack/react-query';
 import 'xterm/css/xterm.css';
@@ -47,6 +47,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   const socketRef = useRef<any>(null);
   const { user } = useAuth();
   const [currentFont, setCurrentFont] = useState<string>(TERMINAL_FONTS[0].value);
+  const [fontSize, setFontSize] = useState<number>(15); // Default font size
   
   // Function to change terminal font
   const changeTerminalFont = (newFont: string) => {
@@ -55,6 +56,23 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     // If terminal exists, update its font
     if (terminal) {
       terminal.options.fontFamily = newFont;
+      
+      // Force a redraw by updating the terminal size
+      if (fitAddon) {
+        setTimeout(() => {
+          fitAddon.fit();
+        }, 50);
+      }
+    }
+  };
+  
+  // Function to change terminal font size
+  const changeFontSize = (newSize: number) => {
+    setFontSize(newSize);
+    
+    // If terminal exists, update its font size
+    if (terminal) {
+      terminal.options.fontSize = newSize;
       
       // Force a redraw by updating the terminal size
       if (fitAddon) {
@@ -98,9 +116,10 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     // Initialize XTerm with a nice theme
     const term = new Terminal({
       cursorBlink: true,
-      fontFamily: 'Menlo, Monaco, Consolas, "Courier New", monospace',
-      fontSize: 14,
-      letterSpacing: 0,
+      cursorStyle: 'block',
+      fontFamily: currentFont, // Use the selected font from state
+      fontSize: fontSize, // Use the font size from state
+      letterSpacing: 0.2,
       theme: {
         background: '#1a1b26',
         foreground: '#c0caf5',
@@ -155,7 +174,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         socketRef.current.disconnect();
       }
     };
-  }, [serverId, user, serverDetails]);
+  }, [serverId, user, serverDetails, currentFont, fontSize]); // Include all display settings dependencies
 
   // Handle full screen mode changes
   useEffect(() => {
@@ -392,6 +411,39 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
             </div>
           </div>
           <div className="flex space-x-2">
+            {/* Font selector dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  title="Change Font"
+                >
+                  <Type className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[200px]">
+                {TERMINAL_FONTS.map((font) => (
+                  <DropdownMenuItem
+                    key={font.name}
+                    onClick={() => changeTerminalFont(font.value)}
+                    className={currentFont === font.value ? "bg-muted" : ""}
+                  >
+                    <span 
+                      className="truncate" 
+                      style={{ fontFamily: font.value }}
+                    >
+                      {font.name}
+                    </span>
+                    {currentFont === font.value && (
+                      <span className="ml-auto text-primary">✓</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
             <Button 
               variant="ghost" 
               size="icon" 
