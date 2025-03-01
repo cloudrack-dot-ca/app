@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,7 @@ interface TicketDetails {
 export default function SupportPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { subscribeToTicket, unsubscribeFromTicket, ticketUpdates } = useWebSocket();
   const params = useParams();
   const [location, setLocation] = useLocation();
   const [selectedTicket, setSelectedTicket] = React.useState<number | null>(null);
@@ -72,6 +74,18 @@ export default function SupportPage() {
       }
     }
   }, [params]);
+  
+  // Subscribe to WebSocket updates for the selected ticket
+  React.useEffect(() => {
+    if (selectedTicket) {
+      subscribeToTicket(selectedTicket);
+      
+      // Clean up subscription when unmounting or changing tickets
+      return () => {
+        unsubscribeFromTicket(selectedTicket);
+      };
+    }
+  }, [selectedTicket, subscribeToTicket, unsubscribeFromTicket]);
 
   const { data: tickets = [], isLoading: loadingTickets } = useQuery<SupportTicket[]>({
     queryKey: ["/api/tickets"],
