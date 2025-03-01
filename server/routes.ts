@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import type { Server as HttpServer } from "http";
+import { setupTerminalSocket } from "./terminal-handler";
 import type { User } from "@shared/schema";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
@@ -1226,5 +1227,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   });
 
   const httpServer = createServer(app);
+  
+  // Setup the terminal websocket handler
+  setupTerminalSocket(httpServer);
+  
   return httpServer;
 }

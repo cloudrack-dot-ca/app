@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Server as SchemaServer, Volume } from "@shared/schema";
-import ServerTerminal from "@/components/server-terminal-updated";
+import ServerTerminal from "@/components/server-terminal-real";
 
 // Extended Server interface with additional properties for UI display
 interface Server extends SchemaServer {
