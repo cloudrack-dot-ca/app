@@ -79,6 +79,12 @@ export default function ServerCard({ server }: ServerCardProps) {
               variant="default" 
               className="flex-1"
               asChild
+              onClick={() => {
+                // Pre-load server data into cache if possible to avoid loading issues
+                queryClient.prefetchQuery({
+                  queryKey: [`/api/servers/${server.id}`],
+                });
+              }}
             >
               <Link href={`/servers/${server.id}`}>
                 <ServerIcon className="h-4 w-4 mr-2" />

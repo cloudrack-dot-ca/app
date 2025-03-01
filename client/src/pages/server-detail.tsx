@@ -58,7 +58,7 @@ const regionFlags: { [key: string]: string } = {
 export default function ServerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const serverId = parseInt(id);
-  const { user } = useAuth();
+  const { user, refetchUser } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isEditingPassword, setIsEditingPassword] = useState(false);
