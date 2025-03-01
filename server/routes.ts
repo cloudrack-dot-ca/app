@@ -1048,6 +1048,39 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
   });
 
+  // Get server details with sensitive information for terminal authentication
+  app.get("/api/servers/:id/details", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const serverId = parseInt(req.params.id);
+      
+      // Query the database directly to get extended server information
+      const serverDetails = await db.query.servers.findFirst({
+        where: eq(schema.servers.id, serverId)
+      });
+      
+      if (!serverDetails) {
+        return res.status(404).json({ message: "Server not found" });
+      }
+      
+      // Check if this server belongs to the current user or if the user is an admin
+      if (serverDetails.userId !== req.user.id && !req.user.isAdmin) {
+        return res.status(403).json({ message: "Not authorized to access this server" });
+      }
+
+      // Return only the necessary secured details for terminal authentication
+      return res.json({
+        id: serverDetails.id,
+        rootPassword: serverDetails.rootPassword,
+        rootPassUpdated: !!serverDetails.rootPassword
+      });
+    } catch (error) {
+      console.error('Error getting server details:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   app.patch("/api/servers/:id/ipv6", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 

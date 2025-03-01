@@ -4,7 +4,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Maximize2, Minimize2, AlertCircle } from 'lucide-react';
+import { RefreshCw, Maximize2, Minimize2, AlertCircle, Lock, Key } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -40,6 +40,8 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
 
     // Clear any existing terminal
     terminalRef.current.innerHTML = '';
+    
+    console.log("Terminal initializing, root password available:", !!serverDetails?.rootPassword);
 
     // Initialize XTerm
     const term = new Terminal({
@@ -99,7 +101,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         socketRef.current.disconnect();
       }
     };
-  }, [serverId, user]);
+  }, [serverId, user, serverDetails]);
 
   // Handle full screen mode changes
   useEffect(() => {
@@ -275,7 +277,18 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         <div className="bg-gray-800 text-gray-300 p-2 flex justify-between items-center text-xs">
           <div className="flex items-center">
             <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            {isConnected ? 'Connected' : 'Disconnected'} - {serverName} ({ipAddress})
+            <div className="flex flex-col">
+              <span>{isConnected ? 'Connected' : 'Disconnected'} - {serverName} ({ipAddress})</span>
+              {serverDetails?.rootPassword ? (
+                <span className="text-xs text-green-400 flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Password authentication enabled
+                </span>
+              ) : (
+                <span className="text-xs text-blue-400 flex items-center gap-1">
+                  <Key className="h-3 w-3" /> CloudRack Terminal Key authentication
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex space-x-2">
             <Button 
