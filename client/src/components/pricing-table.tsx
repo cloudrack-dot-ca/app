@@ -29,11 +29,10 @@ export default function PricingTable() {
     queryKey: ["/api/sizes"],
   });
 
-  // Storage pricing info with 0.5% markup
+  // Storage pricing info
   const storagePricing = {
-    baseRate: 0.10, // $0.10/GB/month base rate (Digital Ocean)
-    markup: 0.0005, // 0.5% markup
-    rateWithMarkup: 0.10 * 1.005 // $0.1005/GB/month with markup
+    baseRate: 0.10, // $0.10/GB/month base rate
+    rateWithMarkup: 0.1005 // $0.1005/GB/month final rate
   };
 
   const processorTypeInfo = {
@@ -88,18 +87,12 @@ export default function PricingTable() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-3xl font-bold">
-                  ${(size.price_monthly * 1.005).toFixed(2)}
+                  ${Math.round(size.price_monthly * 1.005 * 100) / 100}
                   <span className="text-lg text-muted-foreground font-normal">
                     {" "}
                     /mo
                   </span>
                 </p>
-                <div className="flex items-center">
-                  <p className="text-xs text-muted-foreground">
-                    <span className="line-through">${size.price_monthly}</span>
-                    <span className="ml-1">+0.5% markup</span>
-                  </p>
-                </div>
                 <div className="flex items-center space-x-2 mb-3">
                   <Cpu className={`h-4 w-4 ${processorInfo.textColor}`} />
                   <span className="text-sm">{processorInfo.label}</span>
@@ -158,12 +151,6 @@ export default function PricingTable() {
                 ${storagePricing.rateWithMarkup.toFixed(3)}
                 <span className="text-lg text-muted-foreground font-normal"> /GB/mo</span>
               </p>
-              <div className="flex items-center">
-                <p className="text-xs text-muted-foreground">
-                  <span className="line-through">${storagePricing.baseRate.toFixed(2)}</span>
-                  <span className="ml-1">+0.5% markup</span>
-                </p>
-              </div>
               <ul className="space-y-2">
                 <li className="flex items-center">
                   <Check className="h-4 w-4 mr-2 text-primary" />
@@ -193,15 +180,9 @@ export default function PricingTable() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-2xl font-bold">
-                ${(0.01 * 1.005).toFixed(3)}
+                $0.010
                 <span className="text-lg text-muted-foreground font-normal"> /GB overage</span>
               </p>
-              <div className="flex items-center">
-                <p className="text-xs text-muted-foreground">
-                  <span className="line-through">$0.01</span>
-                  <span className="ml-1">+0.5% markup</span>
-                </p>
-              </div>
               <ul className="space-y-2">
                 <li className="flex items-center">
                   <Check className="h-4 w-4 mr-2 text-primary" />
