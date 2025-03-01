@@ -1,8 +1,6 @@
 import * as React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-// Temporarily disabled WebSocket for stability
-// import { useWebSocket, WebSocketProvider } from "@/hooks/use-websocket";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,16 +49,6 @@ const regionFlags: { [key: string]: string } = {
   'blr1': '🇮🇳 Bangalore',
 };
 
-// Component for connection status showing that WebSockets are disabled
-function ConnectionStatus() {
-  return (
-    <div className="flex items-center text-xs text-muted-foreground">
-      <div className="w-2 h-2 rounded-full mr-1 bg-yellow-500"></div>
-      Live updates paused
-    </div>
-  );
-}
-
 interface TicketDetails {
   ticket: SupportTicket;
   messages: SupportMessage[];
@@ -69,11 +57,6 @@ interface TicketDetails {
 export default function SupportPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  // Mock WebSocket functionality while it's disabled
-  const ticketUpdates = new Map();
-  const subscribeToTicket = (_ticketId: number) => {};
-  const unsubscribeFromTicket = (_ticketId: number) => {};
-  
   const params = useParams();
   const [location, setLocation] = useLocation();
   const [selectedTicket, setSelectedTicket] = React.useState<number | null>(null);
@@ -89,23 +72,9 @@ export default function SupportPage() {
       }
     }
   }, [params]);
-  
-  // Subscribe to WebSocket updates for the selected ticket
-  React.useEffect(() => {
-    if (selectedTicket) {
-      subscribeToTicket(selectedTicket);
-      
-      // Clean up subscription when unmounting or changing tickets
-      return () => {
-        unsubscribeFromTicket(selectedTicket);
-      };
-    }
-  }, [selectedTicket, subscribeToTicket, unsubscribeFromTicket]);
 
   const { data: tickets = [], isLoading: loadingTickets } = useQuery<SupportTicket[]>({
     queryKey: ["/api/tickets"],
-    // Add polling to replace real-time updates temporarily
-    refetchInterval: 10000, // Poll every 10 seconds for tickets list
   });
 
   const { data: selectedTicketData, isLoading: loadingTicketDetails } = useQuery<TicketDetails>({
@@ -115,9 +84,7 @@ export default function SupportPage() {
       if (!selectedTicket) throw new Error("No ticket selected");
       const response = await apiRequest("GET", `/api/tickets/${selectedTicket}`);
       return response.json();
-    },
-    // Add polling to replace real-time updates temporarily
-    refetchInterval: 5000, // Poll every 5 seconds
+    }
   });
 
   // Get user's servers for ticket creation
@@ -277,28 +244,6 @@ export default function SupportPage() {
     const diffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
     return diffInMinutes <= 10;
   };
-  
-  // Combine server-loaded messages with real-time updates
-  const combinedMessages = React.useMemo(() => {
-    if (!selectedTicket || !selectedTicketData?.messages) {
-      return [];
-    }
-    
-    // Get any real-time updates for this ticket
-    const updates = ticketUpdates.get(selectedTicket) || [];
-    
-    // Filter out updates that are already in the loaded messages
-    // and only include message updates (not ticket status updates)
-    const newMessages = updates.filter((update: any) => 
-      update.message && 
-      !selectedTicketData.messages.some(msg => msg.id === update.id)
-    );
-    
-    // Return combined and sorted messages
-    return [...selectedTicketData.messages, ...newMessages].sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-  }, [selectedTicket, selectedTicketData?.messages, ticketUpdates]);
 
   if (loadingTickets) {
     return (
@@ -474,13 +419,7 @@ export default function SupportPage() {
                   <CardContent className="py-4">
                     <div className="flex justify-between items-center">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{ticket.subject}</p>
-                          {/* Show indicator for unread messages */}
-                          {(ticketUpdates.get(ticket.id)?.length || 0) > 0 && ticket.id !== selectedTicket && (
-                            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" title="New messages"></div>
-                          )}
-                        </div>
+                        <p className="font-medium">{ticket.subject}</p>
                         <p className="text-sm text-muted-foreground">
                           {new Date(ticket.createdAt).toLocaleString()}
                         </p>
@@ -499,10 +438,7 @@ export default function SupportPage() {
 
         <div>
           <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold">Conversation</h2>
-              {selectedTicket && <ConnectionStatus />}
-            </div>
+            <h2 className="text-xl font-semibold">Conversation</h2>
             <div className="flex space-x-2">
               {selectedTicketData?.ticket?.status === "open" && (
                 <Button
@@ -596,8 +532,8 @@ export default function SupportPage() {
                 
                 {/* Conversation history */}
                 <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border rounded-lg">
-                  {combinedMessages.length > 0 ? (
-                    combinedMessages.map((message) => (
+                  {selectedTicketData.messages && selectedTicketData.messages.length > 0 ? (
+                    selectedTicketData.messages.map((message) => (
                       <div
                         key={message.id}
                         className={`flex flex-col ${
