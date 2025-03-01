@@ -5,6 +5,10 @@ import { storage } from './storage';
 import { log } from './vite';
 import { cloudRackKeyManager } from './cloudrack-key-manager';
 import * as fs from 'fs';
+import * as http from 'http';
+import { db } from './db';
+import { servers } from '@shared/schema';
+import { eq, sql } from 'drizzle-orm';
 
 // Extend the Server type to include rootPassword
 interface ExtendedServer {
@@ -65,17 +69,43 @@ export function setupTerminalSocket(server: HttpServer) {
         return;
       }
       
-      // Get server details with sensitive data to check for root password
-      // Need to fetch details directly from API endpoint to get the actual password
-      // storage.getServer() doesn't return the raw password for security
-      const response = await fetch(`http://localhost:5000/api/servers/${serverId}/details`, {
-        headers: {
-          'Cookie': socket.handshake.headers.cookie || ''
-        }
+      // Get server details including root password directly from the database
+      // Use raw SQL to ensure we're getting the password
+      const rawResult = await db.execute(
+        sql`SELECT * FROM servers WHERE id = ${parseInt(serverId)}`
+      );
+      
+      // Extract the server details from the raw result
+      const rawServerDetails = rawResult.rows[0];
+      log(`Server ${serverId} raw details: ${JSON.stringify(rawServerDetails)}`, 'terminal');
+      
+      // Also try the regular query approach
+      const serverDetails = await db.query.servers.findFirst({
+        where: eq(servers.id, parseInt(serverId))
       });
       
-      const serverDetails = await response.json();
-      const hasRootPassword = !!serverDetails?.rootPassword;
+      if (serverDetails) {
+        log(`Server query from schema - rootPassword: ${serverDetails.rootPassword ? 'present' : 'missing'}`, 'terminal');
+      }
+      
+      // Use raw SQL results as a fallback if regular query doesn't work
+      const effectiveServerDetails = serverDetails?.rootPassword ? serverDetails : rawServerDetails;
+      
+      // Check if we have a password for this server
+      // Since we have both raw SQL results (with snake_case) and schema results (with camelCase)
+      // we need to check both formats
+      const hasRootPassword = !!effectiveServerDetails?.rootPassword || 
+                             !!(effectiveServerDetails as any)?.root_password;
+      
+      // Get the actual password value, preferring the schema version if available
+      const rootPasswordValue = effectiveServerDetails?.rootPassword || 
+                               (effectiveServerDetails as any)?.root_password;
+      
+      // Debug log the password length if it exists
+      if (hasRootPassword) {
+        log(`Server ${serverId} has root password with length: ${rootPasswordValue?.length}`, 'terminal');
+        log(`First few characters of password: ${rootPasswordValue?.substring(0, 3)}...`, 'terminal');
+      }
       
       log(`Server ${serverId} root password status: ${hasRootPassword ? 'Available' : 'Not available'}`, 'terminal');
       
@@ -161,7 +191,8 @@ export function setupTerminalSocket(server: HttpServer) {
         // If it's a password prompt and we have the root password, use it
         if (prompts.length > 0 && hasRootPassword) {
           log(`Responding to keyboard-interactive with stored password`, 'terminal');
-          finish([(serverDetails as any).rootPassword]);
+          // Use the discovered password value from earlier
+          finish([rootPasswordValue]);
         } else {
           // Otherwise inform the user authentication failed
           log(`Keyboard-interactive auth failed - no password available`, 'terminal');
@@ -209,8 +240,13 @@ export function setupTerminalSocket(server: HttpServer) {
         
         // If we have a root password, use it
         if (hasRootPassword) {
-          config.password = (serverDetails as any).rootPassword;
+          // Use the rootPasswordValue from earlier that handles both camelCase and snake_case
+          config.password = rootPasswordValue;
+          
+          // Debug log the password details
           log(`Connecting to SSH server at ${server.ipAddress} with password auth`, 'terminal');
+          log(`Password being used for SSH auth: ${rootPasswordValue?.substring(0, 3)}... (length: ${rootPasswordValue?.length})`, 'terminal');
+          
           socket.emit('status', { 
             status: 'auth_in_progress',
             message: 'Attempting password authentication'
