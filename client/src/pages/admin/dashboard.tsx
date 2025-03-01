@@ -48,6 +48,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { Input } from '@/components/ui/input';
+import { CurrencyDisplay } from '@/components/ui/currency-display';
 import { 
   BarChart, 
   LineChart, 

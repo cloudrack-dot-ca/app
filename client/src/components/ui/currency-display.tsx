@@ -49,7 +49,9 @@ export function CurrencyDisplay({
   }
   
   // Format with the currency symbol and sign
-  const displayValue = `${sign}$${formattedValue}${showPrefix ? ` ${currency}` : ''}`;
+  const displayValue = isNegative 
+    ? `-$${formattedValue}${showPrefix ? ` ${currency}` : ''}` 
+    : `${showSign ? '+' : ''}$${formattedValue}${showPrefix ? ` ${currency}` : ''}`;
   
   return (
     <span 
