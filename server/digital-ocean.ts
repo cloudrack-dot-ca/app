@@ -28,7 +28,7 @@ export interface Application {
 
 export interface FirewallRule {
   id?: string;
-  type: 'inbound' | 'outbound';
+  type?: 'inbound' | 'outbound';
   protocol: 'tcp' | 'udp' | 'icmp';
   ports: string;
   sources?: {
@@ -636,7 +636,11 @@ export class DigitalOceanClient {
   }): Promise<{ id: string; ip_address: string; ipv6_address?: string }> {
     if (this.useMock) {
       // Mock droplet creation with optional IPv6
-      const mockResponse = {
+      const mockResponse: {
+        id: string;
+        ip_address: string;
+        ipv6_address?: string;
+      } = {
         id: Math.random().toString(36).substring(7),
         ip_address: `${Math.floor(Math.random() * 256)}.${Math.floor(
           Math.random() * 256,
@@ -644,13 +648,13 @@ export class DigitalOceanClient {
       };
       
       if (options.ipv6) {
-        return {
-          ...mockResponse,
-          ipv6_address: `2001:db8:${Math.floor(Math.random() * 9999)}:${Math.floor(
-            Math.random() * 9999,
-          )}:${Math.floor(Math.random() * 9999)}:${Math.floor(Math.random() * 9999)}::/64`
-        };
+        mockResponse.ipv6_address = `2001:db8:${Math.floor(Math.random() * 9999)}:${Math.floor(
+          Math.random() * 9999,
+        )}:${Math.floor(Math.random() * 9999)}:${Math.floor(Math.random() * 9999)}::/64`;
       }
+      
+      // Create a default firewall for this droplet
+      this.setupDefaultFirewall(mockResponse.id);
       
       return mockResponse;
     }
@@ -897,6 +901,312 @@ runcmd:
       ],
       uptime_seconds: 3600 * 24 * Math.floor(Math.random() * 30 + 1), // 1-30 days
     };
+  }
+  
+  // Mock firewall data
+  private mockFirewalls: Record<string, Firewall> = {};
+  
+  // Create default firewall when the class is instantiated
+  private setupDefaultFirewall(dropletId: string) {
+    if (this.useMock) {
+      const existingFirewall = Object.values(this.mockFirewalls).find(
+        firewall => firewall.droplet_ids.includes(parseInt(dropletId))
+      );
+      
+      if (!existingFirewall) {
+        const firewallId = `firewall-${Math.random().toString(36).substring(7)}`;
+        this.mockFirewalls[firewallId] = {
+          id: firewallId,
+          name: `firewall-${dropletId}`,
+          status: 'active',
+          created_at: new Date().toISOString(),
+          droplet_ids: [parseInt(dropletId)],
+          inbound_rules: [
+            {
+              protocol: 'tcp',
+              ports: '22',
+              sources: { addresses: ['0.0.0.0/0', '::/0'] }
+            },
+            {
+              protocol: 'tcp',
+              ports: '80',
+              sources: { addresses: ['0.0.0.0/0', '::/0'] }
+            },
+            {
+              protocol: 'tcp',
+              ports: '443',
+              sources: { addresses: ['0.0.0.0/0', '::/0'] }
+            }
+          ],
+          outbound_rules: [
+            {
+              protocol: 'tcp',
+              ports: 'all',
+              destinations: { addresses: ['0.0.0.0/0', '::/0'] }
+            },
+            {
+              protocol: 'udp',
+              ports: 'all',
+              destinations: { addresses: ['0.0.0.0/0', '::/0'] }
+            }
+          ]
+        };
+      }
+      
+      return this.mockFirewalls[Object.keys(this.mockFirewalls)[0]];
+    }
+  }
+  
+  // Firewall methods
+  async getFirewalls(): Promise<Firewall[]> {
+    if (this.useMock) {
+      return Object.values(this.mockFirewalls);
+    }
+
+    try {
+      const response = await this.apiRequest<{ firewalls: Firewall[] }>('/firewalls');
+      return response.firewalls;
+    } catch (error) {
+      console.error('Error fetching firewalls:', error);
+      return Object.values(this.mockFirewalls);
+    }
+  }
+
+  async getFirewallByDropletId(dropletId: string): Promise<Firewall | null> {
+    const dropletIdNumber = parseInt(dropletId);
+    
+    if (this.useMock) {
+      return Object.values(this.mockFirewalls).find(
+        firewall => firewall.droplet_ids.includes(dropletIdNumber)
+      ) || null;
+    }
+
+    try {
+      const firewalls = await this.getFirewalls();
+      return firewalls.find(firewall => 
+        firewall.droplet_ids.includes(dropletIdNumber)
+      ) || null;
+    } catch (error) {
+      console.error(`Error fetching firewall for droplet ${dropletId}:`, error);
+      return null;
+    }
+  }
+
+  async createFirewall(options: {
+    name: string;
+    droplet_ids: number[];
+    inbound_rules: FirewallRule[];
+    outbound_rules: FirewallRule[];
+  }): Promise<Firewall> {
+    if (this.useMock) {
+      const id = `firewall-${Math.random().toString(36).substring(7)}`;
+      const firewall: Firewall = {
+        id,
+        name: options.name,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        droplet_ids: options.droplet_ids,
+        inbound_rules: options.inbound_rules,
+        outbound_rules: options.outbound_rules
+      };
+
+      this.mockFirewalls[id] = firewall;
+      return firewall;
+    }
+
+    try {
+      const response = await this.apiRequest<{ firewall: Firewall }>(
+        '/firewalls',
+        'POST',
+        options
+      );
+      return response.firewall;
+    } catch (error) {
+      console.error('Error creating firewall:', error);
+      throw error;
+    }
+  }
+
+  async updateFirewall(
+    firewallId: string,
+    updates: Partial<Firewall>
+  ): Promise<Firewall> {
+    if (this.useMock) {
+      if (!this.mockFirewalls[firewallId]) {
+        throw new Error(`Firewall with ID ${firewallId} not found`);
+      }
+
+      this.mockFirewalls[firewallId] = {
+        ...this.mockFirewalls[firewallId],
+        ...updates
+      };
+
+      return this.mockFirewalls[firewallId];
+    }
+
+    try {
+      const response = await this.apiRequest<{ firewall: Firewall }>(
+        `/firewalls/${firewallId}`,
+        'PUT',
+        updates
+      );
+      return response.firewall;
+    } catch (error) {
+      console.error(`Error updating firewall ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async addDropletsToFirewall(
+    firewallId: string,
+    dropletIds: number[]
+  ): Promise<void> {
+    if (this.useMock) {
+      if (!this.mockFirewalls[firewallId]) {
+        throw new Error(`Firewall with ID ${firewallId} not found`);
+      }
+
+      this.mockFirewalls[firewallId].droplet_ids = [
+        ...this.mockFirewalls[firewallId].droplet_ids,
+        ...dropletIds.filter(id => !this.mockFirewalls[firewallId].droplet_ids.includes(id))
+      ];
+      return;
+    }
+
+    try {
+      await this.apiRequest(
+        `/firewalls/${firewallId}/droplets`,
+        'POST',
+        { droplet_ids: dropletIds }
+      );
+    } catch (error) {
+      console.error(`Error adding droplets to firewall ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async removeDropletsFromFirewall(
+    firewallId: string,
+    dropletIds: number[]
+  ): Promise<void> {
+    if (this.useMock) {
+      if (!this.mockFirewalls[firewallId]) {
+        throw new Error(`Firewall with ID ${firewallId} not found`);
+      }
+
+      this.mockFirewalls[firewallId].droplet_ids = 
+        this.mockFirewalls[firewallId].droplet_ids.filter(id => !dropletIds.includes(id));
+      return;
+    }
+
+    try {
+      await this.apiRequest(
+        `/firewalls/${firewallId}/droplets`,
+        'DELETE',
+        { droplet_ids: dropletIds }
+      );
+    } catch (error) {
+      console.error(`Error removing droplets from firewall ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async addRulesToFirewall(
+    firewallId: string,
+    inboundRules: FirewallRule[] = [],
+    outboundRules: FirewallRule[] = []
+  ): Promise<void> {
+    if (this.useMock) {
+      if (!this.mockFirewalls[firewallId]) {
+        throw new Error(`Firewall with ID ${firewallId} not found`);
+      }
+
+      if (inboundRules.length > 0) {
+        this.mockFirewalls[firewallId].inbound_rules = [
+          ...this.mockFirewalls[firewallId].inbound_rules,
+          ...inboundRules
+        ];
+      }
+
+      if (outboundRules.length > 0) {
+        this.mockFirewalls[firewallId].outbound_rules = [
+          ...this.mockFirewalls[firewallId].outbound_rules,
+          ...outboundRules
+        ];
+      }
+      return;
+    }
+
+    try {
+      await this.apiRequest(
+        `/firewalls/${firewallId}/rules`,
+        'POST',
+        {
+          inbound_rules: inboundRules,
+          outbound_rules: outboundRules
+        }
+      );
+    } catch (error) {
+      console.error(`Error adding rules to firewall ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async removeRulesFromFirewall(
+    firewallId: string,
+    inboundRules: FirewallRule[] = [],
+    outboundRules: FirewallRule[] = []
+  ): Promise<void> {
+    if (this.useMock) {
+      if (!this.mockFirewalls[firewallId]) {
+        throw new Error(`Firewall with ID ${firewallId} not found`);
+      }
+
+      if (inboundRules.length > 0) {
+        const inboundPorts = inboundRules.map(rule => rule.ports);
+        this.mockFirewalls[firewallId].inbound_rules = 
+          this.mockFirewalls[firewallId].inbound_rules.filter(
+            rule => !inboundPorts.includes(rule.ports)
+          );
+      }
+
+      if (outboundRules.length > 0) {
+        const outboundPorts = outboundRules.map(rule => rule.ports);
+        this.mockFirewalls[firewallId].outbound_rules = 
+          this.mockFirewalls[firewallId].outbound_rules.filter(
+            rule => !outboundPorts.includes(rule.ports)
+          );
+      }
+      return;
+    }
+
+    try {
+      await this.apiRequest(
+        `/firewalls/${firewallId}/rules`,
+        'DELETE',
+        {
+          inbound_rules: inboundRules,
+          outbound_rules: outboundRules
+        }
+      );
+    } catch (error) {
+      console.error(`Error removing rules from firewall ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteFirewall(firewallId: string): Promise<void> {
+    if (this.useMock) {
+      delete this.mockFirewalls[firewallId];
+      return;
+    }
+
+    try {
+      await this.apiRequest(`/firewalls/${firewallId}`, 'DELETE');
+    } catch (error) {
+      console.error(`Error deleting firewall ${firewallId}:`, error);
+      throw error;
+    }
   }
 }
 
