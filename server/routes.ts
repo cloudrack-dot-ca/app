@@ -1026,6 +1026,84 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     await storage.deleteSSHKey(keyId);
     res.sendStatus(204);
   });
+  
+  // CloudRack key status and management endpoints
+  app.get("/api/cloudrack-key", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      // Check if user has CloudRack key
+      const hasKey = await cloudRackKeyManager.hasCloudRackKey(req.user.id);
+      
+      if (hasKey) {
+        // Find the actual key for additional details
+        const keys = await storage.getSSHKeysByUser(req.user.id);
+        const cloudRackKey = keys.find(key => key.isCloudRackKey);
+        
+        res.json({
+          status: "active",
+          key: cloudRackKey
+        });
+      } else {
+        res.json({
+          status: "missing"
+        });
+      }
+    } catch (error) {
+      console.error("Error checking CloudRack key status:", error);
+      res.status(500).json({ 
+        message: "Failed to check CloudRack key status",
+        error: (error as Error).message 
+      });
+    }
+  });
+
+  // Ensure or regenerate CloudRack key
+  app.post("/api/cloudrack-key", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      // Regenerate will delete existing and create a new one
+      const regenerate = req.body.regenerate === true;
+      
+      if (regenerate) {
+        // Find and delete existing CloudRack key if present
+        const keys = await storage.getSSHKeysByUser(req.user.id);
+        const cloudRackKey = keys.find(key => key.isCloudRackKey);
+        
+        if (cloudRackKey) {
+          await storage.deleteSSHKey(cloudRackKey.id);
+        }
+      }
+      
+      // Create/ensure the CloudRack key
+      const success = await cloudRackKeyManager.ensureCloudRackKey(req.user.id);
+      
+      if (success) {
+        // Get the newly created key
+        const keys = await storage.getSSHKeysByUser(req.user.id);
+        const cloudRackKey = keys.find(key => key.isCloudRackKey);
+        
+        res.json({
+          status: "success",
+          message: regenerate ? "CloudRack key regenerated successfully" : "CloudRack key ensured successfully", 
+          key: cloudRackKey
+        });
+      } else {
+        res.status(500).json({
+          status: "error",
+          message: "Failed to create CloudRack key"
+        });
+      }
+    } catch (error) {
+      console.error("Error managing CloudRack key:", error);
+      res.status(500).json({ 
+        status: "error",
+        message: "Failed to manage CloudRack key",
+        error: (error as Error).message 
+      });
+    }
+  });
 
   // Account Update Route
   app.patch("/api/account", async (req, res) => {
@@ -1037,11 +1115,48 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
 
     try {
-      const user = await storage.updateUser(req.user.id, {
-        username,
-        password: newPassword || currentPassword,
-      });
-      res.json({ username: user.username });
+      // Get the current user to verify the password
+      const currentUser = await storage.getUser(req.user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      const isPasswordValid = await comparePasswords(currentPassword, currentUser.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      // Prepare updates
+      const updates: Partial<User> = { username };
+      
+      // Hash new password if provided
+      if (newPassword) {
+        updates.password = await hashPassword(newPassword);
+      }
+
+      // Update user
+      const user = await storage.updateUser(req.user.id, updates);
+      
+      // Log the user out if the password was changed
+      if (newPassword) {
+        req.logout((err) => {
+          if (err) {
+            console.error("Error logging out after password change:", err);
+          }
+          // Return success with a flag indicating logout happened
+          res.json({ 
+            username: user.username,
+            passwordChanged: true
+          });
+        });
+      } else {
+        // Return success without logout
+        res.json({ 
+          username: user.username,
+          passwordChanged: false
+        });
+      }
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
     }
