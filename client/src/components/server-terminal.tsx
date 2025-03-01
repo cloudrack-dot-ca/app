@@ -103,68 +103,89 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     try {
       setConnectionError(null);
       
-      // Since we don't have a real backend socket connection yet, let's simulate one
-      // In a real implementation, you would connect to a socket server like this:
-      // const socket = io(`${window.location.origin}?serverId=${serverId}`);
-      
-      // For now, we'll simulate the terminal experience
+      // Clear terminal and show connecting message
       term.clear();
       term.writeln('\x1b[1;32mInitiating connection to server...\x1b[0m');
       term.writeln(`\x1b[1;34mConnecting to ${serverName} (${ipAddress})...\x1b[0m`);
       
-      setTimeout(() => {
-        term.writeln('\x1b[1;32mConnection established!\x1b[0m');
-        term.writeln('');
-        term.writeln('\x1b[1;37mWelcome to Ubuntu 22.04.3 LTS\x1b[0m');
-        term.writeln(`Last login: ${new Date().toUTCString()}`);
-        term.writeln(`System information as of ${new Date().toLocaleDateString()}`);
-        term.writeln('');
-        term.writeln('System load:  0.8              Users logged in:      1');
-        term.writeln(`Usage of /:   25.1% of 24.06GB IPv4 address:         ${ipAddress}`);
-        term.writeln('Memory usage: 18%              Swap usage:           0%');
-        term.writeln('');
-        term.writeln('\x1b[1;37mThis is a functional terminal with basic simulation.\x1b[0m');
-        term.writeln('\x1b[1;37mYou can type commands and see some simulated responses.\x1b[0m');
-        term.writeln('');
-        
-        // Show prompt
-        term.write(`\x1b[1;32mroot@${serverName}:~#\x1b[0m `);
-        
+      // Connect to real terminal socket server
+      const socket = io(`${window.location.origin}/terminal?serverId=${serverId}`);
+      socketRef.current = socket;
+      
+      // Handle successful connection
+      socket.on('connect', () => {
+        console.log('Connected to terminal socket server');
+        term.writeln('\x1b[1;32mSocket connection established!\x1b[0m');
         setIsConnected(true);
-        
-        // Handle user input
-        let currentLine = '';
-        
-        term.onData(data => {
-          // Handle backspace
-          if (data === '\u007f') {
-            if (currentLine.length > 0) {
-              currentLine = currentLine.slice(0, -1);
-              term.write('\b \b');
-            }
-            return;
+      });
+      
+      // Handle connection error
+      socket.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+        term.writeln('\x1b[1;31mSocket connection error: ' + error.message + '\x1b[0m');
+        setConnectionError(`Connection error: ${error.message}`);
+        setIsConnected(false);
+      });
+      
+      // Handle terminal data from server
+      socket.on('data', (data) => {
+        term.write(data);
+      });
+      
+      // Handle status messages from server
+      socket.on('status', (data) => {
+        term.writeln(`\x1b[1;33m${data.message}\x1b[0m`);
+      });
+      
+      // Handle server errors
+      socket.on('error', (message) => {
+        term.writeln(`\x1b[1;31mError: ${message}\x1b[0m`);
+        setConnectionError(message);
+      });
+      
+      // Handle authentication requests
+      socket.on('auth_request', (data) => {
+        term.writeln(`\x1b[1;36m${data.prompt}\x1b[0m`);
+      });
+      
+      // Handle disconnect
+      socket.on('disconnect', () => {
+        console.log('Disconnected from terminal socket server');
+        term.writeln('\x1b[1;31mDisconnected from server\x1b[0m');
+        setIsConnected(false);
+      });
+      
+      // Handle terminal input - send to server
+      term.onData(data => {
+        if (socket.connected) {
+          socket.emit('data', data);
+        }
+      });
+      
+      // Handle window resize
+      const resizeObserver = new ResizeObserver(() => {
+        if (fitAddon) {
+          fitAddon.fit();
+          if (socket.connected) {
+            const dims = term.rows && term.cols ? 
+              { rows: term.rows, cols: term.cols } : 
+              { rows: 24, cols: 80 };
+            socket.emit('resize', dims);
           }
-          
-          // Handle enter key
-          if (data === '\r') {
-            term.writeln('');
-            
-            // Process the command
-            processCommand(term, currentLine);
-            
-            // Reset current line
-            currentLine = '';
-            return;
-          }
-          
-          // Handle printable characters
-          if (data >= ' ' && data <= '~') {
-            currentLine += data;
-            term.write(data);
-          }
-        });
-        
-      }, 1500);
+        }
+      });
+      
+      if (terminalRef.current) {
+        resizeObserver.observe(terminalRef.current);
+      }
+      
+      // Return cleanup function
+      return () => {
+        if (terminalRef.current) {
+          resizeObserver.unobserve(terminalRef.current);
+        }
+        socket.disconnect();
+      };
       
     } catch (error) {
       console.error('Failed to connect to terminal server:', error);
@@ -173,81 +194,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     }
   };
 
-  // Process simulated commands
-  const processCommand = (term: Terminal, command: string) => {
-    const cmd = command.trim().toLowerCase();
-    
-    if (cmd === '') {
-      term.write(`\x1b[1;32mroot@${serverName}:~#\x1b[0m `);
-      return;
-    }
-    
-    // Handle common Linux commands
-    if (cmd === 'ls') {
-      term.writeln('Documents  Downloads  public_html  server.log  .ssh');
-      
-    } else if (cmd === 'pwd') {
-      term.writeln('/root');
-      
-    } else if (cmd === 'whoami') {
-      term.writeln('root');
-      
-    } else if (cmd === 'date') {
-      term.writeln(new Date().toString());
-      
-    } else if (cmd === 'clear' || cmd === 'cls') {
-      term.clear();
-      
-    } else if (cmd === 'uname' || cmd === 'uname -a') {
-      term.writeln('Linux server-' + serverId + ' 5.15.0-56-generic #62-Ubuntu SMP x86_64 GNU/Linux');
-      
-    } else if (cmd.startsWith('cd ')) {
-      term.writeln(`Changed directory to: ${cmd.substring(3)}`);
-      
-    } else if (cmd.startsWith('echo ')) {
-      term.writeln(cmd.substring(5));
-      
-    } else if (cmd === 'ps' || cmd === 'ps aux') {
-      term.writeln('USER        PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND');
-      term.writeln('root          1  0.0  0.2 167284 11248 ?        Ss   00:00   0:02 /sbin/init');
-      term.writeln('root          2  0.0  0.0      0     0 ?        S    00:00   0:00 [kthreadd]');
-      term.writeln('www-data    743  0.0  0.6 235968 24616 ?        S    00:00   0:00 nginx: worker process');
-      term.writeln('root       1021  0.0  1.2 1295384 49152 ?       Ssl  00:00   0:17 node server.js');
-      
-    } else if (cmd === 'df' || cmd === 'df -h') {
-      term.writeln('Filesystem      Size  Used Avail Use% Mounted on');
-      term.writeln('udev            1.9G     0  1.9G   0% /dev');
-      term.writeln('tmpfs           394M  1.1M  393M   1% /run');
-      term.writeln('/dev/vda1        25G  6.2G   18G  26% /');
-      term.writeln('/dev/vdb1        50G   12G   38G  24% /mnt/volume-1');
-      
-    } else if (cmd === 'free' || cmd === 'free -h') {
-      term.writeln('              total        used        free      shared  buff/cache   available');
-      term.writeln('Mem:          3.9Gi       734Mi       2.2Gi       2.0Mi       967Mi       2.9Gi');
-      term.writeln('Swap:            0B          0B          0B');
-      
-    } else if (cmd === 'top' || cmd === 'htop') {
-      term.writeln('Simulated system monitor not available in this interface.');
-      term.writeln('Please use real SSH connection for this functionality.');
-      
-    } else if (cmd === 'reboot' || cmd === 'shutdown' || cmd === 'shutdown -r now') {
-      term.writeln('System reboot/shutdown commands are disabled in this simulation.');
-      term.writeln('Please use the server control panel buttons instead.');
-      
-    } else if (cmd === 'help') {
-      term.writeln('Available simulated commands:');
-      term.writeln('  ls, pwd, whoami, date, clear, uname, cd, echo, ps, df, free');
-      term.writeln('');
-      term.writeln('Note: This is a basic simulation. For full functionality,');
-      term.writeln('use SSH to connect directly to the server.');
-      
-    } else {
-      term.writeln(`Command not found: ${command}`);
-    }
-    
-    // Show prompt
-    term.write(`\x1b[1;32mroot@${serverName}:~#\x1b[0m `);
-  };
+  // No need for simulated command processing now that we're connecting to real server
 
   // Reconnect terminal
   const handleReconnect = () => {

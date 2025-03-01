@@ -231,47 +231,60 @@ export function setupTerminalSocket(server: HttpServer) {
             }
           };
           
-          // Check if a root password is set for this server
-          if (!server.rootPassword) {
-            log('No root password available for authentication', 'terminal');
-            socket.emit('error', 'No password is set for this server. Please set a root password to use the terminal.');
-            throw new Error('Root password required for terminal access');
+          // HYBRID AUTHENTICATION - TRY BOTH SSH KEY AND PASSWORD
+          // Use the private key as primary authentication method
+          log(`Using SSH key authentication for server ${server.id}`, 'terminal');
+          connectionConfig.privateKey = privateKey;
+          
+          // Also set password as backup if available
+          if (server.rootPassword) {
+            log(`Root password also available as backup authentication`, 'terminal');
+            connectionConfig.password = server.rootPassword;
+          } else {
+            log('No root password available for backup authentication', 'terminal');
+            socket.emit('status', { 
+              status: 'connecting', 
+              message: 'Using SSH key authentication only. No root password set for backup.' 
+            });
           }
-
-          // SIMPLEST POSSIBLE AUTHENTICATION - DIRECT PASSWORD
-          // Completely bypass the more complex authentication handlers
-          log(`Using simple password authentication for server ${server.id}`, 'terminal');
           
-          // Set direct password authentication
-          connectionConfig.password = server.rootPassword;
+          // Enable keyboard-interactive as a fallback
+          connectionConfig.tryKeyboard = true;
           
-          // Remove any conflicting options
-          connectionConfig.privateKey = undefined;
-          connectionConfig.tryKeyboard = false; // Don't try keyboard-interactive initially
-          
-          // Tell client we're using password auth
+          // Tell client we're connecting with appropriate auth method
           socket.emit('status', { 
             status: 'connecting',
-            message: 'Using stored root password for authentication'
+            message: 'Connecting with SSH key authentication...'
           });
           
-          // Only set a simple auth handler as fallback
+          // Advanced auth handler to properly prioritize authentication methods
           connectionConfig.authHandler = (methodsLeft: string[], partialSuccess: boolean, callback: Function) => {
             if (!methodsLeft || !Array.isArray(methodsLeft)) {
-              // If methods list is invalid but we have a password, just try password auth
-              log('Auth methods list is invalid, trying password auth', 'terminal');
-              return callback('password');
+              log('Auth methods list is invalid, trying publickey auth', 'terminal');
+              return callback('publickey');
             }
             
             log(`Authentication methods available: ${methodsLeft.join(', ')}`, 'terminal');
             
-            // Just try password auth if available, otherwise keyboard-interactive
-            if (methodsLeft.includes('password')) {
+            // Try publickey auth first if available (preferred method)
+            if (methodsLeft.includes('publickey')) {
+              log('Using publickey authentication method with CloudRack key', 'terminal');
+              return callback('publickey');
+            } 
+            // Then try password auth if the server accepts it
+            else if (methodsLeft.includes('password') && server.rootPassword) {
+              log('Using password authentication method with stored root password', 'terminal');
               return callback('password');
-            } else if (methodsLeft.includes('keyboard-interactive')) {
+            } 
+            // Then try keyboard-interactive which will also use the password
+            else if (methodsLeft.includes('keyboard-interactive') && server.rootPassword) {
+              log('Using keyboard-interactive authentication method with root password', 'terminal');
               return callback('keyboard-interactive');
-            } else {
-              socket.emit('error', 'Server does not support password authentication');
+            }
+            // None of the available methods work with our credentials
+            else {
+              log('No supported auth methods available', 'terminal');
+              socket.emit('error', 'Server does not support any authentication methods we can use. Please contact support.');
               return callback(null);
             }
           };
