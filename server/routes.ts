@@ -1048,21 +1048,55 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   app.patch("/api/servers/:id/password", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
-    const server = await storage.getServer(parseInt(req.params.id));
+    const serverId = parseInt(req.params.id);
+    const server = await storage.getServer(serverId);
     if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
       return res.sendStatus(404);
     }
 
-    const { password } = req.body;
+    const { password, digital_ocean_integration } = req.body;
     if (!password) {
       return res.status(400).json({ message: "Password is required" });
     }
 
     try {
-      // In a real implementation, this would reset the server's root password
-      // For now we'll just simulate success
-      res.json({ success: true });
+      // Validate password complexity
+      if (password.length < 8) {
+        return res.status(400).json({ 
+          message: "Password must be at least 8 characters long" 
+        });
+      }
+
+      // Store the root password in the database
+      const updatedServer = await db.update(schema.servers)
+        .set({ 
+          rootPassword: password,
+          // Add a timestamp indicating the password was updated
+          updatedAt: new Date()
+        })
+        .where(eq(schema.servers.id, serverId))
+        .returning();
+      
+      // Log the password update - without showing the actual password
+      console.log(`Root password updated for server ${serverId} by user ${req.user.id}`);
+      
+      // For DigitalOcean integration - in a real implementation with the actual DigitalOcean API,
+      // we would make an API call here to reset the server's root password.
+      // For demonstration purposes, we are just storing it in our database.
+      
+      if (digital_ocean_integration) {
+        console.log(`Digital Ocean integration flag set for password update on server ${serverId}`);
+        // This would be where we'd make the API call to DigitalOcean
+      }
+      
+      res.json({ 
+        success: true,
+        message: "Server root password updated successfully",
+        // Don't return the password in the response for security
+        passwordUpdated: true
+      });
     } catch (error) {
+      console.error(`Error updating root password for server ${serverId}:`, error);
       res.status(500).json({ message: (error as Error).message });
     }
   });
