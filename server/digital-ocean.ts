@@ -54,10 +54,10 @@ export interface Firewall {
 }
 
 // Support both mock and real DigitalOcean API
-export class DigitalOceanClient {
+export class CloudRackClient {
   private apiKey: string;
   public useMock: boolean;
-  private apiBaseUrl = 'https://api.digitalocean.com/v2';
+  private apiBaseUrl = 'https://api.cloudrack.com/v2';
 
   constructor() {
     this.apiKey = process.env.DIGITAL_OCEAN_API_KEY || '';
@@ -1252,4 +1252,4 @@ runcmd:
   }
 }
 
-export const digitalOcean = new DigitalOceanClient();
+export const digitalOcean = new CloudRackClient();
