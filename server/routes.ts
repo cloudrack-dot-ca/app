@@ -604,6 +604,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         type: "server_charge",
         paypalTransactionId: null,
         createdAt: new Date(),
+        description: `Initial charge for server: ${serverData.name} (${serverData.size})`,
       });
 
       // Fetch the updated server with the correct password from the database
@@ -750,6 +751,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       type: "volume_charge",
       paypalTransactionId: null,
       createdAt: new Date(),
+      description: `Initial charge for volume: ${parsed.data.name} (${parsed.data.size}GB)`,
     });
 
     res.status(201).json(volume);
@@ -844,6 +846,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       type: "volume_resize_charge",
       paypalTransactionId: null,
       createdAt: new Date(),
+      description: `Volume resize charge: ${volume.name} (${volume.size - (size - volume.size)}GB to ${volume.size}GB)`,
     });
 
     res.json(volume);
@@ -886,6 +889,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         type: "deposit",
         paypalTransactionId: payment.id,
         createdAt: new Date(),
+        description: `PayPal deposit of $${amount.toFixed(2)}`,
       });
 
       res.json({ success: true, payment });

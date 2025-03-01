@@ -64,7 +64,7 @@ export const billingTransactions = pgTable("billing_transactions", {
   type: text("type").notNull(), // deposit, hourly_server_charge, hourly_volume_charge, bandwidth_overage, server_deleted_insufficient_funds
   paypalTransactionId: text("paypal_transaction_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  description: text("description"), // Optional description for the transaction
+  description: text("description").default(''), // Optional description for the transaction, default empty string
 });
 
 // Updated: Support Tickets with server relation
