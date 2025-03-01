@@ -48,11 +48,22 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       });
     };
     
-    // Listen for our custom event
+    const handleConnectionError = (event: Event) => {
+      const customEvent = event as CustomEvent<{ message: string }>;
+      toast({
+        title: 'Connection lost',
+        description: customEvent.detail.message,
+        variant: 'destructive'
+      });
+    };
+    
+    // Listen for our custom events
     window.addEventListener('new-ticket-message', handleNewTicketMessage);
+    window.addEventListener('websocket-connection-error', handleConnectionError);
     
     return () => {
       window.removeEventListener('new-ticket-message', handleNewTicketMessage);
+      window.removeEventListener('websocket-connection-error', handleConnectionError);
     };
   }, [toast]);
 
@@ -139,6 +150,10 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
     socket.onerror = (error) => {
       console.error('WebSocket error:', error);
+      // Dispatch event for connection error
+      window.dispatchEvent(new CustomEvent('websocket-connection-error', { 
+        detail: { message: 'WebSocket error occurred. Connection may be unstable.' }
+      }));
     };
 
     socket.onmessage = (event) => {
