@@ -60,20 +60,20 @@ export default function ServerDetailPage() {
   const params = useParams<{ id: string }>();
   const pathId = params?.id || '';
   
-  // Implement fallback logic - if ID isn't valid, try to use a known working ID
+  // Parse the server ID from the URL
   let serverId: number;
   try {
     // Parse the server ID
     serverId = parseInt(pathId);
     
-    // If we get an invalid ID, use a fallback for testing
+    // If we get an invalid ID, show an error
     if (isNaN(serverId) || serverId <= 0) {
-      console.log("Invalid server ID in URL, using fallback ID");
-      serverId = 10; // Use ID 10 which we know exists from our API test
+      console.error("Invalid server ID in URL:", pathId);
+      serverId = -1; // Use an invalid ID that will be caught by the error handling
     }
   } catch (err) {
     console.error("Error parsing server ID:", err);
-    serverId = 10; // Default to server 10 if there's any parsing error
+    serverId = -1;
   }
   
   // Comprehensive debug logging

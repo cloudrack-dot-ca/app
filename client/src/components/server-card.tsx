@@ -81,19 +81,14 @@ export default function ServerCard({ server }: ServerCardProps) {
               onClick={() => {
                 try {
                   // Ensure it's a valid server ID
-                  const validId = server.id ? parseInt(String(server.id)) : 0;
-                  if (isNaN(validId) || validId <= 0) {
+                  const validId = server.id;
+                  if (!validId) {
                     throw new Error("Invalid server ID");
                   }
                   
                   console.log("Navigating to server detail, ID:", validId);
                   
-                  // Pre-load server data into cache if possible to avoid loading issues
-                  queryClient.prefetchQuery({
-                    queryKey: [`/api/servers/${validId}`],
-                  });
-                  
-                  // Force navigation to ensure consistent routing
+                  // Navigate to the server details page
                   window.location.href = `/servers/${validId}`;
                 } catch (err) {
                   console.error("Navigation error:", err);
