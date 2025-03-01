@@ -9,16 +9,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertServerSchema } from "@shared/schema";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Search, LockKeyhole, Server as ServerIcon } from "lucide-react";
+import { Loader2, Plus, Search, LockKeyhole, Key, Server as ServerIcon } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 import * as z from 'zod';
 
 interface Region {
@@ -41,6 +43,13 @@ interface Application {
   type: string;
 }
 
+interface SSHKey {
+  id: number;
+  name: string;
+  publicKey: string;
+  createdAt: string;
+}
+
 function calculatePasswordStrength(password: string): number {
   if (!password) return 0;
   let strength = 0;
@@ -59,9 +68,14 @@ export default function Dashboard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
+  const [authType, setAuthType] = useState<"password" | "ssh">("password");
+  const [sshKey, setSshKey] = useState("");
+  const [selectedSSHKeyId, setSelectedSSHKeyId] = useState<number | string | null>(null);
+  const [newKeyName, setNewKeyName] = useState("");
   const [processorFilter, setProcessorFilter] = useState<string>("all");
   const [applicationTypeFilter, setApplicationTypeFilter] = useState<string>("all");
   
+
   const { data: servers = [], isLoading } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
   });
@@ -78,12 +92,19 @@ export default function Dashboard() {
     queryKey: ["/api/applications"],
   });
 
+  const { data: sshKeys = [] } = useQuery<SSHKey[]>({
+    queryKey: ["/api/ssh-keys"],
+  });
+
   const form = useForm({
     resolver: zodResolver(
       insertServerSchema.extend({
         auth: insertServerSchema.shape.name.refine(
           (value) => {
-            return value && value.length >= 8 && !value.match(/[^a-zA-Z0-9]$/);
+            if (authType === "password") {
+              return value && value.length >= 8 && !value.match(/[^a-zA-Z0-9]$/);
+            }
+            return true;
           },
           "Password must be at least 8 characters and not end with a special character"
         ),
@@ -112,14 +133,46 @@ export default function Dashboard() {
 
   async function onSubmit(values: any) {
     try {
+      // If adding a new SSH key, save it first
+      let sshKeyToUse = selectedSSHKeyId && typeof selectedSSHKeyId === "number" 
+        ? sshKeys.find(key => key.id === selectedSSHKeyId)?.publicKey 
+        : undefined;
+
+      if (authType === "ssh" && sshKey && !selectedSSHKeyId) {
+        if (!newKeyName) {
+          toast({
+            title: "Error",
+            description: "Please provide a name for your SSH key",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        try {
+          const response = await apiRequest("POST", "/api/ssh-keys", {
+            name: newKeyName,
+            publicKey: sshKey,
+          });
+          sshKeyToUse = (response as any).publicKey;
+          queryClient.invalidateQueries({ queryKey: ["/api/ssh-keys"] });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to save SSH key: " + (error as Error).message,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const serverData = {
         name: values.name,
         region: values.region,
         size: values.size,
         application: values.application,
         auth: {
-          type: "password",
-          value: values.auth
+          type: authType,
+          value: authType === "password" ? values.auth : sshKeyToUse || sshKey
         }
       };
 
@@ -127,6 +180,9 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/servers"] });
       setCreateOpen(false);
       form.reset();
+      setNewKeyName("");
+      setSshKey("");
+      setSelectedSSHKeyId(null);
       toast({
         title: "Server created",
         description: "Your new server is being provisioned",
@@ -163,6 +219,11 @@ export default function Dashboard() {
                 <DropdownMenuItem asChild>
                   <Link href="/account">
                     Edit Account
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/ssh-keys">
+                    SSH Keys
                   </Link>
                 </DropdownMenuItem>
                 {user?.isAdmin && (
@@ -347,45 +408,99 @@ export default function Dashboard() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                              <SelectItem value="none">No Application (Clean OS)</SelectItem>
+                              
+                              {/* Filter applications by type */}
                               {applications
-                                .filter(app => applicationTypeFilter === "all" ? true : app.type === applicationTypeFilter)
+                                .filter(app => 
+                                  applicationTypeFilter === "all" || 
+                                  app.type === applicationTypeFilter
+                                )
                                 .map((app) => (
                                   <SelectItem key={app.slug} value={app.slug}>
-                                    {app.name}
+                                    {app.name} - {app.description}
                                   </SelectItem>
-                                ))}
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage className="text-xs" />
                         </FormItem>
                       )}
                     />
+                    <div className="col-span-2 mb-1">
+                      <Label className="text-sm">Processor Type</Label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "all" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("all")}
+                          className="text-xs h-8"
+                        >
+                          All
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "regular" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("regular")}
+                          className="text-xs h-8"
+                        >
+                          Regular
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "intel" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("intel")}
+                          className="text-xs h-8"
+                        >
+                          Intel Optimized
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "amd" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("amd")}
+                          className="text-xs h-8"
+                        >
+                          AMD
+                        </Button>
+                      </div>
+                    </div>
                     
                     <FormField
                       control={form.control}
                       name="size"
                       render={({ field }) => (
                         <FormItem className="col-span-2">
-                          <FormLabel className="text-sm">Server Size</FormLabel>
+                          <FormLabel className="text-sm">Size</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             defaultValue={field.value}
                           >
                             <FormControl>
                               <SelectTrigger className="h-9">
-                                <SelectValue placeholder="Select server size" />
+                                <SelectValue placeholder="Select size" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {sizes
-                                .filter(size => processorFilter === "all" ? true : (size.processor_type || 'regular') === processorFilter)
+                                .filter(size => {
+                                  if (processorFilter === "all") return true;
+                                  // Handle regular which includes undefined
+                                  if (processorFilter === "regular") {
+                                    return !size.processor_type || size.processor_type === "regular";
+                                  }
+                                  return size.processor_type === processorFilter;
+                                })
                                 .map((size) => (
                                   <SelectItem key={size.slug} value={size.slug}>
                                     {size.processor_type === 'intel' && '🔷 '}
                                     {size.processor_type === 'amd' && '🔶 '}
                                     {size.memory / 1024}GB RAM, {size.vcpus} vCPUs (${(size.price_monthly / (24 * 30)).toFixed(3)}/hr)
                                   </SelectItem>
-                                ))}
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage className="text-xs" />
@@ -393,7 +508,6 @@ export default function Dashboard() {
                       )}
                     />
                     </div>
-                    
                     <FormField
                       control={form.control}
                       name="auth"
@@ -410,14 +524,44 @@ export default function Dashboard() {
                             </div>
                             <Progress value={passwordStrength} className="h-1.5" />
                           </div>
-                          <FormDescription className="text-xs">
+                          <div className="text-xs text-muted-foreground">
                             This password will be used to access your server via the web terminal.
-                          </FormDescription>
+                          </div>
                           <FormMessage className="text-xs" />
                         </FormItem>
                       )}
                     />
 
+                        {(!selectedSSHKeyId || selectedSSHKeyId === "new" as string) && (
+                          <div className="space-y-3">
+                            <FormItem>
+                              <FormLabel className="text-sm">SSH Key Name</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="e.g., My Work Laptop"
+                                  value={newKeyName}
+                                  onChange={(e) => setNewKeyName(e.target.value)}
+                                  className="h-9 text-sm"
+                                />
+                              </FormControl>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                            <FormItem>
+                              <FormLabel className="text-sm">SSH Public Key</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  value={sshKey}
+                                  onChange={(e) => setSshKey(e.target.value)}
+                                  className="font-mono text-xs h-24"
+                                  placeholder="Paste your SSH public key here"
+                                />
+                              </FormControl>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="pt-2">
                       <Button type="submit" className="w-full h-9 text-sm" disabled={form.formState.isSubmitting}>
                         {form.formState.isSubmitting ? (
