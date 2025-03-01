@@ -87,7 +87,8 @@ async function deductHourlyServerCosts() {
       }
       
       // Calculate the hourly cost based on server size
-      const hourlyCost = COSTS.servers[server.size] || COSTS.servers.default;
+      const serverSizeSlug = server.size as keyof typeof COSTS.servers;
+      const hourlyCost = COSTS.servers[serverSizeSlug] || COSTS.servers.default;
       const costInCents = hourlyCost; // Already in cents
       
       console.log(`Server ${server.id} (${server.name}): Hourly cost = ${hourlyCost} cents`);
@@ -229,7 +230,8 @@ async function calculateBandwidthOverages() {
       const totalBandwidthGB = totalBandwidthBytes / (1024 * 1024 * 1024);
       
       // Determine the free bandwidth limit for this server size
-      const freeBandwidthLimit = COSTS.bandwidth.includedLimit[server.size] || COSTS.bandwidth.includedLimit.default;
+      const serverSize = server.size as keyof typeof COSTS.bandwidth.includedLimit;
+      const freeBandwidthLimit = COSTS.bandwidth.includedLimit[serverSize] || COSTS.bandwidth.includedLimit.default;
       
       // Calculate overage in GB
       const overageGB = Math.max(0, totalBandwidthGB - freeBandwidthLimit);
@@ -604,7 +606,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         type: "server_charge",
         paypalTransactionId: null,
         createdAt: new Date(),
-        description: `Initial charge for server: ${serverData.name} (${serverData.size})`,
+        description: `Initial charge for server: ${parsed.data.name} (${parsed.data.size})`,
       });
 
       // Fetch the updated server with the correct password from the database
@@ -692,8 +694,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
     }
 
-    // Calculate hourly cost with markup
-    const hourlyCost = parsed.data.size * (COSTS.storage.baseRate + COSTS.storage.markup);
+    // Calculate hourly storage cost
+    const hourlyCost = parsed.data.size * COSTS.storage.rateWithMargin;
 
     // Check if user has enough balance for at least 1 hour
     try {
@@ -818,8 +820,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
 
     // Calculate additional cost for the new size
-    const newHourlyCost = size * (COSTS.storage.baseRate + COSTS.storage.markup);
-    const currentHourlyCost = volume.size * (COSTS.storage.baseRate + COSTS.storage.markup);
+    const newHourlyCost = size * COSTS.storage.rateWithMargin;
+    const currentHourlyCost = volume.size * COSTS.storage.rateWithMargin;
     const additionalCost = newHourlyCost - currentHourlyCost;
 
     // Check if user has enough balance for the size increase
