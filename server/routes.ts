@@ -1802,58 +1802,11 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
   });
 
-  // SSH Key Routes
-  app.get("/api/ssh-keys", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-    const keys = await storage.getSSHKeysByUser(req.user.id);
-    res.json(keys);
-  });
-
-  app.post("/api/ssh-keys", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-
-    const { name, publicKey, isCloudRackKey = false } = req.body;
-    if (!name || !publicKey) {
-      return res.status(400).json({ message: "Name and public key are required" });
-    }
-
-    try {
-      const key = await storage.createSSHKey({
-        userId: req.user.id,
-        name,
-        publicKey,
-        createdAt: new Date(),
-        isCloudRackKey: isCloudRackKey,
-        isSystemKey: false // Default to false for user-created keys
-      });
-      res.status(201).json(key);
-    } catch (error) {
-      res.status(400).json({ message: (error as Error).message });
-    }
-  });
-
-  app.delete("/api/ssh-keys/:id", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-
-    const keyId = parseInt(req.params.id);
-    const key = await storage.getSSHKey(keyId);
-
-    if (!key || (key.userId !== req.user.id && !req.user.isAdmin)) {
-      return res.sendStatus(404);
-    }
-
-    // The user has confirmed they want to delete the CloudRack key
-    // This will disable web terminal access to all servers
-    if (key.isCloudRackKey) {
-      console.log(`User ${req.user.id} deleted their CloudRack Terminal key ${keyId}`);
-    }
-
-    await storage.deleteSSHKey(keyId);
-    res.sendStatus(204);
-  });
+  // SSH Key Routes - Removed as part of password-only authentication system
+  // All SSH key functionality has been removed in favor of password-only authentication
   
-  // CloudRack key status and management endpoints
-  // CloudRack key endpoint removed - using password authentication only
+  // Password-only authentication system
+  // The password set during server creation is used for both SSH and web terminal access
 
   // CloudRack key management endpoint removed - using password authentication only
   
