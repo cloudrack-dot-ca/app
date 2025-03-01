@@ -582,86 +582,86 @@ export default function AdminDashboard() {
                 <div className="text-center py-8">Loading users...</div>
               ) : users ? (
                 <div>
-                <Table>
-                  <TableCaption>List of all registered users on the platform</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Balance</TableHead>
-                      <TableHead>Admin</TableHead>
-                      <TableHead>API Key</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users
-                      .filter(user => user.username.toLowerCase().includes(userSearch.toLowerCase()))
-                      .slice((userPage - 1) * ITEMS_PER_PAGE, userPage * ITEMS_PER_PAGE)
-                      .map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>{user.id}</TableCell>
-                        <TableCell>{user.username}</TableCell>
-                        <TableCell>${(user.balance / 100).toFixed(2)}</TableCell>
-                        <TableCell>
-                          {user.isAdmin ? (
-                            <BadgeCheck className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <BadgeX className="h-5 w-5 text-gray-400" />
-                          )}
-                        </TableCell>
-                        <TableCell>{user.apiKey ? 'Set' : 'Not Set'}</TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setEditingUser(user);
-                              setEditUserBalance((user.balance / 100).toString());
-                            }}
-                          >
-                            Edit Balance
-                          </Button>
-                        </TableCell>
+                  <Table>
+                    <TableCaption>List of all registered users on the platform</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Username</TableHead>
+                        <TableHead>Balance</TableHead>
+                        <TableHead>Admin</TableHead>
+                        <TableHead>API Key</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {/* Pagination for users */}
-                {users.filter(user => user.username.toLowerCase().includes(userSearch.toLowerCase())).length > 0 && (
-                  <div className="flex items-center justify-center space-x-2 py-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setUserPage(prev => Math.max(prev - 1, 1))}
-                      disabled={userPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <div className="text-sm">
-                      Page {userPage} of {Math.ceil(users.filter(user => 
-                        user.username.toLowerCase().includes(userSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setUserPage(prev => 
-                        Math.min(prev + 1, Math.ceil(users.filter(user => 
+                    </TableHeader>
+                    <TableBody>
+                      {users
+                        .filter(user => user.username.toLowerCase().includes(userSearch.toLowerCase()))
+                        .slice((userPage - 1) * ITEMS_PER_PAGE, userPage * ITEMS_PER_PAGE)
+                        .map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell>{user.id}</TableCell>
+                          <TableCell>{user.username}</TableCell>
+                          <TableCell>${(user.balance / 100).toFixed(2)}</TableCell>
+                          <TableCell>
+                            {user.isAdmin ? (
+                              <BadgeCheck className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <BadgeX className="h-5 w-5 text-gray-400" />
+                            )}
+                          </TableCell>
+                          <TableCell>{user.apiKey ? 'Set' : 'Not Set'}</TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setEditingUser(user);
+                                setEditUserBalance((user.balance / 100).toString());
+                              }}
+                            >
+                              Edit Balance
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {/* Pagination for users */}
+                  {users.filter(user => user.username.toLowerCase().includes(userSearch.toLowerCase())).length > 0 && (
+                    <div className="flex items-center justify-center space-x-2 py-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUserPage(prev => Math.max(prev - 1, 1))}
+                        disabled={userPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <div className="text-sm">
+                        Page {userPage} of {Math.ceil(users.filter(user => 
                           user.username.toLowerCase().includes(userSearch.toLowerCase())
-                        ).length / ITEMS_PER_PAGE))
-                      )}
-                      disabled={userPage >= Math.ceil(users.filter(user => 
-                        user.username.toLowerCase().includes(userSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                        ).length / ITEMS_PER_PAGE)}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUserPage(prev => 
+                          Math.min(prev + 1, Math.ceil(users.filter(user => 
+                            user.username.toLowerCase().includes(userSearch.toLowerCase())
+                          ).length / ITEMS_PER_PAGE))
+                        )}
+                        disabled={userPage >= Math.ceil(users.filter(user => 
+                          user.username.toLowerCase().includes(userSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE)}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load users</div>
@@ -744,105 +744,105 @@ export default function AdminDashboard() {
                 <div className="text-center py-8">Loading servers...</div>
               ) : servers ? (
                 <div>
-                <Table>
-                  <TableCaption>List of all servers on the platform</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>User ID</TableHead>
-                      <TableHead>Region</TableHead>
-                      <TableHead>Size</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>IP Address</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {servers
-                      .filter(server => 
-                        server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
-                        server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                      )
-                      .slice((serverPage - 1) * ITEMS_PER_PAGE, serverPage * ITEMS_PER_PAGE)
-                      .map((server) => (
-                      <TableRow key={server.id}>
-                        <TableCell>{server.id}</TableCell>
-                        <TableCell>{server.name}</TableCell>
-                        <TableCell>{server.userId}</TableCell>
-                        <TableCell>{server.region}</TableCell>
-                        <TableCell>{server.size}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            server.status === 'active' ? 'bg-green-100 text-green-800' : 
-                            server.status === 'new' ? 'bg-blue-100 text-blue-800' :
-                            'bg-amber-100 text-amber-800'
-                          }`}>
-                            {server.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{server.ipAddress || 'Not assigned'}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => {
-                                if (window.confirm('Are you sure you want to delete this server? This action cannot be undone.')) {
-                                  deleteServerMutation.mutate(server.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
+                  <Table>
+                    <TableCaption>List of all servers on the platform</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>User ID</TableHead>
+                        <TableHead>Region</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>IP Address</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {/* Pagination for servers */}
-                {servers.filter(server => 
-                  server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
-                  server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                ).length > 0 && (
-                  <div className="flex items-center justify-center space-x-2 py-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setServerPage(prev => Math.max(prev - 1, 1))}
-                      disabled={serverPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <div className="text-sm">
-                      Page {serverPage} of {Math.ceil(servers.filter(server => 
-                        server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
-                        server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setServerPage(prev => 
-                        Math.min(prev + 1, Math.ceil(servers.filter(server => 
+                    </TableHeader>
+                    <TableBody>
+                      {servers
+                        .filter(server => 
                           server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
                           server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                        ).length / ITEMS_PER_PAGE))
-                      )}
-                      disabled={serverPage >= Math.ceil(servers.filter(server => 
-                        server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
-                        server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                        )
+                        .slice((serverPage - 1) * ITEMS_PER_PAGE, serverPage * ITEMS_PER_PAGE)
+                        .map((server) => (
+                        <TableRow key={server.id}>
+                          <TableCell>{server.id}</TableCell>
+                          <TableCell>{server.name}</TableCell>
+                          <TableCell>{server.userId}</TableCell>
+                          <TableCell>{server.region}</TableCell>
+                          <TableCell>{server.size}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              server.status === 'active' ? 'bg-green-100 text-green-800' : 
+                              server.status === 'new' ? 'bg-blue-100 text-blue-800' :
+                              'bg-amber-100 text-amber-800'
+                            }`}>
+                              {server.status}
+                            </span>
+                          </TableCell>
+                          <TableCell>{server.ipAddress || 'Not assigned'}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                onClick={() => {
+                                  if (window.confirm('Are you sure you want to delete this server? This action cannot be undone.')) {
+                                    deleteServerMutation.mutate(server.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {/* Pagination for servers */}
+                  {servers.filter(server => 
+                    server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                    server.region.toLowerCase().includes(serverSearch.toLowerCase())
+                  ).length > 0 && (
+                    <div className="flex items-center justify-center space-x-2 py-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setServerPage(prev => Math.max(prev - 1, 1))}
+                        disabled={serverPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <div className="text-sm">
+                        Page {serverPage} of {Math.ceil(servers.filter(server => 
+                          server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                          server.region.toLowerCase().includes(serverSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE)}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setServerPage(prev => 
+                          Math.min(prev + 1, Math.ceil(servers.filter(server => 
+                            server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                            server.region.toLowerCase().includes(serverSearch.toLowerCase())
+                          ).length / ITEMS_PER_PAGE))
+                        )}
+                        disabled={serverPage >= Math.ceil(servers.filter(server => 
+                          server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                          server.region.toLowerCase().includes(serverSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE)}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load servers</div>
@@ -876,90 +876,90 @@ export default function AdminDashboard() {
                 <div className="text-center py-8">Loading transactions...</div>
               ) : transactions ? (
                 <div>
-                <Table>
-                  <TableCaption>List of all financial transactions</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>User ID</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions
-                      .filter(transaction => 
-                        transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
-                        transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
-                      )
-                      .slice((transactionPage - 1) * ITEMS_PER_PAGE, transactionPage * ITEMS_PER_PAGE)
-                      .map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>{transaction.id}</TableCell>
-                        <TableCell>{transaction.userId}</TableCell>
-                        <TableCell className={transaction.type === 'deposit' ? 'text-green-600' : 'text-red-600'}>
-                          {transaction.type === 'deposit' ? '+' : '-'}${(transaction.amount / 100).toFixed(2)}
-                        </TableCell>
-                        <TableCell>{transaction.type}</TableCell>
-                        <TableCell>{transaction.description}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                            transaction.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {transaction.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{new Date(transaction.createdAt).toLocaleString()}</TableCell>
+                  <Table>
+                    <TableCaption>List of all financial transactions</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>User ID</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {/* Pagination for transactions */}
-                {transactions.filter(transaction => 
-                  transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
-                  transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
-                ).length > 0 && (
-                  <div className="flex items-center justify-center space-x-2 py-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setTransactionPage(prev => Math.max(prev - 1, 1))}
-                      disabled={transactionPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <div className="text-sm">
-                      Page {transactionPage} of {Math.ceil(transactions.filter(transaction => 
-                        transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
-                        transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setTransactionPage(prev => 
-                        Math.min(prev + 1, Math.ceil(transactions.filter(transaction => 
+                    </TableHeader>
+                    <TableBody>
+                      {transactions
+                        .filter(transaction => 
                           transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
                           transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
-                        ).length / ITEMS_PER_PAGE))
-                      )}
-                      disabled={transactionPage >= Math.ceil(transactions.filter(transaction => 
-                        transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
-                        transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                        )
+                        .slice((transactionPage - 1) * ITEMS_PER_PAGE, transactionPage * ITEMS_PER_PAGE)
+                        .map((transaction) => (
+                        <TableRow key={transaction.id}>
+                          <TableCell>{transaction.id}</TableCell>
+                          <TableCell>{transaction.userId}</TableCell>
+                          <TableCell className={transaction.type === 'deposit' ? 'text-green-600' : 'text-red-600'}>
+                            {transaction.type === 'deposit' ? '+' : '-'}${(transaction.amount / 100).toFixed(2)}
+                          </TableCell>
+                          <TableCell>{transaction.type}</TableCell>
+                          <TableCell>{transaction.description}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                              transaction.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {transaction.status}
+                            </span>
+                          </TableCell>
+                          <TableCell>{new Date(transaction.createdAt).toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {/* Pagination for transactions */}
+                  {transactions.filter(transaction => 
+                    transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
+                    transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
+                  ).length > 0 && (
+                    <div className="flex items-center justify-center space-x-2 py-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTransactionPage(prev => Math.max(prev - 1, 1))}
+                        disabled={transactionPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <div className="text-sm">
+                        Page {transactionPage} of {Math.ceil(transactions.filter(transaction => 
+                          transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
+                          transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE)}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTransactionPage(prev => 
+                          Math.min(prev + 1, Math.ceil(transactions.filter(transaction => 
+                            transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
+                            transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
+                          ).length / ITEMS_PER_PAGE))
+                        )}
+                        disabled={transactionPage >= Math.ceil(transactions.filter(transaction => 
+                          transaction.type.toLowerCase().includes(transactionSearch.toLowerCase()) || 
+                          transaction.description.toLowerCase().includes(transactionSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE)}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load transactions</div>
@@ -993,123 +993,123 @@ export default function AdminDashboard() {
                 <div className="text-center py-8">Loading tickets...</div>
               ) : tickets ? (
                 <div>
-                <Table>
-                  <TableCaption>List of all support tickets</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>User ID</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tickets
-                      .filter(ticket => 
-                        ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
-                      )
-                      .slice((ticketPage - 1) * ITEMS_PER_PAGE, ticketPage * ITEMS_PER_PAGE)
-                      .map((ticket) => (
-                      <TableRow key={ticket.id}>
-                        <TableCell>{ticket.id}</TableCell>
-                        <TableCell>{ticket.userId}</TableCell>
-                        <TableCell>{ticket.subject}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            ticket.status === 'open' ? 'bg-green-100 text-green-800' : 
-                            ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {ticket.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            ticket.priority === 'critical' ? 'bg-red-100 text-red-800' : 
-                            ticket.priority === 'high' ? 'bg-amber-100 text-amber-800' :
-                            'bg-blue-100 text-blue-800'
-                          }`}>
-                            {ticket.priority}
-                          </span>
-                        </TableCell>
-                        <TableCell>{new Date(ticket.createdAt).toLocaleString()}</TableCell>
-                        <TableCell>{new Date(ticket.updatedAt).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              asChild
-                            >
-                              <Link href={`/support/${ticket.id}`}>
-                                View & Respond
-                              </Link>
-                            </Button>
-                            <Select
-                              onValueChange={(value) => {
-                                updateTicketStatusMutation.mutate({
-                                  ticketId: ticket.id,
-                                  status: value
-                                });
-                              }}
-                              defaultValue={ticket.status}
-                            >
-                              <SelectTrigger className="w-[120px]">
-                                <SelectValue placeholder="Change Status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="open">Open</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="closed">Closed</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </TableCell>
+                  <Table>
+                    <TableCaption>List of all support tickets</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>User ID</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Updated</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {/* Pagination for tickets */}
-                {tickets.filter(ticket => 
-                  ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
-                ).length > 0 && (
-                  <div className="flex items-center justify-center space-x-2 py-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setTicketPage(prev => Math.max(prev - 1, 1))}
-                      disabled={ticketPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <div className="text-sm">
-                      Page {ticketPage} of {Math.ceil(tickets.filter(ticket => 
-                        ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setTicketPage(prev => 
-                        Math.min(prev + 1, Math.ceil(tickets.filter(ticket => 
+                    </TableHeader>
+                    <TableBody>
+                      {tickets
+                        .filter(ticket => 
                           ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
-                        ).length / ITEMS_PER_PAGE))
-                      )}
-                      disabled={ticketPage >= Math.ceil(tickets.filter(ticket => 
-                        ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                        )
+                        .slice((ticketPage - 1) * ITEMS_PER_PAGE, ticketPage * ITEMS_PER_PAGE)
+                        .map((ticket) => (
+                        <TableRow key={ticket.id}>
+                          <TableCell>{ticket.id}</TableCell>
+                          <TableCell>{ticket.userId}</TableCell>
+                          <TableCell>{ticket.subject}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              ticket.status === 'open' ? 'bg-green-100 text-green-800' : 
+                              ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {ticket.status}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              ticket.priority === 'critical' ? 'bg-red-100 text-red-800' : 
+                              ticket.priority === 'high' ? 'bg-amber-100 text-amber-800' :
+                              'bg-blue-100 text-blue-800'
+                            }`}>
+                              {ticket.priority}
+                            </span>
+                          </TableCell>
+                          <TableCell>{new Date(ticket.createdAt).toLocaleString()}</TableCell>
+                          <TableCell>{new Date(ticket.updatedAt).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                asChild
+                              >
+                                <Link href={`/support/${ticket.id}`}>
+                                  View & Respond
+                                </Link>
+                              </Button>
+                              <Select
+                                onValueChange={(value) => {
+                                  updateTicketStatusMutation.mutate({
+                                    ticketId: ticket.id,
+                                    status: value
+                                  });
+                                }}
+                                defaultValue={ticket.status}
+                              >
+                                <SelectTrigger className="w-[120px]">
+                                  <SelectValue placeholder="Change Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="open">Open</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="closed">Closed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {/* Pagination for tickets */}
+                  {tickets.filter(ticket => 
+                    ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
+                  ).length > 0 && (
+                    <div className="flex items-center justify-center space-x-2 py-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTicketPage(prev => Math.max(prev - 1, 1))}
+                        disabled={ticketPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <div className="text-sm">
+                        Page {ticketPage} of {Math.ceil(tickets.filter(ticket => 
+                          ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE)}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTicketPage(prev => 
+                          Math.min(prev + 1, Math.ceil(tickets.filter(ticket => 
+                            ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
+                          ).length / ITEMS_PER_PAGE))
+                        )}
+                        disabled={ticketPage >= Math.ceil(tickets.filter(ticket => 
+                          ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE)}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load tickets</div>
@@ -1154,87 +1154,87 @@ export default function AdminDashboard() {
                 <div className="text-center py-8">Loading IP bans...</div>
               ) : ipBans && ipBans.length > 0 ? (
                 <div>
-                <Table>
-                  <TableCaption>List of all banned IP addresses</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>IP Address</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Banned On</TableHead>
-                      <TableHead>Expires</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ipBans
-                      .filter(ban => 
-                        ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
-                        ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
-                      )
-                      .slice((ipBanPage - 1) * ITEMS_PER_PAGE, ipBanPage * ITEMS_PER_PAGE)
-                      .map((ban) => (
-                      <TableRow key={ban.id}>
-                        <TableCell>{ban.id}</TableCell>
-                        <TableCell>{ban.ipAddress}</TableCell>
-                        <TableCell>{ban.reason}</TableCell>
-                        <TableCell>{new Date(ban.createdAt).toLocaleString()}</TableCell>
-                        <TableCell>{ban.expiresAt ? new Date(ban.expiresAt).toLocaleString() : 'Never'}</TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={() => removeIpBanMutation.mutate(ban.id)}
-                            disabled={removeIpBanMutation.isPending}
-                          >
-                            {removeIpBanMutation.isPending ? 'Removing...' : 'Remove Ban'}
-                          </Button>
-                        </TableCell>
+                  <Table>
+                    <TableCaption>List of all banned IP addresses</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>IP Address</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Banned On</TableHead>
+                        <TableHead>Expires</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {/* Pagination for IP bans */}
-                {ipBans.filter(ban => 
-                  ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
-                  ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
-                ).length > 0 && (
-                  <div className="flex items-center justify-center space-x-2 py-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIpBanPage(prev => Math.max(prev - 1, 1))}
-                      disabled={ipBanPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <div className="text-sm">
-                      Page {ipBanPage} of {Math.ceil(ipBans.filter(ban => 
-                        ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
-                        ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIpBanPage(prev => 
-                        Math.min(prev + 1, Math.ceil(ipBans.filter(ban => 
+                    </TableHeader>
+                    <TableBody>
+                      {ipBans
+                        .filter(ban => 
                           ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
                           ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
-                        ).length / ITEMS_PER_PAGE))
-                      )}
-                      disabled={ipBanPage >= Math.ceil(ipBans.filter(ban => 
-                        ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
-                        ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
-                      ).length / ITEMS_PER_PAGE)}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                        )
+                        .slice((ipBanPage - 1) * ITEMS_PER_PAGE, ipBanPage * ITEMS_PER_PAGE)
+                        .map((ban) => (
+                        <TableRow key={ban.id}>
+                          <TableCell>{ban.id}</TableCell>
+                          <TableCell>{ban.ipAddress}</TableCell>
+                          <TableCell>{ban.reason}</TableCell>
+                          <TableCell>{new Date(ban.createdAt).toLocaleString()}</TableCell>
+                          <TableCell>{ban.expiresAt ? new Date(ban.expiresAt).toLocaleString() : 'Never'}</TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => removeIpBanMutation.mutate(ban.id)}
+                              disabled={removeIpBanMutation.isPending}
+                            >
+                              {removeIpBanMutation.isPending ? 'Removing...' : 'Remove Ban'}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {/* Pagination for IP bans */}
+                  {ipBans.filter(ban => 
+                    ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
+                    ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
+                  ).length > 0 && (
+                    <div className="flex items-center justify-center space-x-2 py-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIpBanPage(prev => Math.max(prev - 1, 1))}
+                        disabled={ipBanPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <div className="text-sm">
+                        Page {ipBanPage} of {Math.ceil(ipBans.filter(ban => 
+                          ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
+                          ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE)}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIpBanPage(prev => 
+                          Math.min(prev + 1, Math.ceil(ipBans.filter(ban => 
+                            ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
+                            ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
+                          ).length / ITEMS_PER_PAGE))
+                        )}
+                        disabled={ipBanPage >= Math.ceil(ipBans.filter(ban => 
+                          ban.ipAddress.toLowerCase().includes(ipBanSearch.toLowerCase()) || 
+                          ban.reason.toLowerCase().includes(ipBanSearch.toLowerCase())
+                        ).length / ITEMS_PER_PAGE)}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8">No IP bans found</div>
