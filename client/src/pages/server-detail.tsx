@@ -1156,7 +1156,7 @@ export default function ServerDetailPage() {
               {/* CloudRack Terminal Notice */}
               <CloudRackTerminalNotice />
               
-              {/* SSH Access Section - Moved to Top */}
+              {/* SSH Access Section - Updated for Password Authentication */}
               <div className="mb-6">
                 <h3 className="text-lg font-medium mb-2">SSH Access</h3>
                 <p className="text-sm mb-4">Connect to your server via SSH using the following command:</p>
@@ -1176,6 +1176,9 @@ export default function ServerDetailPage() {
                     <CopyPlus className="h-4 w-4" />
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  You will be prompted for the root password you set during server creation.
+                </p>
                 
                 {/* Password Authentication */}
                 <div className="mt-4">

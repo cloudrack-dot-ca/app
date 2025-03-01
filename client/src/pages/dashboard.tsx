@@ -81,6 +81,13 @@ export default function Dashboard() {
   const form = useForm({
     resolver: zodResolver(
       insertServerSchema.extend({
+        name: z.string()
+          .min(3, "Server name must be at least 3 characters")
+          .max(63, "Server name must be 63 characters or less")
+          .refine(
+            (value) => /^[a-z0-9]([a-z0-9\-\.]*[a-z0-9])?$/i.test(value),
+            "Server name must be a valid hostname (only letters, numbers, hyphens, and periods allowed. Cannot start or end with hyphens or periods)"
+          ),
         auth: insertServerSchema.shape.name.refine(
           (value) => {
             return value && value.length >= 8 && !value.match(/[^a-zA-Z0-9]$/);
@@ -209,9 +216,12 @@ export default function Dashboard() {
                         <FormItem>
                           <FormLabel className="text-sm">Server Name</FormLabel>
                           <FormControl>
-                            <Input {...field} className="h-9" />
+                            <Input {...field} className="h-9" placeholder="e.g., my-server" />
                           </FormControl>
                           <FormMessage className="text-xs" />
+                          <p className="text-xs text-muted-foreground">
+                            Only letters, numbers, hyphens (-) and periods (.) allowed. Must start and end with a letter or number.
+                          </p>
                         </FormItem>
                       )}
                     />

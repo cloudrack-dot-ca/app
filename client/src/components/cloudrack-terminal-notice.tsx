@@ -1,26 +1,26 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Key } from "lucide-react";
+import { KeyRound } from "lucide-react";
 
 /**
- * CloudRack Terminal Notice Component
+ * Terminal Access Notice Component
  * 
- * This component shows an informational banner about SSH keys for terminal access.
+ * This component shows an informational banner about password authentication for terminal access.
  */
 export function CloudRackTerminalNotice() {
   return (
     <Alert className="mb-6 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-      <Key className="h-5 w-5 text-blue-600 dark:text-blue-500" />
-      <AlertTitle className="text-blue-800 dark:text-blue-400">Terminal Access SSH Key</AlertTitle>
+      <KeyRound className="h-5 w-5 text-blue-600 dark:text-blue-500" />
+      <AlertTitle className="text-blue-800 dark:text-blue-400">Terminal Password Authentication</AlertTitle>
       <AlertDescription className="text-blue-700 dark:text-blue-300">
         <p className="mt-2">
-          CloudRack uses a system SSH key (fingerprint: c0:62:80:ae:2a:05:66:22:cb:d1:64:6e:54:c2:2c:ca) which is
-          automatically added to all your VPS servers during creation. This key allows secure terminal access
-          directly from the CloudRack web interface, eliminating the need for password authentication.
+          CloudRack uses secure password authentication for terminal access to your VPS servers. 
+          The root password you set during server creation is used to authenticate your terminal 
+          sessions directly from the CloudRack web interface.
         </p>
         <p className="mt-2">
-          <strong>How it works:</strong> When you create a new server, this key is added to the server's 
-          <code className="mx-1 px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded">~/.ssh/authorized_keys</code> 
-          file, allowing secure key-based authentication between CloudRack and your server instances.
+          <strong>How it works:</strong> When you create a new server, your chosen root password is securely stored 
+          and used for authentication when accessing your server through SSH or the web terminal. For security, 
+          make sure to use a strong, unique password for each server.
         </p>
       </AlertDescription>
     </Alert>
