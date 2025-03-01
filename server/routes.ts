@@ -2087,5 +2087,47 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   // Setup the terminal websocket handler
   setupTerminalSocket(httpServer);
   
+  // TEST ENDPOINT for password authentication validation
+  app.get("/api/test/password/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    // Only admin users can access this test endpoint
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    const serverId = parseInt(req.params.id);
+    try {
+      // Get the server directly from the database to bypass any caching
+      const serverResult = await db.select()
+        .from(schema.servers)
+        .where(eq(schema.servers.id, serverId))
+        .limit(1);
+      
+      if (serverResult.length === 0) {
+        return res.status(404).json({ message: "Server not found" });
+      }
+
+      const server = serverResult[0];
+      
+      // Return password information for debugging
+      res.json({
+        serverId: server.id,
+        passwordSet: !!server.rootPassword,
+        passwordLength: server.rootPassword ? server.rootPassword.length : 0,
+        passwordFirstChars: server.rootPassword ? server.rootPassword.substring(0, 3) + '...' : null,
+        // Return some raw metadata about the password for diagnostics
+        passwordMetadata: {
+          type: typeof server.rootPassword,
+          containsSpaces: server.rootPassword ? server.rootPassword.includes(' ') : false,
+          hasSpecialChars: server.rootPassword ? /[^A-Za-z0-9]/.test(server.rootPassword) : false
+        }
+      });
+    } catch (error) {
+      console.error("Password test error:", error);
+      res.status(500).json({ message: "Error testing password", error: (error as Error).message });
+    }
+  });
+  
   return httpServer;
 }
