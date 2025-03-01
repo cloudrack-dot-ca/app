@@ -112,6 +112,8 @@ export default function AdminDashboard() {
   if (!user?.isAdmin) {
     return <Redirect to="/dashboard" />;
   }
+  
+  // Main return with consistent styling
 
   // Fetch all users
   const { data: users = [], isLoading: usersLoading } = useQuery({
