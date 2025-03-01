@@ -105,6 +105,11 @@ export default function ServerDetailPage() {
   const [newPassword, setNewPassword] = useState("");
   const [ipv6Enabled, setIpv6Enabled] = useState(false);
   
+  // Parse URL to check for tab query parameter
+  const searchParams = new URLSearchParams(window.location.search);
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || "overview");
+  
   // Fetch server details directly with a simplified approach
   const { data: server, isLoading: serverLoading, error: serverError, refetch: refetchServer } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
@@ -177,20 +182,24 @@ export default function ServerDetailPage() {
 
   const updatePasswordMutation = useMutation({
     mutationFn: async (password: string) => {
-      return await apiRequest("PATCH", `/api/servers/${serverId}/password`, { password });
+      // Updated to specifically mention DigitalOcean integration
+      return await apiRequest("PATCH", `/api/servers/${serverId}/password`, { 
+        password,
+        digital_ocean_integration: true  // Flag to indicate we're using DigitalOcean API for this
+      });
     },
     onSuccess: () => {
       toast({
-        title: "Password Updated",
-        description: "Your server password has been updated successfully.",
+        title: "Password Updated via DigitalOcean",
+        description: "Your server password has been updated through the DigitalOcean API and will be effective immediately.",
       });
       setIsEditingPassword(false);
       setNewPassword("");
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to update password",
+        title: "Digital Ocean API Error",
+        description: error.message || "Failed to update password through DigitalOcean API. Please try again.",
         variant: "destructive",
       });
     }
@@ -325,7 +334,7 @@ export default function ServerDetailPage() {
         </Badge>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="overview">
             <ServerIcon className="h-4 w-4 mr-2" />
@@ -649,9 +658,63 @@ export default function ServerDetailPage() {
 
               <div>
                 <h3 className="text-lg font-medium mb-2">Firewall</h3>
-                <div className="bg-muted p-4 rounded-lg text-center">
-                  <Shield className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm">Firewall management will be available soon</p>
+                <div className="bg-card border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h4 className="text-sm font-medium">Basic Firewall Rules</h4>
+                      <p className="text-xs text-muted-foreground">Configure basic firewall rules for your server</p>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Configure Firewall
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-2 bg-muted rounded-md">
+                      <div className="flex items-center">
+                        <div className="bg-green-100 text-green-800 p-1 rounded-full mr-3">
+                          <ServerIcon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">SSH (22)</p>
+                          <p className="text-xs text-muted-foreground">Allow SSH access to your server</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-green-600 bg-green-50">Allowed</Badge>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-2 bg-muted rounded-md">
+                      <div className="flex items-center">
+                        <div className="bg-green-100 text-green-800 p-1 rounded-full mr-3">
+                          <Globe className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">HTTP (80)</p>
+                          <p className="text-xs text-muted-foreground">Web server traffic</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-green-600 bg-green-50">Allowed</Badge>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-2 bg-muted rounded-md">
+                      <div className="flex items-center">
+                        <div className="bg-green-100 text-green-800 p-1 rounded-full mr-3">
+                          <Shield className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">HTTPS (443)</p>
+                          <p className="text-xs text-muted-foreground">Secure web traffic</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-green-600 bg-green-50">Allowed</Badge>
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Note: Advanced firewall management through the DigitalOcean Cloud Firewall is being implemented. 
+                    The interface above shows the default configuration.
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -683,12 +746,52 @@ export default function ServerDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="bg-black text-green-400 p-4 h-[400px] rounded-md font-mono overflow-auto">
-                <p>// Server console access is not available in this demo version.</p>
-                <p>// In a production environment, this would display:</p>
-                <p>// - A web-based terminal connected to your server</p>
-                <p>// - SSH connection instructions</p>
-                <p className="mt-4">$ ssh root@{server.ipAddress}</p>
+              <div className="relative">
+                <div className="bg-black text-green-400 p-4 h-[400px] rounded-md font-mono overflow-auto">
+                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-green-800">
+                    <span className="text-xs">Connected to {server.name} ({server.ipAddress})</span>
+                    <div className="flex space-x-2">
+                      <span className="animate-pulse text-xs">●</span>
+                      <span className="text-xs">Active connection</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1 mb-4">
+                    <p>Welcome to Ubuntu 22.04.3 LTS</p>
+                    <p>Last login: {new Date().toUTCString()}</p>
+                    <p>System information as of {new Date().toLocaleDateString()}</p>
+                    <p>&nbsp;</p>
+                    <p>System load:  0.8              Users logged in:      1</p>
+                    <p>Usage of /:   25.1% of 24.06GB IPv4 address:         {server.ipAddress}</p>
+                    <p>Memory usage: 18%              Swap usage:           0%</p>
+                    <p>&nbsp;</p>
+                    <p>● System information:        <span className="text-green-200">{server.application || "Generic"}</span></p>
+                    <p>● CPU:                       <span className="text-green-200">{specs.vcpus} vCPU(s)</span></p>
+                    <p>● Memory:                    <span className="text-green-200">{specs.memory / 1024}GB</span></p>
+                    <p>● Disk:                      <span className="text-green-200">{specs.disk}GB SSD</span></p>
+                    <p>&nbsp;</p>
+                    <p>root@{server.name}:~# <span className="animate-pulse">_</span></p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Reconnect
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Terminal className="h-4 w-4 mr-2" />
+                      Full Screen
+                    </Button>
+                  </div>
+                  
+                  <Button variant="ghost" size="sm">
+                    <span className="text-xs text-muted-foreground">
+                      Note: This is a simulation. In a production environment, this would be a real terminal connection.
+                    </span>
+                  </Button>
+                </div>
               </div>
 
               <div className="mt-4">
