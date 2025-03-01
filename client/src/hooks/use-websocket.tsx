@@ -17,6 +17,9 @@ interface WebSocketContextType {
 
 const WebSocketContext = React.createContext<WebSocketContextType | null>(null);
 
+// Feature flag to disable WebSockets entirely when debugging
+const WEBSOCKET_ENABLED = false;
+
 // WebSocket host determined by current host
 const getWsUrl = () => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -37,6 +40,8 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
   const reconnectTimeoutId = useRef<NodeJS.Timeout | null>(null);
+  // Track if connection is in progress to prevent multiple simultaneous connections
+  const isConnecting = useRef(false);
 
   // Handle custom events for toast notifications to avoid circular dependencies
   useEffect(() => {
@@ -51,7 +56,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     const handleConnectionError = (event: Event) => {
       const customEvent = event as CustomEvent<{ message: string }>;
       toast({
-        title: 'Connection lost',
+        title: 'Connection issue',
         description: customEvent.detail.message,
         variant: 'destructive'
       });
@@ -84,154 +89,176 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
   // Handle establishing WebSocket connection - no toast or sendMessage in dependencies
   const connectWebSocket = useCallback(() => {
+    // If WebSockets are disabled via feature flag, don't connect
+    if (!WEBSOCKET_ENABLED) return;
+
     const currentUserId = userIdRef.current;
-    if (!currentUserId) return;
+    if (!currentUserId || isConnecting.current) return;
     
-    // Close existing connection if any
-    if (ws.current) {
-      ws.current.close();
-    }
-
-    // Create new WebSocket connection
-    const socket = new WebSocket(getWsUrl());
-    ws.current = socket;
-
-    socket.onopen = () => {
-      console.log('WebSocket connected');
-      setConnected(true);
-      reconnectAttempts.current = 0;
-
-      // Authenticate with user ID
-      if (ws.current?.readyState === WebSocket.OPEN) {
-        ws.current.send(JSON.stringify({
-          type: 'auth',
-          userId: currentUserId
-        }));
+    isConnecting.current = true;
+    
+    try {
+      // Close existing connection if any
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
       }
 
-      // Resubscribe to any previously subscribed tickets
-      subscribedTickets.current.forEach(ticketId => {
+      // Create new WebSocket connection
+      const socket = new WebSocket(getWsUrl());
+      ws.current = socket;
+
+      socket.onopen = () => {
+        console.log('WebSocket connected');
+        setConnected(true);
+        reconnectAttempts.current = 0;
+        isConnecting.current = false;
+
+        // Authenticate with user ID
         if (ws.current?.readyState === WebSocket.OPEN) {
           ws.current.send(JSON.stringify({
-            type: 'subscribe',
-            ticketId,
+            type: 'auth',
             userId: currentUserId
           }));
         }
-      });
-    };
 
-    socket.onclose = () => {
-      console.log('WebSocket disconnected');
-      setConnected(false);
-      
-      // Only attempt to reconnect if we haven't exceeded max attempts
-      if (reconnectAttempts.current < maxReconnectAttempts) {
-        reconnectAttempts.current += 1;
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-        console.log(`Attempting to reconnect in ${delay}ms...`);
-        
-        if (reconnectTimeoutId.current) {
-          clearTimeout(reconnectTimeoutId.current);
-        }
-        
-        reconnectTimeoutId.current = setTimeout(() => {
-          connectWebSocket();
-        }, delay);
-      } else {
-        console.log('Max reconnection attempts reached. Please refresh the page.');
-        // Use custom event to handle the toast message
-        window.dispatchEvent(new CustomEvent('websocket-connection-error', { 
-          detail: { message: 'Unable to reconnect to the server. Please refresh the page.' }
-        }));
+        // Resubscribe to any previously subscribed tickets
+        subscribedTickets.current.forEach(ticketId => {
+          if (ws.current?.readyState === WebSocket.OPEN) {
+            ws.current.send(JSON.stringify({
+              type: 'subscribe',
+              ticketId,
+              userId: currentUserId
+            }));
+          }
+        });
+      };
+
+      socket.onclose = () => {
+        console.log('WebSocket disconnected');
         setConnected(false);
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      // Dispatch event for connection error
-      window.dispatchEvent(new CustomEvent('websocket-connection-error', { 
-        detail: { message: 'WebSocket error occurred. Connection may be unstable.' }
-      }));
-    };
-
-    socket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data) as WebSocketMessage;
+        isConnecting.current = false;
         
-        switch (message.type) {
-          case 'auth_success':
-            console.log('Authentication successful');
-            break;
-            
-          case 'subscribe_success':
-            console.log(`Subscribed to ticket ${message.ticketId}`);
-            break;
-            
-          case 'ticket_update':
-            // Handle ticket update messages
-            if (message.ticketId && message.data) {
-              console.log(`Received update for ticket ${message.ticketId}`, message.data);
-              
-              setTicketUpdates(prev => {
-                const newMap = new Map(prev);
-                
-                // Get current updates or initialize empty array
-                const updates = newMap.get(message.ticketId) || [];
-                
-                // Add new update to the beginning of the array
-                newMap.set(message.ticketId, [message.data, ...updates]);
-                
-                return newMap;
-              });
-                
-              // Notify user of new message if this is a message update
-              if (message.data.message) {
-                // We'll dispatch a custom event to avoid dependency cycles with toast
-                window.dispatchEvent(new CustomEvent('new-ticket-message', { 
-                  detail: { ticketId: message.ticketId }
-                }));
-              }
-            }
-            break;
-            
-          default:
-            console.log('Unknown message type:', message);
+        // Only attempt to reconnect if we haven't exceeded max attempts
+        if (reconnectAttempts.current < maxReconnectAttempts) {
+          reconnectAttempts.current += 1;
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+          console.log(`Attempting to reconnect in ${delay}ms...`);
+          
+          if (reconnectTimeoutId.current) {
+            clearTimeout(reconnectTimeoutId.current);
+          }
+          
+          reconnectTimeoutId.current = setTimeout(() => {
+            connectWebSocket();
+          }, delay);
+        } else {
+          console.log('Max reconnection attempts reached. Please refresh the page.');
+          // Don't show error message for now
+          setConnected(false);
         }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
+      };
+
+      socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        isConnecting.current = false;
+        // Don't show error message for now
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data) as WebSocketMessage;
+          
+          switch (message.type) {
+            case 'auth_success':
+              console.log('Authentication successful');
+              break;
+              
+            case 'subscribe_success':
+              console.log(`Subscribed to ticket ${message.ticketId}`);
+              break;
+              
+            case 'ticket_update':
+              // Handle ticket update messages
+              if (message.ticketId && message.data) {
+                console.log(`Received update for ticket ${message.ticketId}`, message.data);
+                
+                setTicketUpdates(prev => {
+                  const newMap = new Map(prev);
+                  
+                  // Get current updates or initialize empty array
+                  const updates = newMap.get(message.ticketId) || [];
+                  
+                  // Add new update to the beginning of the array
+                  newMap.set(message.ticketId, [message.data, ...updates]);
+                  
+                  return newMap;
+                });
+                  
+                // Notify user of new message if this is a message update
+                if (message.data.message) {
+                  // We'll dispatch a custom event to avoid dependency cycles with toast
+                  window.dispatchEvent(new CustomEvent('new-ticket-message', { 
+                    detail: { ticketId: message.ticketId }
+                  }));
+                }
+              }
+              break;
+              
+            default:
+              console.log('Unknown message type:', message);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+    } catch (error) {
+      console.error('Error establishing WebSocket connection:', error);
+      isConnecting.current = false;
+    }
 
     return () => {
       if (reconnectTimeoutId.current) {
         clearTimeout(reconnectTimeoutId.current);
       }
-      socket.close();
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
+      isConnecting.current = false;
     };
   }, []);
 
   // Connect when the component mounts and user is logged in
   useEffect(() => {
-    if (userIdRef.current) {
-      connectWebSocket();
-    }
-    
-    return () => {
-      if (ws.current) {
-        ws.current.close();
-        ws.current = null;
-      }
+    // Only attempt connection if WebSockets are enabled
+    if (WEBSOCKET_ENABLED && userIdRef.current) {
+      // Use setTimeout to delay the connection attempt slightly
+      const timer = setTimeout(() => {
+        connectWebSocket();
+      }, 1000);
       
-      if (reconnectTimeoutId.current) {
-        clearTimeout(reconnectTimeoutId.current);
-      }
-    };
+      return () => {
+        clearTimeout(timer);
+        if (ws.current) {
+          ws.current.close();
+          ws.current = null;
+        }
+        
+        if (reconnectTimeoutId.current) {
+          clearTimeout(reconnectTimeoutId.current);
+        }
+        isConnecting.current = false;
+      };
+    }
+    return undefined;
   }, [connectWebSocket]);
 
   // Function to subscribe to a ticket
   const subscribeToTicket = useCallback((ticketId: number) => {
+    // If WebSockets are disabled, don't try to subscribe
+    if (!WEBSOCKET_ENABLED) return;
+    
     const currentUserId = userIdRef.current;
     if (!currentUserId) return;
     
@@ -258,7 +285,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = {
-    connected,
+    connected: WEBSOCKET_ENABLED ? connected : false,
     subscribeToTicket,
     unsubscribeFromTicket,
     ticketUpdates
