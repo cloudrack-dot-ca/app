@@ -4,6 +4,7 @@ import { Client, ClientChannel, ConnectConfig } from 'ssh2';
 import { storage } from './storage';
 import { log } from './vite';
 import { cloudRackKeyManager } from './cloudrack-key-manager';
+import { systemKeyManager } from './system-key-manager';
 import * as fs from 'fs';
 import * as http from 'http';
 import { db } from './db';
