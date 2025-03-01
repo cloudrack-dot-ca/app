@@ -7,6 +7,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { digitalOcean } from "./digital-ocean";
 import * as schema from "@shared/schema";
+import { cloudRackKeyManager } from "./cloudrack-key-manager";
 import { 
   insertServerSchema, 
   insertVolumeSchema, 
@@ -17,7 +18,6 @@ import {
 } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@shared/schema";
-import { cloudRackKeyManager } from "./cloudrack-key-manager";
 import { db } from "./db";
 
 // Cost constants with our markup applied ($1 markup on server plans, 4¢ markup per GB on volumes)
@@ -999,7 +999,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         name,
         publicKey,
         createdAt: new Date(),
-        isCloudRackKey
+        isCloudRackKey: isCloudRackKey
       });
       res.status(201).json(key);
     } catch (error) {
@@ -1015,6 +1015,12 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
     if (!key || (key.userId !== req.user.id && !req.user.isAdmin)) {
       return res.sendStatus(404);
+    }
+
+    // The user has confirmed they want to delete the CloudRack key
+    // This will disable web terminal access to all servers
+    if (key.isCloudRackKey) {
+      console.log(`User ${req.user.id} deleted their CloudRack Terminal key ${keyId}`);
     }
 
     await storage.deleteSSHKey(keyId);

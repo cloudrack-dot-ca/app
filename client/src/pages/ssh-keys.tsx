@@ -99,6 +99,8 @@ export default function SSHKeysPage() {
       </nav>
 
       <main className="container mx-auto px-4 py-8">
+        <CloudRackTerminalNotice />
+        
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl font-bold">Your SSH Keys</h2>
           <Dialog>
@@ -162,9 +164,19 @@ export default function SSHKeysPage() {
         ) : (
           <div className="space-y-4">
             {keys.map((key) => (
-              <Card key={key.id}>
+              <Card key={key.id} className={key.isCloudRackKey ? "border-amber-300 dark:border-amber-700" : ""}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xl font-semibold">{key.name}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-xl font-semibold">
+                      {key.name}
+                    </CardTitle>
+                    {key.isCloudRackKey && (
+                      <Badge variant="outline" className="border-amber-500 text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <Shield className="h-3 w-3" />
+                        CloudRack Terminal Key
+                      </Badge>
+                    )}
+                  </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon">
@@ -175,7 +187,22 @@ export default function SSHKeysPage() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete SSH Key</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete this SSH key? This action cannot be undone.
+                          {key.isCloudRackKey ? (
+                            <>
+                              <p className="text-amber-600 dark:text-amber-400 font-semibold mb-2">
+                                Warning: This is the CloudRack Terminal Key
+                              </p>
+                              <p>
+                                Deleting this key will disable web terminal access to ALL of your servers. 
+                                You will still be able to connect to your servers using your other SSH keys.
+                              </p>
+                              <p className="mt-2">
+                                Are you sure you want to delete this key?
+                              </p>
+                            </>
+                          ) : (
+                            "Are you sure you want to delete this SSH key? This action cannot be undone."
+                          )}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -189,9 +216,17 @@ export default function SSHKeysPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="font-mono text-sm break-all">{key.publicKey}</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Added on {new Date(key.createdAt).toLocaleDateString()}
-                  </p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Added on {new Date(key.createdAt).toLocaleDateString()}
+                    </p>
+                    {key.isCloudRackKey && (
+                      <p className="text-sm text-amber-600 dark:text-amber-400 mt-2 flex items-center">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Used for web terminal access
+                      </p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
