@@ -31,16 +31,20 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     // Clear any existing terminal
     terminalRef.current.innerHTML = '';
 
-    // Initialize XTerm
+    // Initialize XTerm with improved settings for better visibility
     const term = new Terminal({
       cursorBlink: true,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      fontSize: 14,
+      cursorStyle: 'block',
+      fontFamily: 'Menlo, Monaco, "Courier New", "DejaVu Sans Mono", "Lucida Console", monospace',
+      fontSize: 15,
+      lineHeight: 1.2,
+      letterSpacing: 0.2,
+      scrollback: 5000, // More scrollback history
       theme: {
         background: '#1a1b26',
-        foreground: '#a9b1d6',
-        cursor: '#f7f7f7',
-        selectionBackground: 'rgba(128, 203, 196, 0.3)',
+        foreground: '#c4c9e3', // Brighter foreground for better readability
+        cursor: '#ffffff',
+        selectionBackground: 'rgba(128, 203, 196, 0.4)',
         black: '#32344a',
         red: '#f7768e',
         green: '#9ece6a',
@@ -48,7 +52,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         blue: '#7aa2f7',
         magenta: '#ad8ee6',
         cyan: '#449dab',
-        white: '#787c99',
+        white: '#a0a8cd', // Brighter white
         brightBlack: '#444b6a',
         brightRed: '#ff7a93',
         brightGreen: '#b9f27c',
@@ -56,7 +60,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         brightBlue: '#7da6ff',
         brightMagenta: '#bb9af7',
         brightCyan: '#0db9d7',
-        brightWhite: '#acb0d0',
+        brightWhite: '#c4c9e3', // Brighter bright white
       }
     });
 
@@ -385,7 +389,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         className={`
           ${isFullScreen 
             ? 'absolute inset-0 h-screen w-screen border-none' 
-            : 'border rounded-md overflow-hidden relative h-[400px] group'}
+            : 'border rounded-md overflow-hidden relative h-[700px] group'}
         `}
       >
         {/* Large fullscreen button that appears when hovering (only in normal mode) */}
