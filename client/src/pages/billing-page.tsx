@@ -107,12 +107,21 @@ export default function BillingPage() {
     if (!transactionData || transactions.length === 0) return;
     
     // Create CSV header
-    const headers = ['Date', 'Type', 'Amount', 'Status'];
+    const headers = ['Date', 'Type', 'Description', 'Amount', 'Status'];
+    
+    // Helper to escape CSV fields properly
+    const escapeCSV = (field: string) => {
+      if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+        return `"${field.replace(/"/g, '""')}"`;
+      }
+      return field;
+    };
     
     // Create CSV rows
     const rows = transactions.map(tx => [
       new Date(tx.createdAt).toLocaleString(),
-      tx.type,
+      escapeCSV(tx.type),
+      escapeCSV(tx.description || ''),
       tx.type === 'deposit' ? `+$${(tx.amount / 100).toFixed(2)}` : `-$${(tx.amount / 100).toFixed(2)}`,
       tx.status
     ]);
@@ -199,27 +208,35 @@ export default function BillingPage() {
             <ul className="space-y-2">
               <li className="flex justify-between">
                 <span>1GB RAM, 1 vCPU</span>
-                <span>$0.007/hour</span>
+                <span>${(0.007 * 1.005).toFixed(5)}/hour</span>
               </li>
               <li className="flex justify-between">
                 <span>2GB RAM, 1 vCPU</span>
-                <span>$0.014/hour</span>
+                <span>${(0.014 * 1.005).toFixed(5)}/hour</span>
               </li>
               <li className="flex justify-between">
                 <span>4GB RAM, 2 vCPU</span>
-                <span>$0.028/hour</span>
+                <span>${(0.028 * 1.005).toFixed(5)}/hour</span>
               </li>
             </ul>
+            <p className="text-xs text-muted-foreground mt-2">Pricing includes 0.5% markup over base rates</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Storage Pricing</CardTitle>
+            <CardTitle>Storage & Bandwidth Pricing</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold mb-2">$0.00014/GB</p>
-            <p className="text-muted-foreground">Per hour for block storage volumes</p>
+            <div className="mb-4">
+              <p className="text-lg font-bold mb-1">${(0.00014 * 1.005).toFixed(6)}/GB/hour</p>
+              <p className="text-sm text-muted-foreground">For block storage volumes</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold mb-1">${(0.01 * 1.005).toFixed(5)}/GB</p>
+              <p className="text-sm text-muted-foreground">For bandwidth overages beyond included limit</p>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Pricing includes 0.5% markup over base rates</p>
           </CardContent>
         </Card>
       </div>
@@ -331,9 +348,17 @@ export default function BillingPage() {
                            tx.type === 'volume_charge' ? 'Volume Charge' :
                            tx.type === 'volume_resize_charge' ? 'Volume Resize' :
                            tx.type === 'hourly_server_charge' ? 'Hourly Server Charge' :
+                           tx.type === 'hourly_volume_charge' ? 'Hourly Volume Charge' :
+                           tx.type === 'bandwidth_overage' ? 'Bandwidth Overage' :
+                           tx.type === 'server_deleted_insufficient_funds' ? 'Server Deleted (Insufficient Funds)' :
                            'Charge'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        {tx.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {tx.description}
+                          </p>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-1">
                           {new Date(tx.createdAt).toLocaleString()}
                         </p>
                       </div>

@@ -29,6 +29,13 @@ export default function PricingTable() {
     queryKey: ["/api/sizes"],
   });
 
+  // Storage pricing info with 0.5% markup
+  const storagePricing = {
+    baseRate: 0.10, // $0.10/GB/month base rate (Digital Ocean)
+    markup: 0.0005, // 0.5% markup
+    rateWithMarkup: 0.10 * 1.005 // $0.1005/GB/month with markup
+  };
+
   const processorTypeInfo = {
     regular: {
       label: "Standard SSD",
@@ -81,12 +88,18 @@ export default function PricingTable() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-3xl font-bold">
-                  ${size.price_monthly}
+                  ${(size.price_monthly * 1.005).toFixed(2)}
                   <span className="text-lg text-muted-foreground font-normal">
                     {" "}
                     /mo
                   </span>
                 </p>
+                <div className="flex items-center">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="line-through">${size.price_monthly}</span>
+                    <span className="ml-1">+0.5% markup</span>
+                  </p>
+                </div>
                 <div className="flex items-center space-x-2 mb-3">
                   <Cpu className={`h-4 w-4 ${processorInfo.textColor}`} />
                   <span className="text-sm">{processorInfo.label}</span>
@@ -128,6 +141,88 @@ export default function PricingTable() {
             </Card>
           );
         })}
+      </div>
+      
+      {/* Additional pricing info section */}
+      <div className="mt-12 mb-6">
+        <h3 className="text-xl font-semibold mb-4">Additional Services</h3>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                Block Storage
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-2xl font-bold">
+                ${storagePricing.rateWithMarkup.toFixed(3)}
+                <span className="text-lg text-muted-foreground font-normal"> /GB/mo</span>
+              </p>
+              <div className="flex items-center">
+                <p className="text-xs text-muted-foreground">
+                  <span className="line-through">${storagePricing.baseRate.toFixed(2)}</span>
+                  <span className="ml-1">+0.5% markup</span>
+                </p>
+              </div>
+              <ul className="space-y-2">
+                <li className="flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-primary" />
+                  SSD-backed block storage
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-primary" />
+                  Expand storage without resizing servers
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-primary" />
+                  Volumes can be moved between servers
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-primary" />
+                  Sizes from 1GB to 10TB available
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                Bandwidth Pricing
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-2xl font-bold">
+                ${(0.01 * 1.005).toFixed(3)}
+                <span className="text-lg text-muted-foreground font-normal"> /GB overage</span>
+              </p>
+              <div className="flex items-center">
+                <p className="text-xs text-muted-foreground">
+                  <span className="line-through">$0.01</span>
+                  <span className="ml-1">+0.5% markup</span>
+                </p>
+              </div>
+              <ul className="space-y-2">
+                <li className="flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-primary" />
+                  Free monthly transfer allowance with every server
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-primary" />
+                  1TB-5TB included depending on server size
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-primary" />
+                  Pay only for what you use beyond included amount
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-primary" />
+                  Bandwidth usage tracked monthly
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </TooltipProvider>
   );
