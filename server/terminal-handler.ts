@@ -1,12 +1,11 @@
 import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
-import { Client as SSHClient, ClientChannel } from 'ssh2';
+import { Client as SSHClient, ClientChannel, ConnectConfig } from 'ssh2';
 import { storage } from './storage';
 import { log } from './vite';
 import { Request } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
-import { cloudRackKeyManager } from './cloudrack-key-manager';
 
 // Extend the Server type to include rootPassword
 interface ExtendedServer {
@@ -68,26 +67,17 @@ export function setupTerminalSocket(server: HttpServer) {
       socket.emit('status', { status: 'connecting' });
       
       sshClient.on('ready', () => {
-        // Determine which authentication method was used and notify the client
-        if (server.rootPassword) {
-          log(`Connected to server ${server.id} using password authentication`, 'terminal');
-          socket.emit('status', { 
-            status: 'password_auth'
-          });
-        } else {
-          log(`Connected to server ${server.id} using CloudRack Terminal Key authentication`, 'terminal');
-          socket.emit('status', { 
-            status: 'key_auth'
-          });
-        }
+        // Log successful connection with password authentication
+        log(`Connected to server ${server.id} using password authentication`, 'terminal');
+        socket.emit('status', { 
+          status: 'password_auth'
+        });
           
         // Then emit the connected status after a short delay to ensure sequence
         setTimeout(() => {
           socket.emit('status', { 
             status: 'connected',
-            message: server.rootPassword 
-              ? 'Using password authentication (root password)'
-              : 'Using CloudRack Terminal Key authentication (SSH key)'
+            message: 'Using password authentication (root password)'
           });
         }, 100);
         
@@ -129,7 +119,7 @@ export function setupTerminalSocket(server: HttpServer) {
           // Log detailed error information for debugging
           log(`Authentication failed for server ${server.id}:
             - Server IP: ${server.ipAddress}
-            - Authentication method: ${server.rootPassword ? 'Password' : 'SSH Key'}
+            - Authentication method: Password
             - Error details: ${err.message}`, 'terminal');
             
         } else if (err.message.includes('connect ETIMEDOUT') || err.message.includes('Operation timed out')) {
