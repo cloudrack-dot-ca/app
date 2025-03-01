@@ -3,6 +3,7 @@ import path from 'path';
 import { storage } from './storage';
 import child_process from 'child_process';
 import util from 'util';
+import * as crypto from 'crypto';
 
 const exec = util.promisify(child_process.exec);
 
@@ -112,12 +113,8 @@ export class CloudRackKeyManager {
         // For Replit environment, create a directly compatible RSA PEM key
         // This approach bypasses ssh-keygen entirely and creates the key in the exact format needed
         
-        // Generate a new key pair using node-forge or similar
-        const crypto = require('crypto');
-        const { generateKeyPairSync } = crypto;
-        
         // Generate the key pair directly in PEM format
-        const keyPair = generateKeyPairSync('rsa', {
+        const keyPair = crypto.generateKeyPairSync('rsa', {
           modulusLength: 4096,
           publicKeyEncoding: {
             type: 'spki',
@@ -241,18 +238,17 @@ QEpmj5pJcQuC8/8zEpP5QGl1A3wsm0z/gmN4TKhfv4pOfTMeD4dJbA==
       // 3. Base64 encode the result
       
       // For now, we'll return a simplified result that would be calculated by that process
-      const crypto = require('crypto');
-      const publicKey = crypto.createPublicKey({
-        key: publicKeyDer,
-        format: 'der',
-        type: 'spki'
-      });
-      
-      // Convert to SSH format - this is a proper way but might not work in all environments
       try {
-        const sshKey = publicKey.export({
-          format: 'ssh',
+        const publicKey = crypto.createPublicKey({
+          key: publicKeyDer,
+          format: 'der',
           type: 'spki'
+        });
+        
+        // Convert to SSH format - Node.js >= 12.16.0 supports exporting in SSH format
+        // But we'll need to handle this with care as TypeScript doesn't recognize it
+        const sshKey = (publicKey as any).export({
+          format: 'ssh',
         }).toString();
         return sshKey;
       } catch (sshFormatError) {
