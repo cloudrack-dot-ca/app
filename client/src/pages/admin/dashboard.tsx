@@ -831,11 +831,11 @@ export default function AdminDashboard() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => {
-                                window.location.href = `/support/${ticket.id}`;
-                              }}
+                              asChild
                             >
-                              View & Respond
+                              <Link href={`/support/${ticket.id}`}>
+                                View & Respond
+                              </Link>
                             </Button>
                             <Select
                               onValueChange={(value) => {
