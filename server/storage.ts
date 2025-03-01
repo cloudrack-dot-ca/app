@@ -56,6 +56,7 @@ export interface IStorage {
   getSSHKeysByUser(userId: number): Promise<SSHKey[]>;
   createSSHKey(key: Omit<SSHKey, "id">): Promise<SSHKey>;
   getSSHKey(id: number): Promise<SSHKey | undefined>;
+  updateSSHKey(id: number, updates: Partial<SSHKey>): Promise<SSHKey>;
   deleteSSHKey(id: number): Promise<void>;
 
   // IP Ban functionality
@@ -315,6 +316,14 @@ export class DatabaseStorage implements IStorage {
   async getSSHKey(id: number): Promise<SSHKey | undefined> {
     const [key] = await db.select().from(sshKeys).where(eq(sshKeys.id, id));
     return key;
+  }
+
+  async updateSSHKey(id: number, updates: Partial<SSHKey>): Promise<SSHKey> {
+    const [updatedKey] = await db.update(sshKeys)
+      .set(updates)
+      .where(eq(sshKeys.id, id))
+      .returning();
+    return updatedKey;
   }
 
   async deleteSSHKey(id: number): Promise<void> {
