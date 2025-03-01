@@ -394,12 +394,19 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
     }
 
-    // Create the volume in DigitalOcean
-    const doVolume = await digitalOcean.createVolume({
-      name: parsed.data.name,
-      region: server.region,
-      size_gigabytes: parsed.data.size,
-    });
+    // Create the volume in DigitalOcean with error handling
+    let doVolume;
+    try {
+      doVolume = await digitalOcean.createVolume({
+        name: parsed.data.name,
+        region: server.region,
+        size_gigabytes: parsed.data.size,
+      });
+    } catch (error: any) {
+      return res.status(400).json({ 
+        message: error.message || "Failed to create volume in DigitalOcean. Please try again with a different name."
+      });
+    }
 
     // Create the volume in our database
     const volume = await storage.createVolume({
