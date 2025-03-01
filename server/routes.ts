@@ -1071,8 +1071,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       const updatedServer = await db.update(schema.servers)
         .set({ 
           rootPassword: password,
-          // Add a timestamp indicating the password was updated
-          updatedAt: new Date()
+          // Add a timestamp to lastMonitored to indicate when the password was updated
+          lastMonitored: new Date()
         })
         .where(eq(schema.servers.id, serverId))
         .returning();
