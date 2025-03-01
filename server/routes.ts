@@ -1906,7 +1906,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         name,
         publicKey,
         createdAt: new Date(),
-        isCloudRackKey: isCloudRackKey
+        isCloudRackKey: isCloudRackKey,
+        isSystemKey: false // Default to false for user-created keys
       });
       res.status(201).json(key);
     } catch (error) {
@@ -2007,6 +2008,87 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       res.status(500).json({ 
         status: "error",
         message: "Failed to manage CloudRack key",
+        error: (error as Error).message 
+      });
+    }
+  });
+  
+  // System SSH key status endpoint
+  app.get("/api/system-key", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      // Check if user has the system key
+      const hasKey = await systemKeyManager.hasSystemKey(req.user.id);
+      
+      if (hasKey) {
+        // Find the actual key for additional details
+        const keys = await storage.getSSHKeysByUser(req.user.id);
+        const systemKey = keys.find(key => key.isSystemKey);
+        
+        res.json({
+          status: "active",
+          key: systemKey,
+          fingerprint: systemKeyManager.getSystemKeyFingerprint()
+        });
+      } else {
+        res.json({
+          status: "missing",
+          fingerprint: systemKeyManager.getSystemKeyFingerprint(),
+          publicKey: systemKeyManager.getSystemPublicKey()
+        });
+      }
+    } catch (error) {
+      console.error("Error checking system key status:", error);
+      res.status(500).json({ 
+        message: "Failed to check system key status",
+        error: (error as Error).message 
+      });
+    }
+  });
+  
+  // Ensure or regenerate system key
+  app.post("/api/system-key", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      // Regenerate will delete existing and create a new one
+      const regenerate = req.body.regenerate === true;
+      
+      if (regenerate) {
+        // Find and delete existing system key if present
+        const keys = await storage.getSSHKeysByUser(req.user.id);
+        const systemKey = keys.find(key => key.isSystemKey);
+        
+        if (systemKey) {
+          await storage.deleteSSHKey(systemKey.id);
+        }
+      }
+      
+      // Create/ensure the system key
+      const systemKeyId = await systemKeyManager.ensureSystemKey(req.user.id);
+      
+      if (systemKeyId) {
+        // Get the newly created key
+        const keys = await storage.getSSHKeysByUser(req.user.id);
+        const systemKey = keys.find(key => key.isSystemKey);
+        
+        res.json({
+          status: "success",
+          message: regenerate ? "System key regenerated successfully" : "System key ensured successfully", 
+          key: systemKey
+        });
+      } else {
+        res.status(500).json({
+          status: "error",
+          message: "Failed to create system key"
+        });
+      }
+    } catch (error) {
+      console.error("Error managing system key:", error);
+      res.status(500).json({ 
+        status: "error",
+        message: "Failed to manage system key",
         error: (error as Error).message 
       });
     }
