@@ -56,12 +56,12 @@ const mockSections: DocSection[] = [
       {
         id: "welcome",
         sectionId: "getting-started",
-        title: "Welcome to CloudHost",
-        content: `# Welcome to CloudHost VPS Platform
+        title: "Welcome to CloudRack",
+        content: `# Welcome to CloudRack VPS Platform
         
-This guide will help you get started with our VPS hosting platform. CloudHost provides high-performance virtual private servers with easy deployment options and full control.
+This guide will help you get started with our VPS hosting platform. CloudRack provides high-performance virtual private servers with easy deployment options and full control.
 
-## What You Can Do with CloudHost
+## What You Can Do with CloudRack
 
 - Deploy virtual servers across multiple global regions
 - Choose from various Linux distributions and application templates

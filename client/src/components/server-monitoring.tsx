@@ -236,9 +236,12 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
                 Server Uptime
               </div>
               <div className="text-sm">
-                <div className="font-semibold">{formatUptime(currentMetrics.uptimeSeconds)}</div>
+                <div className="font-semibold">{formatUptime(currentMetrics.uptimeSeconds || 0)}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Created {server?.name ? new Date(parseInt(server.dropletId) * 1000).toLocaleString() : "Unknown"}
+                  {server?.lastMonitored ? 
+                    `Created approximately: ${new Date(Date.now() - (currentMetrics.uptimeSeconds * 1000)).toLocaleString()}` : 
+                    "Creation time unknown"
+                  }
                 </div>
               </div>
             </div>
@@ -253,7 +256,7 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
                 <div className="font-semibold">{volumes?.length || 0} volumes</div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {volumes?.length 
-                    ? `Total: ${volumes.reduce((sum, vol) => sum + vol.sizeGb, 0)} GB` 
+                    ? `Total: ${volumes.reduce((sum, vol) => sum + (vol.size || 0), 0)} GB` 
                     : "No volumes attached"}
                 </div>
               </div>
@@ -325,7 +328,7 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
             <div className="text-xs text-muted-foreground mt-1">
               {Math.round((specs.disk * currentMetrics.diskUsage) / 100)} GB of {specs.disk} GB
               {volumes?.length ? 
-                <span className="ml-1">+ {volumes.reduce((sum, vol) => sum + vol.sizeGb, 0)} GB external</span> 
+                <span className="ml-1">+ {volumes.reduce((sum, vol) => sum + (vol.size || 0), 0)} GB external</span> 
                 : null
               }
             </div>
