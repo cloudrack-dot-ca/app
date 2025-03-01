@@ -70,7 +70,7 @@ import {
 } from "lucide-react";
 import VolumeManager from "@/components/volume-manager";
 import ServerMonitoring from "@/components/server-monitoring";
-import FirewallManager from "@/components/firewall-manager";
+import FirewallManager from "@/components/firewall-manager-enhanced";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 

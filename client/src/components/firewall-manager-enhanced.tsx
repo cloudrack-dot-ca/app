@@ -122,7 +122,7 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
   const [activeTab, setActiveTab] = useState("inbound");
   const [noFirewall, setNoFirewall] = useState(false);
   const [deleteRuleConfirmOpen, setDeleteRuleConfirmOpen] = useState(false);
-  const [ruleToDelete, setRuleToDelete] = useState<{ ruleType: 'inbound' | 'outbound', rule: FirewallRule } | null>(null);
+  const [ruleToDelete, setRuleToDelete] = useState<{ rule_type: 'inbound' | 'outbound', rule: FirewallRule } | null>(null);
   const [newRule, setNewRule] = useState<{
     protocol: 'tcp' | 'udp' | 'icmp';
     ports: string;
@@ -344,14 +344,18 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
 
   // Handle when user clicks delete rule button
   const prepareDeleteRule = (ruleType: 'inbound' | 'outbound', rule: FirewallRule) => {
-    setRuleToDelete({ ruleType, rule });
+    setRuleToDelete({ rule_type: ruleType, rule });
     setDeleteRuleConfirmOpen(true);
   };
 
   // Handle actual deletion after confirmation
   const handleConfirmDeleteRule = () => {
     if (ruleToDelete) {
-      deleteRuleMutation.mutate(ruleToDelete);
+      // We already have the correct format with rule_type
+      deleteRuleMutation.mutate({
+        rule_type: ruleToDelete.rule_type,
+        rule: ruleToDelete.rule
+      });
       setDeleteRuleConfirmOpen(false);
       setRuleToDelete(null);
     }
@@ -678,7 +682,7 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
         }}
         onConfirm={handleConfirmDeleteRule}
         title="Delete Firewall Rule"
-        description={`You are about to delete a ${ruleToDelete?.ruleType || ''} firewall rule for ${ruleToDelete?.rule.protocol || ''} protocol on port(s) ${ruleToDelete?.rule.ports || ''}. This could potentially expose your server to security risks.`}
+        description={`You are about to delete a ${ruleToDelete?.rule_type || ''} firewall rule for ${ruleToDelete?.rule.protocol || ''} protocol on port(s) ${ruleToDelete?.rule.ports || ''}. This could potentially expose your server to security risks.`}
         confirmationText="I CONFIRM DELETION OF RULES"
         confirmButtonText="Delete Rule"
         confirmButtonVariant="destructive"
