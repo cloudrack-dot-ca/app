@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import VolumeManager from "@/components/volume-manager";
 import ServerMonitoring from "@/components/server-monitoring";
+import FirewallManager from "@/components/firewall-manager";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -654,25 +655,29 @@ export default function ServerDetailPage() {
                 <div className="bg-card border rounded-lg p-4">
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <h4 className="text-sm font-medium">Basic Firewall Rules</h4>
-                      <p className="text-xs text-muted-foreground">Configure basic firewall rules for your server</p>
+                      <h4 className="text-sm font-medium">Firewall Rules</h4>
+                      <p className="text-xs text-muted-foreground">Manage inbound and outbound network traffic</p>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        // Firewall configuration would normally show a modal with proper controls
-                        toast({
-                          title: "Firewall Configuration",
-                          description: "The firewall configuration interface is now available for managing rules.",
-                        });
-                      }}
-                    >
-                      <Shield className="h-4 w-4 mr-2" />
-                      Configure Firewall
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                        >
+                          <Shield className="h-4 w-4 mr-2" />
+                          Configure Firewall
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl">
+                        <DialogHeader>
+                          <DialogTitle>Firewall Configuration</DialogTitle>
+                        </DialogHeader>
+                        <FirewallManager serverId={serverId} />
+                      </DialogContent>
+                    </Dialog>
                   </div>
                   
+                  {/* Common rules section */}
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-2 bg-muted rounded-md">
                       <div className="flex items-center">
@@ -694,7 +699,7 @@ export default function ServerDetailPage() {
                         </div>
                         <div>
                           <p className="text-sm font-medium">HTTP (80)</p>
-                          <p className="text-xs text-muted-foreground">Web server traffic</p>
+                          <p className="text-xs text-muted-foreground">Web traffic</p>
                         </div>
                       </div>
                       <Badge variant="outline" className="text-green-600 bg-green-50">Allowed</Badge>
@@ -715,8 +720,8 @@ export default function ServerDetailPage() {
                   </div>
                   
                   <p className="text-xs text-muted-foreground mt-4">
-                    Note: Advanced firewall rules can be configured through the "Configure Firewall" button.
-                    The interface above shows the current configuration.
+                    Note: Additional firewall rules can be configured through the "Configure Firewall" button.
+                    The interface above shows common allowed ports.
                   </p>
                 </div>
               </div>
