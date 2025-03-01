@@ -543,18 +543,20 @@ export default function ServerDetailPage() {
             <HardDrive className="h-4 w-4 mr-2" />
             Volumes
           </TabsTrigger>
-          <TabsTrigger value="networking">
-            <Globe className="h-4 w-4 mr-2" />
-            Networking
-          </TabsTrigger>
           <TabsTrigger value="metrics">
             <BarChart className="h-4 w-4 mr-2" />
             Metrics
+          </TabsTrigger>
+          {/* Hidden for future development
+          <TabsTrigger value="networking">
+            <Globe className="h-4 w-4 mr-2" />
+            Networking
           </TabsTrigger>
           <TabsTrigger value="console">
             <Terminal className="h-4 w-4 mr-2" />
             Console
           </TabsTrigger>
+          */}
         </TabsList>
 
         {/* Overview Tab */}
