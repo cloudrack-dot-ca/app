@@ -825,23 +825,71 @@ export default function ServerDetailPage() {
                       <h4 className="text-sm font-medium">Firewall Configuration</h4>
                       <p className="text-xs text-muted-foreground">Configure security rules for your server</p>
                     </div>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                        >
-                          <Shield className="h-4 w-4 mr-2" />
-                          Manage Firewall
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl">
-                        <DialogHeader>
-                          <DialogTitle>Firewall Configuration</DialogTitle>
-                        </DialogHeader>
-                        <FirewallManager serverId={serverId} />
-                      </DialogContent>
-                    </Dialog>
+                    
+                    {/* Create/Manage Firewall Button Group */}
+                    <div className="flex gap-2">
+                      {/* Direct Create Default Firewall Button */}
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const response = await apiRequest(
+                              'PUT',
+                              `/api/servers/${serverId}/firewall`,
+                              {
+                                inbound_rules: [
+                                  { protocol: 'tcp', ports: '22', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
+                                  { protocol: 'tcp', ports: '80', sources: { addresses: ['0.0.0.0/0', '::/0'] } },
+                                  { protocol: 'tcp', ports: '443', sources: { addresses: ['0.0.0.0/0', '::/0'] } }
+                                ],
+                                outbound_rules: [
+                                  { protocol: 'tcp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } },
+                                  { protocol: 'udp', ports: 'all', destinations: { addresses: ['0.0.0.0/0', '::/0'] } }
+                                ]
+                              }
+                            );
+                            
+                            toast({
+                              title: "Firewall Created",
+                              description: "Default firewall rules have been applied successfully.",
+                            });
+                            
+                            // Refresh the firewall display
+                            queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/firewall`] });
+                            
+                          } catch (error) {
+                            toast({
+                              title: "Failed to create firewall",
+                              description: error instanceof Error ? error.message : "An unknown error occurred",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                      >
+                        <Shield className="h-4 w-4 mr-2" />
+                        Create Default Firewall
+                      </Button>
+                      
+                      {/* Open Firewall Manager Dialog */}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            Advanced Firewall Settings
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>Firewall Configuration</DialogTitle>
+                          </DialogHeader>
+                          <FirewallManager serverId={serverId} />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                   
                   {/* Active rules section - simplified display */}
@@ -851,8 +899,8 @@ export default function ServerDetailPage() {
                   </div>
                   
                   <p className="text-xs text-muted-foreground mt-4">
-                    Use the "Manage Firewall" button above to create and configure your firewall. 
-                    You can set up inbound rules that control which traffic is allowed to reach your server.
+                    First, create a default firewall with basic protection by clicking "Create Default Firewall".
+                    Then you can use "Advanced Firewall Settings" to customize the rules.
                   </p>
                 </div>
               </div>
