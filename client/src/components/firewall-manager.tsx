@@ -116,22 +116,22 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
     refetch();
   }, [serverId, refetch]);
 
-  // Create a new firewall with no rules initially
+  // Create a new firewall with default rules
   const createFirewallMutation = useMutation({
     mutationFn: async () => {
       return apiRequest(
         'PUT',
         `/api/servers/${serverId}/firewall`,
         {
-          inbound_rules: [], // Start with no rules as per requirement
-          outbound_rules: []
+          inbound_rules: defaultInboundRules, // Use default rules for better security
+          outbound_rules: defaultOutboundRules
         }
       );
     },
     onSuccess: () => {
       toast({
         title: "Firewall enabled",
-        description: "Firewall has been created with no rules. Add rules for protection.",
+        description: "Firewall has been created with default security rules for SSH, HTTP, and HTTPS.",
       });
       setNoFirewall(false);
       // Update both this component and any parent components
@@ -391,7 +391,7 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
           {createFirewallMutation.isPending ? "Enabling..." : "Enable Firewall"}
         </Button>
         <p className="text-xs text-muted-foreground mt-1">
-          This will create a firewall with no rules. You will need to add rules after creation.
+          This will create a firewall with default rules for SSH, HTTP, and HTTPS.
         </p>
       </div>
     );
