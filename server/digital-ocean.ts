@@ -480,10 +480,10 @@ export class DigitalOceanClient {
     }
     
     try {
-      // In a real implementation, we would fetch from the DigitalOcean API
-      // Due to complex structure of DO's API for applications, we'll use mock data
+      // In a real implementation, we would fetch from the CloudRack API
+      // Due to complex structure of the API for applications, we'll use mock data
       // instead of trying to parse their complex response format
-      console.log('DigitalOcean API available, but using mock applications data for consistency');
+      console.log('CloudRack API available, but using mock applications data for consistency');
       return this.mockApplications;
     } catch (error) {
       console.error('Error fetching applications, falling back to mock data:', error);
@@ -743,7 +743,7 @@ runcmd:
   }
 
   async getServerMetrics(dropletId: string): Promise<any> {
-    // Always generate mock metrics for consistency and to avoid DigitalOcean API errors 
+    // Always generate mock metrics for consistency and to avoid CloudRack API errors 
     // since we're in development and the API may not be fully integrated
     return this.generateMockMetrics();
   }

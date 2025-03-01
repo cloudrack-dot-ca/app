@@ -293,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
     }
 
-    // Create the volume in DigitalOcean with error handling
+    // Create the volume in CloudRack with error handling
     let doVolume;
     try {
       doVolume = await digitalOcean.createVolume({
@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
     } catch (error: any) {
       return res.status(400).json({ 
-        message: error.message || "Failed to create volume in DigitalOcean. Please try again with a different name."
+        message: error.message || "Failed to create volume in CloudRack. Please try again with a different name."
       });
     }
 
