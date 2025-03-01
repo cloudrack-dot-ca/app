@@ -26,17 +26,17 @@ export interface Application {
   type: string;
 }
 
-// Support both mock and real DigitalOcean API
+// Support both mock and real CloudRack API
 export class DigitalOceanClient {
   private apiKey: string;
   private useMock: boolean;
-  private apiBaseUrl = 'https://api.digitalocean.com/v2';
+  private apiBaseUrl = 'https://api.digitalocean.com/v2'; // Using compatible API endpoint
 
   constructor() {
-    this.apiKey = process.env.DIGITAL_OCEAN_API_KEY || '';
+    this.apiKey = process.env.CLOUDRACK_API_KEY || process.env.DIGITAL_OCEAN_API_KEY || '';
     this.useMock = !this.apiKey;
     if (this.useMock) {
-      console.warn('DigitalOcean API key not found. Using mock data.');
+      console.warn('CloudRack API key not found. Using mock data.');
     }
   }
 
@@ -395,9 +395,9 @@ export class DigitalOceanClient {
         try {
           const errorText = await response.text();
           const errorJson = errorText ? JSON.parse(errorText) : {};
-          throw new Error(`DigitalOcean API Error: ${JSON.stringify(errorJson)}`);
+          throw new Error(`CloudRack API Error: ${JSON.stringify(errorJson)}`);
         } catch (parseError) {
-          throw new Error(`DigitalOcean API Error: ${response.status} ${response.statusText}`);
+          throw new Error(`CloudRack API Error: ${response.status} ${response.statusText}`);
         }
       }
 
@@ -417,7 +417,7 @@ export class DigitalOceanClient {
         return {} as T;
       }
     } catch (error) {
-      console.error(`Error in DigitalOcean API request to ${endpoint}:`, error);
+      console.error(`Error in CloudRack API request to ${endpoint}:`, error);
       throw error;
     }
   }
