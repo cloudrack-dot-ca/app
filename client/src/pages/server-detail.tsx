@@ -4,7 +4,13 @@ import { useParams, Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Server, Volume } from "@shared/schema";
+import { Server as SchemaServer, Volume } from "@shared/schema";
+
+// Extended Server interface with additional properties for UI display
+interface Server extends SchemaServer {
+  rootPassword?: string; // Optional root password that may be set during server creation
+  rootPassUpdated?: boolean; // Flag to indicate if a root password has been set or updated
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,13 +42,149 @@ import {
   Globe,
   Wifi,
   Shield,
-  BarChart
+  BarChart,
+  Check,
+  ExternalLink,
+  Key,
+  Lock
 } from "lucide-react";
 import VolumeManager from "@/components/volume-manager";
 import ServerMonitoring from "@/components/server-monitoring";
 import FirewallManager from "@/components/firewall-manager";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
+// Firewall Rule interface (simplified from the full interface in firewall-manager.tsx)
+interface FirewallRule {
+  protocol: 'tcp' | 'udp' | 'icmp';
+  ports: string;
+  sources?: {
+    addresses?: string[];
+  };
+}
+
+// Common ports with descriptions for quick reference
+const commonPortDescriptions: Record<string, string> = {
+  "22": "SSH",
+  "80": "HTTP",
+  "443": "HTTPS",
+  "3306": "MySQL",
+  "5432": "PostgreSQL",
+  "27017": "MongoDB",
+  "6379": "Redis",
+  "25565": "Minecraft",
+  "8080": "Alternative HTTP",
+  "2222": "Alternative SSH",
+  "21": "FTP",
+  "25": "SMTP",
+  "53": "DNS",
+  "3389": "RDP"
+};
+
+// Get friendly name for the port
+const getPortDescription = (port: string) => {
+  return port === "all" 
+    ? "All Ports" 
+    : commonPortDescriptions[port] 
+      ? `${port} (${commonPortDescriptions[port]})` 
+      : port.includes("-") 
+        ? `Port Range ${port}` 
+        : `Port ${port}`;
+};
+
+// Active Firewall Rules Component
+function ActiveFirewallRules({ serverId }: { serverId: number }) {
+  const { toast } = useToast();
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Fetch current firewall configuration
+  const { data: firewall, isLoading, error } = useQuery({
+    queryKey: ['/api/servers', serverId, 'firewall'],
+    queryFn: () => fetch(`/api/servers/${serverId}/firewall`)
+      .then(res => {
+        if (res.status === 404) {
+          // No firewall exists yet
+          return { inbound_rules: [], outbound_rules: [] };
+        }
+        if (!res.ok) {
+          throw new Error(`Failed to fetch firewall rules`);
+        }
+        return res.json();
+      }),
+    refetchOnWindowFocus: false
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-4">
+        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+        <span className="text-sm">Loading firewall rules...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-sm text-red-500">Error loading firewall rules.</p>
+        <p className="text-xs text-muted-foreground mt-1">Please use the "Configure Firewall" button to manage rules.</p>
+      </div>
+    );
+  }
+
+  if (!firewall || !firewall.inbound_rules || firewall.inbound_rules.length === 0) {
+    return (
+      <div className="p-4 text-center bg-yellow-50 border border-yellow-200 rounded-lg">
+        <Shield className="h-5 w-5 text-yellow-600 mx-auto mb-2" />
+        <p className="text-sm text-yellow-700">No firewall rules configured.</p>
+        <p className="text-xs text-yellow-600 mt-1">Use "Configure Firewall" to set up protection.</p>
+      </div>
+    );
+  }
+
+  // Rules to display (limit to the first few unless expanded)
+  const displayRules = isExpanded 
+    ? firewall.inbound_rules 
+    : firewall.inbound_rules.slice(0, 3);
+
+  return (
+    <div>
+      {displayRules.map((rule: FirewallRule, index: number) => (
+        <div key={`rule-${index}`} className="flex justify-between items-center p-2 bg-muted rounded-md mb-2">
+          <div className="flex items-center">
+            <div className="bg-green-100 text-green-800 p-1 rounded-full mr-3">
+              {rule.protocol === 'tcp' ? <Globe className="h-4 w-4" /> : 
+               rule.protocol === 'udp' ? <Wifi className="h-4 w-4" /> : 
+               <Shield className="h-4 w-4" />}
+            </div>
+            <div>
+              <p className="text-sm font-medium">{rule.protocol.toUpperCase()} {getPortDescription(rule.ports)}</p>
+              <p className="text-xs text-muted-foreground">
+                From: {rule.sources?.addresses?.join(', ') || 'Any source'}
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className="text-green-600 bg-green-50">
+            <Check className="h-3 w-3 mr-1" /> Allowed
+          </Badge>
+        </div>
+      ))}
+      
+      {firewall.inbound_rules.length > 3 && (
+        <div className="text-center mt-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-sm"
+          >
+            {isExpanded ? 'Show less' : `Show ${firewall.inbound_rules.length - 3} more rules`}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Map regions to flag emojis
 const regionFlags: { [key: string]: string } = {
@@ -655,8 +797,8 @@ export default function ServerDetailPage() {
                 <div className="bg-card border rounded-lg p-4">
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <h4 className="text-sm font-medium">Firewall Rules</h4>
-                      <p className="text-xs text-muted-foreground">Manage inbound and outbound network traffic</p>
+                      <h4 className="text-sm font-medium">Active Firewall Rules</h4>
+                      <p className="text-xs text-muted-foreground">Current inbound network traffic rules</p>
                     </div>
                     <Dialog>
                       <DialogTrigger asChild>
@@ -677,51 +819,14 @@ export default function ServerDetailPage() {
                     </Dialog>
                   </div>
                   
-                  {/* Common rules section */}
+                  {/* Active rules section - simplified display */}
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-2 bg-muted rounded-md">
-                      <div className="flex items-center">
-                        <div className="bg-green-100 text-green-800 p-1 rounded-full mr-3">
-                          <ServerIcon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">SSH (22)</p>
-                          <p className="text-xs text-muted-foreground">Allow SSH access to your server</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-green-600 bg-green-50">Allowed</Badge>
-                    </div>
-                    
-                    <div className="flex justify-between items-center p-2 bg-muted rounded-md">
-                      <div className="flex items-center">
-                        <div className="bg-green-100 text-green-800 p-1 rounded-full mr-3">
-                          <Globe className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">HTTP (80)</p>
-                          <p className="text-xs text-muted-foreground">Web traffic</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-green-600 bg-green-50">Allowed</Badge>
-                    </div>
-                    
-                    <div className="flex justify-between items-center p-2 bg-muted rounded-md">
-                      <div className="flex items-center">
-                        <div className="bg-green-100 text-green-800 p-1 rounded-full mr-3">
-                          <Shield className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">HTTPS (443)</p>
-                          <p className="text-xs text-muted-foreground">Secure web traffic</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-green-600 bg-green-50">Allowed</Badge>
-                    </div>
+                    {/* Fetch and display actual rules from API */}
+                    <ActiveFirewallRules serverId={serverId} />
                   </div>
                   
                   <p className="text-xs text-muted-foreground mt-4">
-                    Note: Additional firewall rules can be configured through the "Configure Firewall" button.
-                    The interface above shows common allowed ports.
+                    This section displays your active inbound firewall rules. Use the "Configure Firewall" button to manage all rules in detail.
                   </p>
                 </div>
               </div>
@@ -820,6 +925,73 @@ export default function ServerDetailPage() {
                   >
                     <CopyPlus className="h-4 w-4" />
                   </Button>
+                </div>
+                
+                {/* SSH Keys and Password Information */}
+                <div className="mt-4 grid md:grid-cols-2 gap-4">
+                  <div className="bg-card border rounded-md p-4">
+                    <h4 className="text-sm font-medium mb-2">SSH Key Authentication</h4>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      SSH keys provide secure passwordless authentication to your server.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate("/ssh-keys")}
+                    >
+                      <Key className="h-4 w-4 mr-2" />
+                      Manage SSH Keys
+                    </Button>
+                  </div>
+                  
+                  <div className="bg-card border rounded-md p-4">
+                    <h4 className="text-sm font-medium mb-2">Password Authentication</h4>
+                    
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {isEditingPassword 
+                        ? "Enter a new root password for your server."
+                        : "You can use a password to access your server via SSH or the web console."}
+                    </p>
+                    
+                    {isEditingPassword ? (
+                      <div className="flex items-center gap-2 mt-3">
+                        <Input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="New password"
+                          className="w-48"
+                        />
+                        <Button 
+                          size="sm" 
+                          onClick={() => updatePasswordMutation.mutate(newPassword)}
+                          disabled={updatePasswordMutation.isPending || !newPassword}
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          Save
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => {
+                            setIsEditingPassword(false);
+                            setNewPassword("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setIsEditingPassword(true)}
+                      >
+                        <Lock className="h-4 w-4 mr-2" />
+                        {server.rootPassUpdated ? "Change Password" : "Set Root Password"}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
