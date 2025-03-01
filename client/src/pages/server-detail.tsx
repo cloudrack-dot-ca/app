@@ -9,8 +9,8 @@ import ServerTerminal from "@/components/server-terminal-real";
 import { CloudRackTerminalNotice } from "@/components/cloudrack-terminal-notice";
 
 // Extended Server interface with additional properties for UI display
-interface Server extends SchemaServer {
-  rootPassword?: string; // Optional root password that may be set during server creation
+interface Server extends Omit<SchemaServer, 'rootPassword'> {
+  rootPassword?: string | null; // Optional root password that may be set during server creation
   rootPassUpdated?: boolean; // Flag to indicate if a root password has been set or updated
 }
 import { Button } from "@/components/ui/button";

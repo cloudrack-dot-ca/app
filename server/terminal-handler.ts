@@ -68,7 +68,15 @@ export function setupTerminalSocket(server: HttpServer) {
       socket.emit('status', { status: 'connecting' });
       
       sshClient.on('ready', () => {
-        socket.emit('status', { status: 'connected' });
+        // Determine which authentication method was used
+        const authMethod = server.rootPassword 
+          ? 'Using password authentication'
+          : 'Using CloudRack Terminal Key authentication';
+          
+        socket.emit('status', { 
+          status: 'connected',
+          message: authMethod
+        });
         
         // Create a new shell session
         sshClient.shell((err: Error | undefined, stream: ClientChannel) => {

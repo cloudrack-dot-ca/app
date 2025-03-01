@@ -108,6 +108,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       term.clear();
       term.writeln('\x1b[1;32mInitiating connection to server...\x1b[0m');
       term.writeln(`\x1b[1;34mConnecting to ${serverName} (${ipAddress})...\x1b[0m`);
+      term.writeln('\x1b[1;33mNote: Connection may take up to 30 seconds for new servers\x1b[0m');
       
       // Create a socket.io connection to the server with query parameters
       const socket = io(`${window.location.origin}`, {
@@ -121,16 +122,31 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       
       // Handle socket events
       socket.on('connect', () => {
-        console.log('Socket connected');
+        console.log('Socket connected to backend');
+        term.writeln('\x1b[1;32mEstablished connection to CloudRack...\x1b[0m');
+        term.writeln('\x1b[1;33mAttempting SSH connection to server...\x1b[0m');
       });
       
-      socket.on('status', (data: { status: string }) => {
-        if (data.status === 'connected') {
+      socket.on('status', (data: { status: string, message?: string }) => {
+        if (data.status === 'connecting') {
+          term.writeln('\x1b[1;33mEstablishing secure connection...\x1b[0m');
+        } else if (data.status === 'connected') {
           setIsConnected(true);
-          term.writeln('\x1b[1;32mConnection established!\x1b[0m');
+          term.writeln('\x1b[1;32mSecure connection established!\x1b[0m');
+          term.writeln('\x1b[1;32m-----------------------------------------\x1b[0m');
+          term.writeln('\x1b[1;32mWelcome to CloudRack.ca Terminal Access\x1b[0m');
+          term.writeln('\x1b[1;32m-----------------------------------------\x1b[0m');
+          // Display message if provided (like authentication method used)
+          if (data.message) {
+            term.writeln(`\x1b[1;34m${data.message}\x1b[0m`);
+          }
         } else if (data.status === 'disconnected') {
           setIsConnected(false);
           term.writeln('\x1b[1;31mConnection closed.\x1b[0m');
+        } else if (data.status === 'password_auth') {
+          term.writeln('\x1b[1;33mUsing password authentication fallback...\x1b[0m');
+        } else if (data.status === 'key_auth') {
+          term.writeln('\x1b[1;33mUsing CloudRack Terminal Key authentication...\x1b[0m');
         }
       });
       
@@ -142,12 +158,31 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         console.error('Terminal error:', error);
         setConnectionError(error);
         term.writeln(`\x1b[1;31mError: ${error}\x1b[0m`);
+        
+        // Provide helpful information based on the error
+        if (error.includes('timeout') || error.includes('Connection refused')) {
+          term.writeln('\x1b[1;33mNote: New servers may take up to 5 minutes to complete setup.\x1b[0m');
+          term.writeln('\x1b[1;33mPlease wait a few minutes and try reconnecting.\x1b[0m');
+        } else if (error.includes('Authentication failed')) {
+          term.writeln('\x1b[1;33mAuthentication error detected. This may happen if:\x1b[0m');
+          term.writeln('\x1b[1;33m1. The server has been recently rebooted\x1b[0m');
+          term.writeln('\x1b[1;33m2. SSH keys have changed on the server\x1b[0m');
+          term.writeln('\x1b[1;33mPlease contact support if this persists.\x1b[0m');
+        }
+        
         setIsConnected(false);
       });
       
       socket.on('disconnect', () => {
         setIsConnected(false);
         term.writeln('\x1b[1;31mDisconnected from server.\x1b[0m');
+        term.writeln('\x1b[1;33mClick "Reconnect" to try connecting again.\x1b[0m');
+      });
+      
+      // Handle authentication request (server asking for password)
+      socket.on('auth_request', (data: { prompt: string }) => {
+        term.writeln('\x1b[1;33mServer requesting authentication...\x1b[0m');
+        term.write(data.prompt);
       });
       
       // Handle user input in the terminal
