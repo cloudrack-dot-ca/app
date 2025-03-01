@@ -26,7 +26,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
 
   // Initialize terminal
   useEffect(() => {
-    if (!terminalRef.current) return;
+    if (!terminalRef.current || !user) return;
 
     // Clear any existing terminal
     terminalRef.current.innerHTML = '';
@@ -89,7 +89,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         socketRef.current.disconnect();
       }
     };
-  }, [serverId]);
+  }, [serverId, user]);
 
   // Handle full screen mode changes
   useEffect(() => {
@@ -114,7 +114,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       const socket = io(`${window.location.origin}/terminal`, {
         query: {
           serverId: serverId.toString(),
-          userId: localStorage.getItem('userId') || ''
+          userId: user?.id.toString() || ''
         }
       });
       socketRef.current = socket;
