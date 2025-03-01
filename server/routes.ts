@@ -289,14 +289,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       let droplet;
       
       // Generate a random password for the server - define it outside try block so it's accessible in the response
-      let rootPassword = Math.random().toString(36).slice(-10) + 
-                         Math.random().toString(36).toUpperCase().slice(-2) + '!';
-      
-      // If user provided a password, use that instead
-      if (auth.type === "password" && auth.value) {
-        rootPassword = auth.value;
-        console.log(`[DEBUG] Using user-provided password for both creation and storage`);
-      }
+      const rootPassword = Math.random().toString(36).slice(-10) + 
+                           Math.random().toString(36).toUpperCase().slice(-2) + '!';
       
       try {
         console.log(`[DEBUG] Creating droplet with params:
@@ -320,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         if (auth.type === "password" && auth.value) {
           // If password auth is explicitly chosen, use the provided password
           console.log(`[DEBUG] Using provided password authentication`);
-          createOptions.password = rootPassword; // Use the same password for both creation and storage
+          createOptions.password = auth.value;
         } else if (sshKeys.length > 0) {
           // Try to use SSH keys but also set a fallback password
           console.log(`[DEBUG] Using SSH key authentication with fallback password`);
