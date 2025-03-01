@@ -67,6 +67,11 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
     // Open terminal in the container
     term.open(terminalRef.current);
     fit.fit();
+    
+    // Make sure to fit terminal after a small delay to allow the DOM to settle
+    setTimeout(() => {
+      fit.fit();
+    }, 100);
 
     // Store references
     setTerminal(term);
@@ -229,6 +234,14 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       if (fitAddon) {
         fitAddon.fit();
         
+        // Update terminal dimensions and emit resize event
+        if (terminal && socketRef.current?.connected) {
+          const dims = terminal.rows && terminal.cols ? 
+            { rows: terminal.rows, cols: terminal.cols } : 
+            { rows: 24, cols: 80 };
+          socketRef.current.emit('resize', dims);
+        }
+        
         // Focus the terminal when entering fullscreen
         if (newFullscreenState && terminal) {
           terminal.focus();
@@ -323,6 +336,11 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
         <div 
           ref={terminalRef} 
           className="h-full"
+          onClick={() => {
+            if (isFullScreen && terminal) {
+              terminal.focus();
+            }
+          }}
         />
       </div>
       
