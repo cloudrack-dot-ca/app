@@ -1,0 +1,73 @@
+[vite] connecting... client:495:8
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Socket connected to backend server-terminal-real.tsx:141:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Fetching data for: /api/user queryClient.ts:59:14
+Fetching data for: /api/servers/36 queryClient.ts:59:14
+Fetching data for: /api/servers/36/volumes queryClient.ts:59:14
+Fetching data for: /api/servers/36/details queryClient.ts:59:14
+Terminal initializing, root password available: true server-terminal-real.tsx:48:12
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Socket connected to backend server-terminal-real.tsx:141:16
+Fetching data for: /api/user queryClient.ts:59:14
+Fetching data for: /api/servers/36 queryClient.ts:59:14
+Fetching data for: /api/servers/36/volumes queryClient.ts:59:14
+Fetching data for: /api/servers/36/details queryClient.ts:59:14
+ServerDetailPage Params: 
+Object { 0: "36", id: "36" }
+server-detail.tsx:302:10
+Path ID: 36 server-detail.tsx:303:10
+URL Path: /servers/36 server-detail.tsx:304:10
+Valid server ID found: 36 server-detail.tsx:319:16
+Terminal initializing, root password available: true server-terminal-real.tsx:48:12
+Socket connected to backend server-terminal-real.tsx:141:16
+
+​
+

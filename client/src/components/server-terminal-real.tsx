@@ -29,14 +29,29 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   const { user } = useAuth();
   
   // Get the server's root password from the API
-  const { data: serverDetails } = useQuery<{ rootPassword?: string }>({
+  const { data: serverDetails, isLoading: loadingPassword, error: passwordError } = useQuery<{ rootPassword?: string, id: number }>({
     queryKey: [`/api/servers/${serverId}/details`],
     enabled: !isNaN(serverId) && !!user,
     // Add some stale time to avoid too many refreshes
     staleTime: 10000,
     // Add a refetchInterval to ensure we always have the latest password
-    refetchInterval: 30000
+    refetchInterval: 30000,
+    retry: 3,
   });
+  
+  // Log password availability for debugging
+  useEffect(() => {
+    if (serverDetails) {
+      console.log(`[Terminal Debug] Server ${serverId} password status:`, {
+        hasPassword: !!serverDetails.rootPassword,
+        passwordLength: serverDetails.rootPassword?.length || 0
+      });
+    } else if (passwordError) {
+      console.error(`[Terminal Debug] Error fetching password:`, passwordError);
+    } else if (loadingPassword) {
+      console.log(`[Terminal Debug] Loading password data...`);
+    }
+  }, [serverDetails, passwordError, loadingPassword, serverId]);
 
   // Initialize terminal
   useEffect(() => {
