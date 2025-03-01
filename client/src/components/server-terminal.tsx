@@ -215,12 +215,31 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   // Toggle full screen mode
   const toggleFullScreen = () => {
     setIsFullScreen(!isFullScreen);
+    
+    // Give the DOM time to update, then resize the terminal to fill the new space
+    setTimeout(() => {
+      if (fitAddon) {
+        fitAddon.fit();
+      }
+    }, 100);
   };
 
+  // Effect to handle fitting when fullscreen changes
+  useEffect(() => {
+    if (isFullScreen && fitAddon) {
+      fitAddon.fit();
+    }
+  }, [isFullScreen, fitAddon]);
+
   return (
-    <div className={`relative ${isFullScreen ? 'fixed inset-0 z-50 bg-background p-6' : ''}`}>
+    <div className={`relative ${isFullScreen ? 'fixed inset-0 z-[100] bg-background' : ''}`}>
+      {/* Overlay when in fullscreen to prevent interaction with elements behind */}
+      {isFullScreen && (
+        <div className="absolute inset-0 bg-background/95 backdrop-blur-sm" />
+      )}
+      
       {connectionError && (
-        <div className="bg-red-500/10 text-red-500 p-3 rounded-md mb-4">
+        <div className={`bg-red-500/10 text-red-500 p-3 rounded-md ${isFullScreen ? 'absolute top-4 left-4 right-4 z-10' : 'mb-4'}`}>
           {connectionError}
         </div>
       )}
@@ -228,7 +247,9 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       <div 
         className={`
           border rounded-md overflow-hidden
-          ${isFullScreen ? 'h-[calc(100vh-100px)]' : 'h-[400px]'}
+          ${isFullScreen 
+            ? 'absolute inset-4 h-[calc(100vh-32px)] w-[calc(100vw-32px)] z-10 shadow-xl' 
+            : 'h-[400px]'}
         `}
       >
         <div className="bg-gray-800 text-gray-300 p-2 flex justify-between items-center text-xs">
