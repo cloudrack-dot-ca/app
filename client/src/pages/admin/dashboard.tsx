@@ -159,6 +159,21 @@ export default function AdminDashboard() {
   const [editUserBalance, setEditUserBalance] = useState<string>('');
   const [ipBanData, setIpBanData] = useState({ ipAddress: '', reason: '', expiresAt: '' });
   const [ipBanDialogOpen, setIpBanDialogOpen] = useState(false);
+  
+  // Pagination states
+  const [userPage, setUserPage] = useState(1);
+  const [serverPage, setServerPage] = useState(1);
+  const [ticketPage, setTicketPage] = useState(1);
+  const [transactionPage, setTransactionPage] = useState(1);
+  const [ipBanPage, setIpBanPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+  
+  // Search states
+  const [userSearch, setUserSearch] = useState('');
+  const [serverSearch, setServerSearch] = useState('');
+  const [ticketSearch, setTicketSearch] = useState('');
+  const [transactionSearch, setTransactionSearch] = useState('');
+  const [ipBanSearch, setIpBanSearch] = useState('');
 
   // Redirect if not an admin
   if (user && !user.isAdmin) {
@@ -549,9 +564,23 @@ export default function AdminDashboard() {
               <CardDescription>Manage all user accounts on the platform</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Search input for users */}
+              <div className="mb-4">
+                <Input 
+                  placeholder="Search users by username..."
+                  value={userSearch}
+                  onChange={(e) => {
+                    setUserSearch(e.target.value);
+                    setUserPage(1); // Reset to first page when searching
+                  }}
+                  className="max-w-md"
+                />
+              </div>
+              
               {usersLoading ? (
                 <div className="text-center py-8">Loading users...</div>
               ) : users ? (
+                <div>
                 <Table>
                   <TableCaption>List of all registered users on the platform</TableCaption>
                   <TableHeader>
@@ -565,7 +594,10 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
+                    {users
+                      .filter(user => user.username.toLowerCase().includes(userSearch.toLowerCase()))
+                      .slice((userPage - 1) * ITEMS_PER_PAGE, userPage * ITEMS_PER_PAGE)
+                      .map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>{user.id}</TableCell>
                         <TableCell>{user.username}</TableCell>
@@ -594,6 +626,7 @@ export default function AdminDashboard() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load users</div>
               )}
