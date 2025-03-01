@@ -200,44 +200,103 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       const auth = req.body.auth || {};
 
       // Ensure user has the CloudRack SSH key for terminal access
-      await cloudRackKeyManager.ensureCloudRackKey(req.user.id);
+      try {
+        console.log(`[DEBUG] Ensuring CloudRack key for user ${req.user.id}`);
+        await cloudRackKeyManager.ensureCloudRackKey(req.user.id);
+        console.log(`[DEBUG] CloudRack key ensured for user ${req.user.id}`);
+      } catch (cloudRackError) {
+        console.error(`[ERROR] CloudRack key setup failed: ${cloudRackError}`);
+        // Continue without CloudRack key if it fails
+      }
 
       // Get the SSH keys to add to the server
-      let sshKeys = [];
+      let sshKeys: string[] = [];
+      console.log(`[DEBUG] Initial sshKeys array: ${JSON.stringify(sshKeys)}`);
 
       // Add user's SSH key if provided
       if (auth.type === "ssh" && auth.value) {
+        console.log(`[DEBUG] Adding user SSH key: ${auth.value}`);
         sshKeys.push(auth.value);
       }
 
       // Add CloudRack's SSH key
-      const cloudRackPublicKey = cloudRackKeyManager.getCloudRackPublicKey();
-      if (cloudRackPublicKey) {
-        // Get all SSH keys for this user
-        const userKeys = await storage.getSSHKeysByUser(req.user.id);
+      try {
+        const cloudRackPublicKey = cloudRackKeyManager.getCloudRackPublicKey();
+        console.log(`[DEBUG] CloudRack public key exists: ${!!cloudRackPublicKey}`);
         
-        // Find the CloudRack key to get its fingerprint/ID
-        const cloudRackKey = userKeys.find(key => key.isCloudRackKey);
-        
-        if (cloudRackKey) {
-          sshKeys.push(cloudRackKey.id.toString());
+        if (cloudRackPublicKey) {
+          // Get all SSH keys for this user
+          const userKeys = await storage.getSSHKeysByUser(req.user.id);
+          console.log(`[DEBUG] User has ${userKeys.length} SSH keys`);
+          
+          // Find the CloudRack key to get its fingerprint/ID
+          const cloudRackKey = userKeys.find(key => key.isCloudRackKey);
+          console.log(`[DEBUG] CloudRack key found in user keys: ${!!cloudRackKey}`);
+          
+          if (cloudRackKey) {
+            console.log(`[DEBUG] Adding CloudRack key ID: ${cloudRackKey.id}`);
+            sshKeys.push(cloudRackKey.id.toString());
+          } else {
+            console.log(`[DEBUG] No CloudRack key found among user keys`);
+          }
         }
+      } catch (sshKeyError) {
+        console.error(`[ERROR] Error adding SSH keys: ${sshKeyError}`);
       }
+      
+      console.log(`[DEBUG] Final sshKeys array: ${JSON.stringify(sshKeys)}`);
 
       // Create the actual droplet via DigitalOcean API
       let droplet;
       try {
-        droplet = await digitalOcean.createDroplet({
+        console.log(`[DEBUG] Creating droplet with params:
+          name: ${parsed.data.name},
+          region: ${parsed.data.region},
+          size: ${parsed.data.size},
+          application: ${parsed.data.application},
+          ssh_keys: ${JSON.stringify(sshKeys.length > 0 ? sshKeys : undefined)},
+          has_password: ${auth.type === "password" ? "yes" : "no"}
+        `);
+        
+        // Try creating droplet without SSH keys if they're causing problems
+        let createOptions = {
           name: parsed.data.name,
           region: parsed.data.region,
           size: parsed.data.size,
           application: parsed.data.application,
-          // Pass authentication details to DigitalOcean
-          ssh_keys: sshKeys.length > 0 ? sshKeys : undefined,
-          password: auth.type === "password" ? auth.value : undefined,
-        });
+        } as any;
+        
+        // Only add SSH keys if they exist and are valid
+        if (sshKeys.length > 0) {
+          createOptions.ssh_keys = sshKeys;
+        } else if (auth.type === "password" && auth.value) {
+          // If no SSH keys but password is provided, use password
+          createOptions.password = auth.value;
+        } else {
+          // If neither SSH keys nor password, generate a random password
+          const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).toUpperCase().slice(-2);
+          console.log(`[DEBUG] No SSH keys or password provided, using random password`);
+          createOptions.password = randomPassword;
+          
+          // Store this password so we can show it to the user once
+          const serverData = parsed.data as any;
+          serverData.rootPassword = randomPassword;
+        }
+        
+        droplet = await digitalOcean.createDroplet(createOptions);
+        console.log(`[DEBUG] Droplet created successfully with ID: ${droplet.id}`);
       } catch (error) {
-        throw new Error(`Failed to create server with DigitalOcean: ${(error as Error).message}`);
+        console.error(`[ERROR] Failed to create server with DigitalOcean:`, error);
+        
+        // Extract and clean up the error message for the user
+        let errorMessage = (error as Error).message;
+        
+        // Look for specific error patterns related to SSH keys
+        if (errorMessage.includes("ssh_keys")) {
+          errorMessage = "SSH key validation failed. Please check if your SSH key is properly formatted and registered with DigitalOcean.";
+        }
+        
+        throw new Error(`Failed to create server: ${errorMessage}`);
       }
 
       const server = await storage.createServer({
@@ -268,7 +327,19 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         createdAt: new Date(),
       });
 
-      res.status(201).json(server);
+      // Check if we have a generated password to return
+      const serverData = parsed.data as any;
+      if (serverData.rootPassword) {
+        // Return server with temporary root password
+        const responseObj = {
+          ...server,
+          rootPassword: serverData.rootPassword
+        };
+        res.status(201).json(responseObj);
+      } else {
+        // Return just the server
+        res.status(201).json(server);
+      }
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
     }
