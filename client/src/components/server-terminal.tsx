@@ -4,7 +4,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
+import { RefreshCw, Maximize2, Minimize2, Move } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import 'xterm/css/xterm.css';
 
@@ -214,12 +214,25 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
 
   // Toggle full screen mode
   const toggleFullScreen = () => {
-    setIsFullScreen(!isFullScreen);
+    const newFullscreenState = !isFullScreen;
+    setIsFullScreen(newFullscreenState);
+    
+    // Add/remove body scroll lock when entering/exiting fullscreen
+    if (newFullscreenState) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
     
     // Give the DOM time to update, then resize the terminal to fill the new space
     setTimeout(() => {
       if (fitAddon) {
         fitAddon.fit();
+        
+        // Focus the terminal when entering fullscreen
+        if (newFullscreenState && terminal) {
+          terminal.focus();
+        }
       }
     }, 100);
   };
@@ -228,8 +241,28 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   useEffect(() => {
     if (isFullScreen && fitAddon) {
       fitAddon.fit();
+      
+      // Add event listener for ESC key to exit fullscreen
+      const handleEscKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && isFullScreen) {
+          toggleFullScreen();
+        }
+      };
+      
+      window.addEventListener('keydown', handleEscKey);
+      
+      return () => {
+        window.removeEventListener('keydown', handleEscKey);
+      };
     }
   }, [isFullScreen, fitAddon]);
+  
+  // Clean up body overflow when component unmounts
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   return (
     <div className={`relative ${isFullScreen ? 'fixed inset-0 z-[100] bg-background' : ''}`}>
@@ -246,12 +279,17 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       
       <div 
         className={`
-          border rounded-md overflow-hidden
+          border rounded-md overflow-hidden relative
           ${isFullScreen 
             ? 'absolute inset-4 h-[calc(100vh-32px)] w-[calc(100vw-32px)] z-10 shadow-xl' 
             : 'h-[400px]'}
         `}
       >
+        {isFullScreen && (
+          <div className="absolute bottom-2 right-2 text-gray-400/40 z-10 pointer-events-none">
+            <Move className="h-6 w-6" />
+          </div>
+        )}
         <div className="bg-gray-800 text-gray-300 p-2 flex justify-between items-center text-xs">
           <div className="flex items-center">
             <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -289,13 +327,15 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       </div>
       
       {isFullScreen && (
-        <div className="absolute bottom-6 right-6">
+        <div className="absolute bottom-6 right-6 z-20">
           <Button 
             variant="secondary" 
             onClick={toggleFullScreen}
+            className="shadow-lg bg-background/80 backdrop-blur-sm hover:bg-background transition-all"
           >
             <Minimize2 className="h-4 w-4 mr-2" />
             Exit Full Screen
+            <span className="ml-2 opacity-70 text-xs">Esc</span>
           </Button>
         </div>
       )}
