@@ -51,43 +51,65 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
   
   // Function to change terminal font
   const changeTerminalFont = (newFont: string) => {
-    // Store the previous connection status to restore after refresh
-    const wasConnected = isConnected;
-    setIsConnected(false); 
-    setConnectionStatus('Updating terminal font...');
+    // First disconnect any existing connection to prevent errors
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
     
-    // Update font preference
+    // Set new font
     setCurrentFont(newFont);
     
-    // We'll just store the font preference - terminal will be recreated with the new font when the effect runs
-    // This avoids the "this._renderer.value is undefined" error
-    
-    // Let the user know what's happening
+    // Force complete recreation of the terminal
     if (terminal) {
-      terminal.clear();
-      terminal.writeln('\x1b[1;33mApplying new terminal font...\x1b[0m');
-      terminal.writeln('\x1b[1;33mTerminal will refresh automatically.\x1b[0m');
+      // Dispose the existing terminal immediately
+      terminal.dispose();
+      setTerminal(null); 
+      
+      // Clean references
+      setFitAddon(null);
+      terminalRef.current!.innerHTML = '';
+      
+      // Show message directly in the container since terminal is gone
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'p-4 text-yellow-400 bg-gray-900 h-full';
+      msgDiv.innerHTML = 'Changing terminal font... Please wait.';
+      terminalRef.current!.appendChild(msgDiv);
+      
+      // Status updates
+      setIsConnected(false);
+      setConnectionStatus('Updating font...');
     }
   };
   
   // Function to change terminal font size
   const changeFontSize = (newSize: number) => {
-    // Store the previous connection status to restore after refresh
-    const wasConnected = isConnected;
-    setIsConnected(false);
-    setConnectionStatus('Updating font size...');
+    // First disconnect any existing connection to prevent errors
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
     
-    // Update size preference
+    // Set new size
     setFontSize(newSize);
     
-    // We'll just store the size preference - terminal will be recreated with the new size when the effect runs
-    // This avoids the "this._renderer.value is undefined" error
-    
-    // Let the user know what's happening
+    // Force complete recreation of the terminal
     if (terminal) {
-      terminal.clear();
-      terminal.writeln('\x1b[1;33mApplying new font size...\x1b[0m');
-      terminal.writeln('\x1b[1;33mTerminal will refresh automatically.\x1b[0m');
+      // Dispose the existing terminal immediately
+      terminal.dispose();
+      setTerminal(null);
+      
+      // Clean references
+      setFitAddon(null);
+      terminalRef.current!.innerHTML = '';
+      
+      // Show message directly in the container since terminal is gone
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'p-4 text-yellow-400 bg-gray-900 h-full';
+      msgDiv.innerHTML = 'Changing font size... Please wait.';
+      terminalRef.current!.appendChild(msgDiv);
+      
+      // Status updates
+      setIsConnected(false);
+      setConnectionStatus('Updating size...');
     }
   };
   
