@@ -258,6 +258,28 @@ export default function SupportPage() {
     const diffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
     return diffInMinutes <= 10;
   };
+  
+  // Combine server-loaded messages with real-time updates
+  const combinedMessages = React.useMemo(() => {
+    if (!selectedTicket || !selectedTicketData?.messages) {
+      return [];
+    }
+    
+    // Get any real-time updates for this ticket
+    const updates = ticketUpdates.get(selectedTicket) || [];
+    
+    // Filter out updates that are already in the loaded messages
+    // and only include message updates (not ticket status updates)
+    const newMessages = updates.filter(update => 
+      update.message && 
+      !selectedTicketData.messages.some(msg => msg.id === update.id)
+    );
+    
+    // Return combined and sorted messages
+    return [...selectedTicketData.messages, ...newMessages].sort((a, b) => 
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+  }, [selectedTicket, selectedTicketData?.messages, ticketUpdates]);
 
   if (loadingTickets) {
     return (
@@ -433,7 +455,13 @@ export default function SupportPage() {
                   <CardContent className="py-4">
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="font-medium">{ticket.subject}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{ticket.subject}</p>
+                          {/* Show indicator for unread messages */}
+                          {(ticketUpdates.get(ticket.id)?.length || 0) > 0 && ticket.id !== selectedTicket && (
+                            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" title="New messages"></div>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {new Date(ticket.createdAt).toLocaleString()}
                         </p>
@@ -452,7 +480,15 @@ export default function SupportPage() {
 
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Conversation</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold">Conversation</h2>
+              {selectedTicket && (
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <div className={`w-2 h-2 rounded-full mr-1 ${useWebSocket().connected ? "bg-green-500" : "bg-red-500"}`}></div>
+                  {useWebSocket().connected ? "Connected" : "Disconnected"}
+                </div>
+              )}
+            </div>
             <div className="flex space-x-2">
               {selectedTicketData?.ticket?.status === "open" && (
                 <Button
@@ -546,8 +582,8 @@ export default function SupportPage() {
                 
                 {/* Conversation history */}
                 <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border rounded-lg">
-                  {selectedTicketData.messages && selectedTicketData.messages.length > 0 ? (
-                    selectedTicketData.messages.map((message) => (
+                  {combinedMessages.length > 0 ? (
+                    combinedMessages.map((message) => (
                       <div
                         key={message.id}
                         className={`flex flex-col ${
