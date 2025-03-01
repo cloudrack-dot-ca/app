@@ -65,40 +65,15 @@ export default function ServerDetailPage() {
   const [newPassword, setNewPassword] = useState("");
   const [ipv6Enabled, setIpv6Enabled] = useState(false);
   
-  // Fetch server details with explicit queryFn to better handle errors
-  const { data: server, isLoading: serverLoading, error: serverError } = useQuery<Server>({
+  // Fetch server details directly with a simplified approach
+  const { data: server, isLoading: serverLoading, error: serverError, refetch: refetchServer } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
     enabled: !isNaN(serverId) && !!user,
     retry: 3,
     retryDelay: 1000,
-    staleTime: 30000,
+    staleTime: 10000, // Shorter stale time for more responsive UI
     refetchOnWindowFocus: true,
-    queryFn: async ({ queryKey }) => {
-      console.log("Fetching server details for ID:", serverId, "User:", user?.id);
-      const res = await fetch(queryKey[0] as string, {
-        credentials: "include",
-      });
-      
-      if (!res.ok) {
-        const text = await res.text();
-        console.error(`Server fetch error (${res.status}):`, text);
-        
-        if (res.status === 401) {
-          throw new Error("Authentication required. Please log in again.");
-        } else if (res.status === 404) {
-          throw new Error("Server not found or you don't have access to it.");
-        }
-        
-        try {
-          const json = JSON.parse(text);
-          throw new Error(json.message || json.error || `${res.status}: ${res.statusText}`);
-        } catch (e) {
-          throw new Error(`Error ${res.status}: ${text || res.statusText}`);
-        }
-      }
-      
-      return res.json();
-    }
+    refetchOnMount: true, // Always refetch when component mounts
   });
   
   // Log any server fetch errors to help debug
@@ -241,6 +216,9 @@ export default function ServerDetailPage() {
   }
 
   if (!server) {
+    // Add console logging to help diagnose the issue
+    console.log("Server data not available:", { serverError, serverId, userLoggedIn: !!user });
+    
     return (
       <div className="container py-8">
         <div className="text-center">
@@ -257,30 +235,28 @@ export default function ServerDetailPage() {
             >
               Return to Dashboard
             </Button>
-            {serverError && (
-              <div className="flex flex-col gap-2 items-center mt-2">
-                <Button
-                  variant="outline"
-                  className="mx-2"
-                  onClick={() => {
-                    // Refetch both user and server data
-                    refetchUser();
-                    queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
-                    
-                    toast({
-                      title: "Refreshing data",
-                      description: "Attempting to reload server information...",
-                    });
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Try Again
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  If problems persist, try refreshing the page or logging out and back in
-                </p>
-              </div>
-            )}
+            <div className="flex flex-col gap-2 items-center mt-2">
+              <Button
+                variant="outline"
+                className="mx-2"
+                onClick={() => {
+                  // Refetch both user and server data
+                  refetchUser();
+                  refetchServer(); // Use the refetch function directly
+                  
+                  toast({
+                    title: "Refreshing data",
+                    description: "Attempting to reload server information...",
+                  });
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                If problems persist, try refreshing the page or logging out and back in
+              </p>
+            </div>
           </div>
         </div>
       </div>

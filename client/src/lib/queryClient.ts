@@ -54,16 +54,39 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
+    try {
+      // Log the query being attempted to help with debugging
+      console.log(`Fetching data for: ${queryKey[0]}`);
+      
+      const res = await fetch(queryKey[0] as string, {
+        credentials: "include",
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        console.warn(`Authentication required for: ${queryKey[0]}`);
+        return null;
+      }
+
+      // Check for 204 No Content response (valid but empty)
+      if (res.status === 204) {
+        return null;
+      }
+
+      // Handle errors
+      await throwIfResNotOk(res);
+      
+      // Parse JSON response
+      try {
+        const data = await res.json();
+        return data;
+      } catch (parseError) {
+        console.error(`Failed to parse JSON for ${queryKey[0]}:`, parseError);
+        throw new Error(`Invalid JSON response from the server: ${parseError}`);
+      }
+    } catch (error) {
+      console.error(`Error fetching ${queryKey[0]}:`, error);
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({
@@ -72,8 +95,8 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: true,
-      staleTime: 60000, // 1 minute
-      retry: 1,
+      staleTime: 30000, // 30 seconds - more responsive UI
+      retry: 2, // Increase retries
       retryDelay: 1000,
     },
     mutations: {
