@@ -172,7 +172,7 @@ export default function TerminalPage() {
     console.log(`Connecting to Socket.IO for server ID: ${id}, userId: ${user?.id}`);
     
     // Create Socket.IO connection with query parameters
-    const socket = io('/', {
+    const socket = io({
       query: {
         serverId: id.toString(),
         userId: user?.id.toString()

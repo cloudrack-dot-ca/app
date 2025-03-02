@@ -159,7 +159,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       term.writeln(`\x1b[1;34mConnecting to ${serverName} (${ipAddress})...\x1b[0m`);
       
       // Connect to real terminal socket server
-      const socket = io(`${window.location.origin}/terminal`, {
+      const socket = io({
         query: {
           serverId: serverId.toString(),
           userId: user?.id.toString() || ''
