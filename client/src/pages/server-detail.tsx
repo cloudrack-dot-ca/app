@@ -30,6 +30,7 @@ interface Server {
   lastMonitored: Date | null;
   rootPassword?: string | null; // Make optional with null
   rootPassUpdated?: boolean; // Flag to indicate if a root password has been set or updated
+  createdAt?: Date | string | null; // Server creation timestamp
 }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -645,6 +646,14 @@ export default function ServerDetailPage() {
                         <span>Application</span>
                         <span className="font-medium">{server.application || "No Application"}</span>
                       </div>
+                      {server.createdAt && (
+                        <div className="flex justify-between">
+                          <span>Created</span>
+                          <span className="font-medium">
+                            {new Date(server.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
