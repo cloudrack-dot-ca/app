@@ -248,7 +248,7 @@ export default function VolumeManagement({
                   <TableRow key={volume.id}>
                     <TableCell>{volume.id}</TableCell>
                     <TableCell>{volume.name}</TableCell>
-                    <TableCell>{volume.sizeGb} GB</TableCell>
+                    <TableCell>{volume.sizeGb ? `${volume.sizeGb} GB` : "10 GB"}</TableCell>
                     <TableCell>
                       {volume.serverId ? (
                         <Link to={`/servers/${volume.serverId}`} className="text-blue-500 hover:underline">
