@@ -565,15 +565,38 @@ export default function ServerDetailPage() {
   const restoreSnapshotMutation = useMutation({
     mutationFn: async (snapshotId: number) => {
       console.log(`Restoring snapshot ${snapshotId} for server ${serverId}`);
-      return await apiRequest("POST", `/api/servers/${serverId}/snapshots/${snapshotId}/restore`);
+      const response = await apiRequest("POST", `/api/servers/${serverId}/snapshots/${snapshotId}/restore`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to restore server from snapshot');
+      }
+      return await response.json();
     },
     onSuccess: () => {
       toast({
         title: "Restore Started",
         description: "Your server is being restored from the snapshot. This may take a few minutes.",
       });
+      
+      // Set server to restoring state immediately in the UI
+      const server = queryClient.getQueryData<Server>([`/api/servers/${serverId}`]);
+      if (server) {
+        queryClient.setQueryData([`/api/servers/${serverId}`], {
+          ...server,
+          status: 'restoring'
+        });
+      }
+      
       // Refresh server status to show it's in a restoration state
       queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
+      
+      // Setup polling to check server status
+      const checkInterval = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
+      }, 5000);
+      
+      // Clear interval after 2 minutes
+      setTimeout(() => clearInterval(checkInterval), 120000);
     },
     onError: (error: Error) => {
       console.error("Error in restore snapshot mutation:", error);
