@@ -4,7 +4,7 @@ import { useParams, Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Server as SchemaServer, Volume, Snapshot } from "@shared/schema";
+import { Server as SchemaServer, Volume } from "@shared/schema";
 import ServerTerminal from "@/components/server-terminal-real";
 import { CloudRackTerminalNotice } from "@/components/cloudrack-terminal-notice";
 import NetworkUsage from "@/components/network-usage";
@@ -359,12 +359,6 @@ export default function ServerDetailPage() {
   const [ipv6Enabled, setIpv6Enabled] = useState(false);
   const [confirmIpv6Enable, setConfirmIpv6Enable] = useState(false);
   
-  // Snapshot states
-  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
-  const [snapshotName, setSnapshotName] = useState("");
-  const [snapshotToDelete, setSnapshotToDelete] = useState<Snapshot | null>(null);
-  const [confirmDeleteSnapshot, setConfirmDeleteSnapshot] = useState(false);
-  
   // Parse URL to check for tab query parameter
   const searchParams = new URLSearchParams(window.location.search);
   const tabParam = searchParams.get('tab');
@@ -411,21 +405,6 @@ export default function ServerDetailPage() {
       return response.json();
     },
     enabled: !isNaN(serverId) && !!user && !!server,
-  });
-  
-  // Fetch snapshots for this server with auto-refresh to keep status up-to-date
-  const { data: snapshots = [], isLoading: snapshotsLoading, refetch: refetchSnapshots } = useQuery({
-    queryKey: [`/api/servers/${serverId}/snapshots`],
-    queryFn: async () => {
-      const response = await fetch(`/api/servers/${serverId}/snapshots`);
-      if (!response.ok) {
-        throw new Error(`Error fetching snapshots: ${response.statusText}`);
-      }
-      return response.json();
-    },
-    enabled: !isNaN(serverId) && !!user && !!server,
-    // Auto-refresh every 5 seconds to keep server/snapshot status current
-    refetchInterval: 5000,
   });
 
   // Server action mutations
@@ -536,116 +515,6 @@ export default function ServerDetailPage() {
         variant: "destructive",
       });
     },
-  });
-  
-  // Snapshot mutations
-  const createSnapshotMutation = useMutation({
-    mutationFn: async (name: string) => {
-      return await apiRequest("POST", `/api/servers/${serverId}/snapshots`, { name });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Snapshot Created",
-        description: "Your server snapshot has been created successfully.",
-      });
-      setIsCreatingSnapshot(false);
-      setSnapshotName("");
-      // Refresh snapshots list
-      refetchSnapshots();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create snapshot",
-        variant: "destructive",
-      });
-    }
-  });
-  
-  const restoreSnapshotMutation = useMutation({
-    mutationFn: async (snapshotId: number) => {
-      console.log(`Restoring snapshot ${snapshotId} for server ${serverId}`);
-      const response = await apiRequest("POST", `/api/servers/${serverId}/snapshots/${snapshotId}/restore`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to restore server from snapshot');
-      }
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Restore Started",
-        description: "Your server is being restored from the snapshot. This may take a few minutes.",
-      });
-      
-      // Set server to restoring state immediately in the UI
-      const server = queryClient.getQueryData<Server>([`/api/servers/${serverId}`]);
-      if (server) {
-        queryClient.setQueryData([`/api/servers/${serverId}`], {
-          ...server,
-          status: 'restoring'
-        });
-      }
-      
-      // Refresh server status to show it's in a restoration state
-      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
-      
-      // Setup polling to check server status
-      const checkInterval = setInterval(() => {
-        queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
-      }, 5000);
-      
-      // Clear interval after 2 minutes
-      setTimeout(() => clearInterval(checkInterval), 120000);
-    },
-    onError: (error: Error) => {
-      console.error("Error in restore snapshot mutation:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to restore from snapshot",
-        variant: "destructive",
-      });
-    }
-  });
-  
-  const deleteSnapshotMutation = useMutation({
-    mutationFn: async (snapshotId: number) => {
-      console.log(`Deleting snapshot ${snapshotId} for server ${serverId}`);
-      const response = await apiRequest("DELETE", `/api/servers/${serverId}/snapshots/${snapshotId}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete snapshot');
-      }
-      
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Snapshot Deleted",
-        description: "The snapshot has been deleted successfully.",
-      });
-      setConfirmDeleteSnapshot(false);
-      setSnapshotToDelete(null);
-      
-      // Refresh snapshots list immediately
-      refetchSnapshots();
-      
-      // Also invalidate the server data in case there are billing/quota changes
-      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
-    },
-    onError: (error: Error) => {
-      console.error("Error in delete snapshot mutation:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete snapshot. Please try again.",
-        variant: "destructive",
-      });
-      
-      // Close the dialog even on error to prevent it getting stuck
-      setConfirmDeleteSnapshot(false);
-      setSnapshotToDelete(null);
-    }
   });
 
   // Set IPv6 status when server data is loaded
