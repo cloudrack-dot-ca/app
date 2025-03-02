@@ -797,7 +797,7 @@ export default function ServerDetailPage() {
                   </Button>
                 </Link>
                 
-                <Link href={`/servers/${serverId}/bandwidth`}>
+                <Link href={`/servers/${serverId}/bandwidth-details`}>
                   <Button 
                     variant="outline" 
                     className="w-full mt-2"
