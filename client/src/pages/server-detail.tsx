@@ -4,7 +4,7 @@ import { useParams, Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Server as SchemaServer, Volume } from "@shared/schema";
+import { Server as SchemaServer, Volume, Snapshot } from "@shared/schema";
 import ServerTerminal from "@/components/server-terminal-real";
 import { CloudRackTerminalNotice } from "@/components/cloudrack-terminal-notice";
 import NetworkUsage from "@/components/network-usage";
@@ -360,7 +360,7 @@ export default function ServerDetailPage() {
   // Snapshot states
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
   const [snapshotName, setSnapshotName] = useState("");
-  const [snapshotToDelete, setSnapshotToDelete] = useState<any>(null);
+  const [snapshotToDelete, setSnapshotToDelete] = useState<Snapshot | null>(null);
   const [confirmDeleteSnapshot, setConfirmDeleteSnapshot] = useState(false);
   
   // Parse URL to check for tab query parameter
@@ -1054,7 +1054,7 @@ export default function ServerDetailPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {snapshots.map((snapshot) => (
+                      {snapshots.map((snapshot: Snapshot) => (
                         <Card key={snapshot.id} className="overflow-hidden">
                           <div className="flex items-center p-4">
                             <div className="flex-1">
