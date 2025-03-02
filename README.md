@@ -10,7 +10,7 @@ CloudRack is a comprehensive cloud VPS hosting provider platform with advanced s
 - **Multiple Server Plans**: Options ranging from 1GB RAM starter servers to 16GB high-performance instances
 - **Custom Firewall Rules**: Configure inbound and outbound traffic rules with an intuitive interface
 - **Block Storage Volumes**: Add expandable SSD storage volumes that can be attached/detached from servers
-- **Server Snapshots**: Create point-in-time backups of your servers for disaster recovery or cloning
+
 
 ### Terminal & Access Management
 - **Integrated SSH Terminal**: Direct server access through web-based terminal
@@ -164,7 +164,6 @@ DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
 4. **Manage Your Server**:
    - Connect via the integrated terminal or SSH
    - Monitor performance and resource usage
-   - Create snapshots for backup and restore points
    - Configure your firewall for security
    - Add block storage volumes as needed
 5. **Track Usage and Billing**:
@@ -220,32 +219,6 @@ CloudRack provides a comprehensive API for programmatic management of all platfo
 - GET `/api/billing/transactions/:id/invoice` - Download invoice
 
 ### Full documentation available at `/api-docs` when in development mode
-
-## 📸 Snapshot System
-
-CloudRack provides a comprehensive snapshot management system for your servers:
-
-### Snapshot Features
-- **Point-in-Time Backups**: Create complete copies of your server's disk state at any moment
-- **Easy Restoration**: Restore your server to a previous state with one click
-- **Disaster Recovery**: Protect against data loss or accidental configuration changes
-- **Quick Creation**: Fast snapshot creation process with minimal downtime
-- **Size-Based Billing**: Pay only for the actual storage used by each snapshot
-- **Limit Management**: Maximum of 2 snapshots per server to manage costs
-
-### Snapshot Pricing
-- **Base Rate**: $0.06 per GB per month
-- **CloudRack Markup**: 0.5% added to base rate (consistent with other billing)
-- **Example Calculation**: A 50GB snapshot would cost approximately $3.01 per month (50GB × $0.06 × 1.005)
-- **Billing Period**: Snapshot storage billed according to the server's billing cycle
-- **Proration**: Charges prorated based on actual storage time
-
-### Snapshot Management
-- **Intuitive Interface**: Easy-to-use snapshot creation and management tab
-- **Size Display**: Accurate reporting of snapshot storage consumption
-- **Creation Timestamp**: Track when each snapshot was created
-- **Status Indicators**: Clear visual status of each snapshot
-- **Quick Actions**: One-click restore and delete functionality
 
 ## 🔄 Bandwidth Billing System
 
