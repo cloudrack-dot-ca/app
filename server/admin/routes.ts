@@ -2,6 +2,9 @@ import { Request, Response, NextFunction, Express } from 'express';
 import { storage } from '../storage';
 import { Server, User, SupportTicket, BillingTransaction } from '@shared/schema';
 import { log } from '../vite';
+import * as crypto from 'crypto';
+import path from 'path';
+import { promises } from 'fs';
 
 // Admin middleware to check if user is an admin
 export function adminMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -326,6 +329,57 @@ export function registerAdminRoutes(app: Express) {
         message: "Error cleaning up CloudRack Terminal Keys",
         error: (error as Error).message
       });
+    }
+  });
+
+  // API Key Management for Admin
+  app.get('/api/admin/users/:id/api-key', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Return the current API key (or null if not set)
+      res.status(200).json({ apiKey: user.apiKey });
+    } catch (error) {
+      console.error('Error getting user API key:', error);
+      res.status(500).json({ message: 'Failed to retrieve API key' });
+    }
+  });
+  
+  app.post('/api/admin/users/:id/api-key', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Generate a new API key
+      const apiKey = crypto.randomBytes(32).toString('hex');
+      
+      // Update the user with the new API key
+      await storage.updateUser(userId, { apiKey });
+      
+      res.status(200).json({ 
+        apiKey: apiKey,
+        message: 'API key regenerated successfully' 
+      });
+    } catch (error) {
+      console.error('Error regenerating API key:', error);
+      res.status(500).json({ message: 'Failed to regenerate API key' });
     }
   });
 
