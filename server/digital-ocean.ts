@@ -511,11 +511,16 @@ export class DigitalOceanClient {
   // Helper method for API requests
   // Public method to allow direct API requests when needed
   async apiRequest<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     url: string,
     data?: any
   ): Promise<T> {
     try {
+      // Make sure we have a valid method
+      if (!method) {
+        method = 'GET';
+      }
+      
       const response = await fetch(url, {
         method,
         headers: {
@@ -613,7 +618,7 @@ export class DigitalOceanClient {
     try {
       // Connect to DigitalOcean API to get distributions
       // The DigitalOcean API returns an array in the 'images' field, not 'distributions'
-      const response = await this.apiRequest<{ images: any[] }>('/images?type=distribution&per_page=100');
+      const response = await this.apiRequest<{ images: any[] }>("GET", `${this.apiBaseUrl}/images?type=distribution&per_page=100`);
       
       if (!response.images || response.images.length === 0) {
         console.warn('No distributions returned from DigitalOcean API, using default distributions');
@@ -664,7 +669,7 @@ export class DigitalOceanClient {
   async getApplications(): Promise<Application[]> {
     try {
       // Connect to DigitalOcean API to get applications (marketplace images)
-      const response = await this.apiRequest<{ images: any[] }>('/images?type=application&per_page=100');
+      const response = await this.apiRequest<{ images: any[] }>("GET", `${this.apiBaseUrl}/images?type=application&per_page=100`);
       
       if (!response.images || response.images.length === 0) {
         console.warn('No application images returned from DigitalOcean API, using default applications');
@@ -1647,7 +1652,7 @@ runcmd:
     try {
       console.log(`Deleting real DigitalOcean snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
-      await this.apiRequest('DELETE', url);
+      await this.apiRequest("DELETE", url);
       console.log(`Successfully deleted snapshot ${snapshotId}`);
     } catch (error) {
       console.error(`Error deleting snapshot ${snapshotId}:`, error);
@@ -1667,11 +1672,18 @@ runcmd:
       return;
     }
 
+    // Check if snapshotId is a valid format and has the right prefix
+    // This is crucial as DigitalOcean API expects a specific format
+    if (!snapshotId.startsWith('snapshot-')) {
+      console.error(`Invalid snapshot ID format: ${snapshotId}. Should start with 'snapshot-'`);
+      throw new Error(`Invalid snapshot ID format. Should start with 'snapshot-'`);
+    }
+
     // This is a real API call
     try {
       console.log(`Restoring real DigitalOcean droplet ${dropletId} from snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
-      await this.apiRequest('POST', url, {
+      await this.apiRequest<any>('POST', url, {
         type: "restore",
         image: snapshotId
       });
