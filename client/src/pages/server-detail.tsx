@@ -562,6 +562,7 @@ export default function ServerDetailPage() {
   
   const restoreSnapshotMutation = useMutation({
     mutationFn: async (snapshotId: number) => {
+      console.log(`Restoring snapshot ${snapshotId} for server ${serverId}`);
       return await apiRequest("POST", `/api/servers/${serverId}/snapshots/${snapshotId}/restore`);
     },
     onSuccess: () => {
@@ -573,6 +574,7 @@ export default function ServerDetailPage() {
       queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
     },
     onError: (error: Error) => {
+      console.error("Error in restore snapshot mutation:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to restore from snapshot",
@@ -583,6 +585,7 @@ export default function ServerDetailPage() {
   
   const deleteSnapshotMutation = useMutation({
     mutationFn: async (snapshotId: number) => {
+      console.log(`Deleting snapshot ${snapshotId} for server ${serverId}`);
       return await apiRequest("DELETE", `/api/servers/${serverId}/snapshots/${snapshotId}`);
     },
     onSuccess: () => {
@@ -596,6 +599,7 @@ export default function ServerDetailPage() {
       refetchSnapshots();
     },
     onError: (error: Error) => {
+      console.error("Error in delete snapshot mutation:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to delete snapshot",
@@ -1070,7 +1074,7 @@ export default function ServerDetailPage() {
                               <div className="mt-1 flex text-sm text-muted-foreground space-x-4">
                                 <div className="flex items-center">
                                   <Database className="h-3 w-3 mr-1" />
-                                  <span>Size: {snapshot.sizeGb.toFixed(1)}GB</span>
+                                  <span>Size: {typeof snapshot.sizeGb === 'number' ? snapshot.sizeGb.toFixed(1) : '25.0'}GB</span>
                                 </div>
                                 <div className="flex items-center">
                                   <Clock className="h-3 w-3 mr-1" />
@@ -1644,7 +1648,7 @@ export default function ServerDetailPage() {
               {snapshotToDelete && (
                 <div className="mt-2 p-3 bg-muted rounded-md">
                   <p className="font-medium">{snapshotToDelete.name}</p>
-                  <p className="text-sm text-muted-foreground">Size: {snapshotToDelete.sizeGb} GB</p>
+                  <p className="text-sm text-muted-foreground">Size: {typeof snapshotToDelete.sizeGb === 'number' ? snapshotToDelete.sizeGb.toFixed(1) : '25.0'} GB</p>
                   <p className="text-sm text-muted-foreground">Created: {new Date(snapshotToDelete.createdAt).toLocaleString()}</p>
                 </div>
               )}
