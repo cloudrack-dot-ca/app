@@ -42,17 +42,22 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
   const [activeMetric, setActiveMetric] = useState<string>("cpu");
   const [refreshInterval, setRefreshInterval] = useState<number>(30000); // 30 seconds default
   
-  // Force auto-refresh every 30 seconds
+  // Force auto-refresh every refreshInterval ms (default 30 seconds)
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (refreshInterval > 0) {
-        queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/latest`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/history`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
-      }
-    }, 30000);
+    if (refreshInterval <= 0) return;
     
-    return () => clearInterval(timer);
+    console.log(`Setting up metrics refresh interval: ${refreshInterval}ms for server ${serverId}`);
+    const timer = setInterval(() => {
+      console.log(`Auto-refreshing metrics for server ${serverId}`);
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/latest`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/history`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
+    }, refreshInterval);
+    
+    return () => {
+      console.log(`Clearing metrics refresh interval for server ${serverId}`);
+      clearInterval(timer);
+    };
   }, [serverId, refreshInterval]);
 
   // Mock data for fallback when API is not available yet
@@ -73,35 +78,44 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
   const { 
     data: latestMetric,
     isLoading: isLoadingLatest,
-    error: latestError
+    error: latestError,
+    refetch: refetchLatestMetric
   } = useQuery<MetricData>({
     queryKey: [`/api/servers/${serverId}/metrics/latest`],
     enabled: !isNaN(serverId),
-    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined
+    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined,
+    refetchOnWindowFocus: true,
+    staleTime: refreshInterval > 0 ? refreshInterval - 1000 : 30000 // Slightly less than refresh to ensure data is stale
   });
 
   // Query for historical metrics
   const { 
     data: metricsHistoryData,
     isLoading: isLoadingHistory,
-    error: historyError
+    error: historyError,
+    refetch: refetchHistoryMetrics
   } = useQuery<MetricData[]>({
     queryKey: [`/api/servers/${serverId}/metrics/history`],
     enabled: !isNaN(serverId),
-    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined
+    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined,
+    refetchOnWindowFocus: true,
+    staleTime: refreshInterval > 0 ? refreshInterval - 1000 : 30000
   });
 
   // Server Details Query - to get the server specs for context
-  const { data: server } = useQuery<Server>({
+  const { data: server, refetch: refetchServer } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
-    enabled: !isNaN(serverId)
+    enabled: !isNaN(serverId),
+    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined,
+    refetchOnWindowFocus: true
   });
   
   // Query to get volumes attached to this server
-  const { data: volumes } = useQuery<Volume[]>({
+  const { data: volumes, refetch: refetchVolumes } = useQuery<Volume[]>({
     queryKey: [`/api/servers/${serverId}/volumes`],
     enabled: !isNaN(serverId),
-    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined
+    refetchInterval: refreshInterval > 0 ? refreshInterval : undefined,
+    refetchOnWindowFocus: true
   });
 
   // Safe access to metrics data with fallbacks
@@ -187,7 +201,15 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
 
   // Function to refresh metrics
   const handleRefreshMetrics = () => {
+    // First try the mutation which fetches fresh metrics from the server
     refreshServerMetrics();
+    
+    // Also directly refetch from the API to ensure immediate UI update
+    refetchLatestMetric();
+    refetchHistoryMetrics();
+    refetchServer();
+    refetchVolumes();
+    console.log("Manual refresh triggered for server metrics");
   };
 
   // Function to toggle auto-refresh
@@ -233,11 +255,20 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
         <h2 className="text-2xl font-bold">Performance Monitoring</h2>
         <div className="flex items-center gap-2">
           <Button 
-            variant="outline" 
+            variant={refreshInterval > 0 ? "outline" : "ghost"} 
             size="sm" 
             onClick={toggleAutoRefresh}
+            className={refreshInterval > 0 ? "border-green-500 text-green-600" : ""}
           >
-            {refreshInterval ? "Auto-refresh: On" : "Auto-refresh: Off"}
+            {refreshInterval > 0 ? (
+              <span className="flex items-center">
+                <span className="relative flex h-2 w-2 mr-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Auto-refresh: On
+              </span>
+            ) : "Auto-refresh: Off"}
           </Button>
           <Button 
             size="sm" 
