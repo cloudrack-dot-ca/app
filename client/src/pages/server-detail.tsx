@@ -353,6 +353,13 @@ export default function ServerDetailPage() {
   // Fetch server details directly with a simplified approach
   const { data: server, isLoading: serverLoading, error: serverError, refetch: refetchServer } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/servers/${serverId}`);
+      if (!response.ok) {
+        throw new Error(`Error fetching server: ${response.statusText}`);
+      }
+      return response.json();
+    },
     enabled: !isNaN(serverId) && !!user,
     retry: 3,
     retryDelay: 1000,
@@ -376,6 +383,13 @@ export default function ServerDetailPage() {
   // Fetch volumes attached to this server
   const { data: volumes = [], isLoading: volumesLoading } = useQuery<Volume[]>({
     queryKey: [`/api/servers/${serverId}/volumes`],
+    queryFn: async () => {
+      const response = await fetch(`/api/servers/${serverId}/volumes`);
+      if (!response.ok) {
+        throw new Error(`Error fetching volumes: ${response.statusText}`);
+      }
+      return response.json();
+    },
     enabled: !isNaN(serverId) && !!user && !!server,
   });
 
