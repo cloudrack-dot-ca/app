@@ -66,7 +66,8 @@ import {
   Check,
   ExternalLink,
   Key,
-  Lock
+  Lock,
+  Maximize2
 } from "lucide-react";
 import VolumeManager from "@/components/volume-manager";
 import ServerMonitoring from "@/components/server-monitoring";
@@ -754,6 +755,17 @@ export default function ServerDetailPage() {
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Reboot
                 </Button>
+                
+                <Link href={`/terminal/${serverId}`}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-2"
+                    disabled={!isRunning || !server.ipAddress}
+                  >
+                    <Maximize2 className="h-4 w-4 mr-2" />
+                    Fullscreen Terminal
+                  </Button>
+                </Link>
 
                 <Separator />
 
