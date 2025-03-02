@@ -81,10 +81,19 @@ export default function BandwidthDetailsPage() {
   
   // Format bandwidth values
   const formatBandwidth = (gb: number) => {
+    // For terabytes
     if (gb >= 1000) {
       return `${(gb / 1000).toFixed(1)} TB`;
     }
-    return `${gb.toFixed(1)} GB`;
+    
+    // For gigabytes (show values ≥ 0.1 GB in GB)
+    if (gb >= 0.1) {
+      return `${gb.toFixed(2)} GB`;
+    }
+    
+    // For small values, show in MB
+    const mbValue = gb * 1024; // Convert GB to MB
+    return `${mbValue.toFixed(1)} MB`;
   };
 
   // Go back to server details
@@ -97,16 +106,23 @@ export default function BandwidthDetailsPage() {
   };
 
   // Define defaults for missing data or to avoid type errors
-  const getBandwidthDefaults = () => ({
-    current: 0,
-    limit: 1000,
-    periodStart: new Date().toISOString(),
-    periodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
-    lastUpdated: new Date().toISOString(),
-    overageRate: 0.005,
-    daily: [],
-    hourly: []
-  });
+  const getBandwidthDefaults = () => {
+    // Create billing period starting today and ending in 30 days
+    const now = new Date();
+    const periodStart = now.toISOString();
+    const periodEnd = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000)).toISOString();
+    
+    return {
+      current: 0,
+      limit: 1000,
+      periodStart,
+      periodEnd,
+      lastUpdated: now.toISOString(),
+      overageRate: 0.005,
+      daily: [],
+      hourly: []
+    };
+  };
 
   // Generate mock data for demonstration if no detailed data is available
   const generateMockData = () => {
@@ -334,9 +350,14 @@ export default function BandwidthDetailsPage() {
                       dataKey="date" 
                       tickFormatter={(date) => new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     />
-                    <YAxis tickFormatter={(value) => `${value.toFixed(1)} GB`} />
+                    <YAxis tickFormatter={(value) => value >= 0.1 ? `${value.toFixed(1)} GB` : `${(value * 1024).toFixed(0)} MB`} />
                     <Tooltip 
-                      formatter={(value: number) => [`${value.toFixed(2)} GB`, '']}
+                      formatter={(value: number) => [
+                        value >= 0.1 
+                          ? `${value.toFixed(2)} GB` 
+                          : `${(value * 1024).toFixed(1)} MB`, 
+                        ''
+                      ]}
                       labelFormatter={(date) => new Date(date).toLocaleDateString()}
                     />
                     <Legend />
@@ -367,7 +388,7 @@ export default function BandwidthDetailsPage() {
                       dataKey="date" 
                       tickFormatter={(date) => new Date(date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                     />
-                    <YAxis tickFormatter={(value) => `${value.toFixed(2)} GB`} />
+                    <YAxis tickFormatter={(value) => value >= 0.1 ? `${value.toFixed(2)} GB` : `${(value * 1024).toFixed(0)} MB`} />
                     <Tooltip 
                       formatter={(value: number) => [`${value.toFixed(3)} GB`, '']}
                       labelFormatter={(date) => new Date(date).toLocaleString()}
@@ -423,7 +444,7 @@ export default function BandwidthDetailsPage() {
         <CardContent>
           <div className="text-sm space-y-2">
             <p>
-              <strong>Billing Period:</strong> Your bandwidth usage is calculated from the 1st day of each month.
+              <strong>Billing Period:</strong> Your bandwidth usage is calculated from your server's creation date.
               Current period: {new Date((effectiveData as BandwidthData).periodStart).toLocaleDateString()} to {new Date((effectiveData as BandwidthData).periodEnd).toLocaleDateString()}
             </p>
             <p>

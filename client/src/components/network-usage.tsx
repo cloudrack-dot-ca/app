@@ -144,7 +144,7 @@ export default function NetworkUsage({ serverId, size }: NetworkUsageProps) {
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <p>
-                  Bandwidth usage is calculated from the 1st day of each month. 
+                  Bandwidth usage is calculated from your server's creation date.
                   Once you exceed your included bandwidth, additional usage will be charged at 0.5% of your monthly server cost per GB.
                 </p>
               </TooltipContent>
