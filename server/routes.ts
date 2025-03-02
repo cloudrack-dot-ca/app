@@ -22,6 +22,7 @@ import {
 } from "@shared/schema";
 import { createSubscription, capturePayment } from "./paypal";
 import { insertTicketSchema, insertMessageSchema, insertIPBanSchema } from "@shared/schema";
+import { getServerBandwidth, calculateBandwidthOverages as calculateBandwidthOveragesNew } from "./bandwidth-billing";
 
 // Cost constants for server and storage pricing
 const COSTS = {
@@ -279,7 +280,7 @@ async function calculateBandwidthOverages() {
 // Run billing jobs
 setInterval(deductHourlyServerCosts, 60 * 60 * 1000); // Every hour
 setInterval(deductHourlyVolumeCosts, 60 * 60 * 1000); // Every hour
-setInterval(calculateBandwidthOverages, 24 * 60 * 60 * 1000); // Once a day
+setInterval(calculateBandwidthOveragesNew, 24 * 60 * 60 * 1000); // Once a day using new implementation
 
 async function checkBalance(userId: number, costInDollars: number) {
   const costInCents = toCents(costInDollars);
@@ -2043,6 +2044,31 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       return res.json(metrics);
     } catch (error) {
       res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  // Get bandwidth usage for a server
+  app.get("/api/servers/:id/bandwidth", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const serverId = parseInt(req.params.id);
+      const server = await storage.getServer(serverId);
+      
+      if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
+        return res.sendStatus(404);
+      }
+      
+      // Get bandwidth data using our new system
+      const bandwidthData = await getServerBandwidth(serverId);
+      
+      return res.json(bandwidthData);
+    } catch (error) {
+      console.error(`Error getting bandwidth data:`, error);
+      res.status(500).json({ 
+        message: "Failed to retrieve bandwidth data",
+        error: (error as Error).message
+      });
     }
   });
 

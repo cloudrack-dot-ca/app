@@ -170,10 +170,11 @@ async function processBandwidthOverage(server: Server): Promise<void> {
     await storage.createTransaction({
       userId: server.userId,
       amount: overageCostCents,
-      type: 'charge',
+      type: 'bandwidth_overage',
       description: `Bandwidth overage charge for server '${server.name}' (${Math.round(overageGB)}GB above limit)`,
       status: 'completed',
       currency: 'USD',
+      paypalTransactionId: null,
       createdAt: new Date()
     });
     
