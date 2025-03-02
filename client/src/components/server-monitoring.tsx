@@ -41,6 +41,19 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
   const { toast } = useToast();
   const [activeMetric, setActiveMetric] = useState<string>("cpu");
   const [refreshInterval, setRefreshInterval] = useState<number>(30000); // 30 seconds default
+  
+  // Force auto-refresh every 30 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (refreshInterval > 0) {
+        queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/latest`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/metrics/history`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
+      }
+    }, 30000);
+    
+    return () => clearInterval(timer);
+  }, [serverId, refreshInterval]);
 
   // Mock data for fallback when API is not available yet
   const defaultMetric: MetricData = {
@@ -256,12 +269,12 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
               </div>
               <div className="text-sm">
                 <div className="font-semibold">
-                  {/* Use lastMonitored as an approximation for server creation time */}
-                  Created {formatRelativeTime(server?.lastMonitored ? server.lastMonitored.toString() : null)}
+                  {/* Show when the server was last refreshed */}
+                  Refreshed {formatRelativeTime(server?.lastMonitored ? server.lastMonitored.toString() : null)}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {server?.lastMonitored ? 
-                    `${new Date(server.lastMonitored).toLocaleString()}` : 
+                    `Created: ${new Date(server?.createdAt || server.lastMonitored).toLocaleString()}` : 
                     "Creation time unknown"
                   }
                 </div>
