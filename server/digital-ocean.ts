@@ -1227,6 +1227,15 @@ runcmd:
     firewallId: string,
     updates: Partial<Firewall>
   ): Promise<Firewall> {
+    // Log more details for debugging
+    console.log(`updateFirewall called for ${firewallId}`, {
+      has_inbound_rules: !!updates.inbound_rules,
+      inbound_count: updates.inbound_rules?.length || 0,
+      has_outbound_rules: !!updates.outbound_rules,
+      outbound_count: updates.outbound_rules?.length || 0,
+      droplet_count: updates.droplet_ids?.length || 0
+    });
+    
     // Handle mock mode or custom firewall IDs (containing 'firewall-')
     if (this.useMock || !this.apiKey || firewallId.includes('firewall-')) {
       // Create the firewall if it doesn't exist yet
@@ -1242,13 +1251,30 @@ runcmd:
           outbound_rules: updates.outbound_rules || []
         };
       } else {
-        // Update existing mock firewall
+        // Update existing mock firewall with enhanced logging
         console.log(`Updating mock firewall ${firewallId}`);
-        this.mockFirewalls[firewallId] = {
-          ...this.mockFirewalls[firewallId],
-          ...updates
-        };
+        
+        // Handle updating inbound and outbound rules explicitly to ensure they're properly updated
+        if (updates.inbound_rules !== undefined) {
+          console.log(`Setting inbound rules for ${firewallId}:`, updates.inbound_rules.length);
+          this.mockFirewalls[firewallId].inbound_rules = [...updates.inbound_rules];
+        }
+        
+        if (updates.outbound_rules !== undefined) {
+          console.log(`Setting outbound rules for ${firewallId}:`, updates.outbound_rules.length);
+          this.mockFirewalls[firewallId].outbound_rules = [...updates.outbound_rules];
+        }
+        
+        // Update other fields
+        if (updates.name) this.mockFirewalls[firewallId].name = updates.name;
+        if (updates.droplet_ids) this.mockFirewalls[firewallId].droplet_ids = [...updates.droplet_ids];
+        if (updates.status) this.mockFirewalls[firewallId].status = updates.status;
       }
+      
+      console.log(`Updated mock firewall ${firewallId} now has:`, {
+        inbound_rules: this.mockFirewalls[firewallId].inbound_rules.length,
+        outbound_rules: this.mockFirewalls[firewallId].outbound_rules.length
+      });
 
       return this.mockFirewalls[firewallId];
     }
@@ -1278,11 +1304,26 @@ runcmd:
             outbound_rules: updates.outbound_rules || []
           };
         } else {
-          // Update existing
-          this.mockFirewalls[firewallId] = {
-            ...this.mockFirewalls[firewallId],
-            ...updates
-          };
+          // Update existing with explicit rule handling
+          if (updates.inbound_rules !== undefined) {
+            console.log(`Fallback: Setting inbound rules for ${firewallId}:`, updates.inbound_rules.length);
+            this.mockFirewalls[firewallId].inbound_rules = [...updates.inbound_rules];
+          }
+          
+          if (updates.outbound_rules !== undefined) {
+            console.log(`Fallback: Setting outbound rules for ${firewallId}:`, updates.outbound_rules.length);
+            this.mockFirewalls[firewallId].outbound_rules = [...updates.outbound_rules];
+          }
+          
+          // Update other fields
+          if (updates.name) this.mockFirewalls[firewallId].name = updates.name;
+          if (updates.droplet_ids) this.mockFirewalls[firewallId].droplet_ids = [...updates.droplet_ids];
+          if (updates.status) this.mockFirewalls[firewallId].status = updates.status;
+          
+          console.log(`Fallback: Updated mock firewall ${firewallId} now has:`, {
+            inbound_rules: this.mockFirewalls[firewallId].inbound_rules.length,
+            outbound_rules: this.mockFirewalls[firewallId].outbound_rules.length
+          });
         }
         return this.mockFirewalls[firewallId];
       }
