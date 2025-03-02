@@ -2221,28 +2221,43 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       const serverId = parseInt(req.params.id);
       const snapshotId = parseInt(req.params.snapshotId);
       
+      console.log(`Processing snapshot deletion request for snapshot ${snapshotId} on server ${serverId}`);
+      
       // First check if server belongs to user
       const server = await storage.getServer(serverId);
       if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
+        console.log(`User ${req.user.id} attempted to delete snapshot ${snapshotId} but doesn't own server ${serverId}`);
         return res.status(404).json({ message: "Server not found" });
       }
       
       // Then check if snapshot exists and belongs to this server
       const snapshot = await storage.getSnapshot(snapshotId);
       if (!snapshot || snapshot.serverId !== serverId) {
+        console.log(`Snapshot ${snapshotId} not found or doesn't belong to server ${serverId}`);
         return res.status(404).json({ message: "Snapshot not found" });
       }
       
       // Delete from DigitalOcean
+      console.log(`Starting snapshot deletion process for snapshot ${snapshotId} (DO ID: ${snapshot.snapshotId})`);
+      
       try {
+        // The digitalOcean.deleteSnapshot method already has mock mode handling
         await digitalOcean.deleteSnapshot(snapshot.snapshotId);
+        console.log(`Successfully deleted snapshot ${snapshotId} from DigitalOcean`);
       } catch (doError) {
         console.warn(`Error deleting DigitalOcean snapshot:`, doError);
         // Continue with DB deletion even if DO deletion fails
+        if (process.env.NODE_ENV === 'production') {
+          console.error(`Production error deleting snapshot ${snapshotId}: ${doError}`);
+        } else {
+          console.log(`[DEV] Continuing with database deletion despite DigitalOcean API error`);
+        }
       }
       
       // Delete from database
+      console.log(`Removing snapshot ${snapshotId} from database`);
       await storage.deleteSnapshot(snapshotId);
+      console.log(`Successfully removed snapshot ${snapshotId} from database`);
       
       // We don't refund snapshot costs - they are non-refundable
       
@@ -2262,22 +2277,36 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
     try {
       const snapshotId = parseInt(req.params.id);
+      console.log(`Processing legacy snapshot deletion request for snapshot ${snapshotId}`);
+      
       const snapshot = await storage.getSnapshot(snapshotId);
       
       if (!snapshot || (snapshot.userId !== req.user.id && !req.user.isAdmin)) {
+        console.log(`User ${req.user.id} attempted to delete snapshot ${snapshotId} but doesn't own it or it doesn't exist`);
         return res.sendStatus(404);
       }
       
       // Delete from DigitalOcean
+      console.log(`Starting legacy snapshot deletion process for snapshot ${snapshotId} (DO ID: ${snapshot.snapshotId})`);
+      
       try {
+        // The digitalOcean.deleteSnapshot method already has mock mode handling
         await digitalOcean.deleteSnapshot(snapshot.snapshotId);
+        console.log(`Successfully deleted snapshot ${snapshotId} from DigitalOcean (legacy endpoint)`);
       } catch (doError) {
         console.warn(`Error deleting DigitalOcean snapshot:`, doError);
         // Continue with DB deletion even if DO deletion fails
+        if (process.env.NODE_ENV === 'production') {
+          console.error(`Production error deleting snapshot ${snapshotId}: ${doError}`);
+        } else {
+          console.log(`[DEV] Continuing with database deletion despite DigitalOcean API error (legacy endpoint)`);
+        }
       }
       
       // Delete from database
+      console.log(`Removing snapshot ${snapshotId} from database (legacy endpoint)`);
       await storage.deleteSnapshot(snapshotId);
+      console.log(`Successfully removed snapshot ${snapshotId} from database (legacy endpoint)`);
       
       return res.status(200).json({ message: "Snapshot deleted successfully" });
     } catch (error) {
