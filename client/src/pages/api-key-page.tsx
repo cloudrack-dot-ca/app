@@ -26,8 +26,13 @@ export default function ApiKeyPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Define the type for our API key response
+  interface ApiKeyResponse {
+    apiKey: string | null;
+  }
+
   // Use react-query to fetch the API key
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<ApiKeyResponse>({
     queryKey: ['/api/account/api-key'],
     enabled: !!user,
     staleTime: 60000, // 1 minute
@@ -40,8 +45,14 @@ export default function ApiKeyPage() {
     },
   });
 
+  // Define response type for the regenerate mutation
+  interface RegenerateKeyResponse {
+    apiKey: string;
+    message: string;
+  }
+
   // Create a mutation for regenerating the API key
-  const regenerateKeyMutation = useMutation({
+  const regenerateKeyMutation = useMutation<RegenerateKeyResponse, Error, ApiKeyFormValues>({
     mutationFn: async (values: ApiKeyFormValues) => {
       return await apiRequest('POST', '/api/account/api-key', values);
     },
@@ -55,10 +66,10 @@ export default function ApiKeyPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/account/api-key'] });
     },
     onError: (error) => {
-      setServerError((error as Error).message);
+      setServerError(error.message);
       toast({
         title: "Error",
-        description: (error as Error).message,
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -66,8 +77,8 @@ export default function ApiKeyPage() {
 
   // Function to copy API key to clipboard
   const copyApiKey = () => {
-    if (user?.apiKey) {
-      navigator.clipboard.writeText(user.apiKey);
+    if (data?.apiKey) {
+      navigator.clipboard.writeText(data.apiKey);
       setCopied(true);
       toast({
         title: "Copied",
@@ -114,11 +125,11 @@ export default function ApiKeyPage() {
                 <div className="relative flex-grow">
                   <Input 
                     type="text" 
-                    value={isLoading ? "Loading..." : (user?.apiKey || "No API key generated")} 
+                    value={isLoading ? "Loading..." : (data?.apiKey || "No API key generated")} 
                     readOnly 
                     className="pr-10 font-mono"
                   />
-                  {user?.apiKey && (
+                  {data?.apiKey && (
                     <Button 
                       size="icon" 
                       variant="ghost" 
