@@ -210,6 +210,7 @@ export default function AdminDashboard() {
   // Search states
   const [userSearch, setUserSearch] = useState('');
   const [serverSearch, setServerSearch] = useState('');
+  const [serverStatusFilter, setServerStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [ticketSearch, setTicketSearch] = useState('');
   const [transactionSearch, setTransactionSearch] = useState('');
   const [ipBanSearch, setIpBanSearch] = useState('');
@@ -1202,27 +1203,10 @@ export default function AdminDashboard() {
           <Card className="mb-4">
             <CardHeader>
               <CardTitle>Server Actions</CardTitle>
-              <CardDescription>Import and manage DigitalOcean VPS instances</CardDescription>
+              <CardDescription>Manage DigitalOcean VPS instances from the console</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-4">
-                <Button 
-                  variant="default" 
-                  className="flex items-center gap-2"
-                  onClick={() => {
-                    if (window.confirm('This will import all unmanaged DigitalOcean droplets into the CloudRack platform. Continue?')) {
-                      // TODO: Implement the import functionality
-                      toast({
-                        title: "Import Started",
-                        description: "Scanning for unmanaged DigitalOcean droplets...",
-                      });
-                    }
-                  }}
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Import Unmanaged VPS</span>
-                </Button>
-                
                 <Button 
                   variant="outline" 
                   className="flex items-center gap-2"
@@ -1254,15 +1238,14 @@ export default function AdminDashboard() {
                 />
                 
                 <Select
-                  onValueChange={(value) => {
-                    // Implement filter by attached/unattached
+                  onValueChange={(value: 'all' | 'active' | 'inactive') => {
+                    // Filter by status
                     setServerSearch("");
-                    if (value === "unattached") {
-                      // Filter to show only servers with no userId (unattached)
-                      // This is a placeholder, would need backend implementation
+                    setServerStatusFilter(value);
+                    if (value !== "all") {
                       toast({
                         title: "Filter Applied",
-                        description: "Showing unattached servers only",
+                        description: `Showing ${value} servers only`,
                       });
                     }
                   }}
@@ -1273,8 +1256,8 @@ export default function AdminDashboard() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Servers</SelectItem>
-                    <SelectItem value="attached">User Attached</SelectItem>
-                    <SelectItem value="unattached">Unattached</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1300,10 +1283,20 @@ export default function AdminDashboard() {
                     </TableHeader>
                     <TableBody>
                       {servers
-                        .filter(server => 
-                          server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
-                          server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                        )
+                        .filter(server => {
+                          // Apply text search filter
+                          const textMatch = server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                            server.region.toLowerCase().includes(serverSearch.toLowerCase());
+                          
+                          // Apply status filter if not "all"
+                          if (serverStatusFilter === "active") {
+                            return textMatch && server.status === "active";
+                          } else if (serverStatusFilter === "inactive") {
+                            return textMatch && server.status !== "active";
+                          }
+                          
+                          return textMatch;
+                        })
                         .slice((serverPage - 1) * ITEMS_PER_PAGE, serverPage * ITEMS_PER_PAGE)
                         .map((server) => (
                         <TableRow key={server.id}>
@@ -1368,10 +1361,20 @@ export default function AdminDashboard() {
                   </Table>
                   
                   {/* Pagination for servers */}
-                  {servers.filter(server => 
-                    server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
-                    server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                  ).length > 0 && (
+                  {servers.filter(server => {
+                    // Apply text search filter
+                    const textMatch = server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                      server.region.toLowerCase().includes(serverSearch.toLowerCase());
+                    
+                    // Apply status filter if not "all"
+                    if (serverStatusFilter === "active") {
+                      return textMatch && server.status === "active";
+                    } else if (serverStatusFilter === "inactive") {
+                      return textMatch && server.status !== "active";
+                    }
+                    
+                    return textMatch;
+                  }).length > 0 && (
                     <div className="flex items-center justify-center space-x-2 py-4">
                       <Button
                         variant="outline"
@@ -1383,10 +1386,20 @@ export default function AdminDashboard() {
                         Previous
                       </Button>
                       <div className="text-sm">
-                        Page {serverPage} of {Math.ceil(servers.filter(server => 
-                          server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
-                          server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                        ).length / ITEMS_PER_PAGE)}
+                        Page {serverPage} of {Math.ceil(servers.filter(server => {
+                          // Apply text search filter
+                          const textMatch = server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                            server.region.toLowerCase().includes(serverSearch.toLowerCase());
+                          
+                          // Apply status filter if not "all"
+                          if (serverStatusFilter === "active") {
+                            return textMatch && server.status === "active";
+                          } else if (serverStatusFilter === "inactive") {
+                            return textMatch && server.status !== "active";
+                          }
+                          
+                          return textMatch;
+                        }).length / ITEMS_PER_PAGE)}
                       </div>
                       <Button
                         variant="outline"
