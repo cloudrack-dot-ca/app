@@ -682,35 +682,70 @@ export class DigitalOceanClient {
   }
 
   async getDistributions(): Promise<Distribution[]> {
-    if (this.useMock) {
-      return this.mockDistributions;
-    }
-    
     try {
-      // In a real implementation, we would fetch from the DigitalOcean API
-      // For now, we'll use mock data
-      console.log('DigitalOcean API available, but using mock distributions data for consistency');
-      return this.mockDistributions;
+      // Connect to DigitalOcean API to get distributions
+      // For now, we'll simulate this - in production this would be a real API call
+      const response = await this.apiRequest<{ distributions: Distribution[] }>('/images?type=distribution&per_page=100');
+      
+      if (!response.distributions || response.distributions.length === 0) {
+        throw new Error('No distributions returned from DigitalOcean API');
+      }
+      
+      // Map the response to our expected format
+      return response.distributions.map(dist => ({
+        slug: dist.slug,
+        name: dist.name,
+        description: `${dist.name} distribution image`
+      }));
     } catch (error) {
-      console.error('Error fetching distributions, falling back to mock data:', error);
-      return this.mockDistributions;
+      console.error('Error fetching distributions from DigitalOcean API:', error);
+      throw error; // Don't fall back to mock data
     }
   }
 
   async getApplications(): Promise<Application[]> {
-    if (this.useMock) {
-      return this.mockApplications;
-    }
-    
     try {
-      // In a real implementation, we would fetch from the DigitalOcean API
-      // Due to complex structure of DO's API for applications, we'll use mock data
-      // instead of trying to parse their complex response format
-      console.log('DigitalOcean API available, but using mock applications data for consistency');
-      return this.mockApplications;
+      // Connect to DigitalOcean API to get applications (marketplace images)
+      const response = await this.apiRequest<{ images: any[] }>('/images?type=application&per_page=100');
+      
+      if (!response.images || response.images.length === 0) {
+        throw new Error('No application images returned from DigitalOcean API');
+      }
+      
+      // Map the marketplace images to our Application format
+      return response.images.map(image => ({
+        slug: image.slug,
+        name: image.name,
+        description: image.description || `${image.name} application`, 
+        type: this.determineAppType(image.name)
+      }));
     } catch (error) {
-      console.error('Error fetching applications, falling back to mock data:', error);
-      return this.mockApplications;
+      console.error('Error fetching applications from DigitalOcean API:', error);
+      throw error; // Don't fall back to mock data
+    }
+  }
+  
+  // Helper method to determine application type based on name
+  private determineAppType(name: string): string {
+    name = name.toLowerCase();
+    
+    if (name.includes('wordpress') || name.includes('drupal') || name.includes('joomla')) {
+      return 'cms';
+    } else if (name.includes('shop') || name.includes('commerce') || name.includes('store')) {
+      return 'ecommerce';
+    } else if (name.includes('node') || name.includes('php') || name.includes('python') || 
+              name.includes('ruby') || name.includes('django') || name.includes('lamp')) {
+      return 'application'; 
+    } else if (name.includes('mongodb') || name.includes('mysql') || 
+              name.includes('postgresql') || name.includes('redis')) {
+      return 'database';
+    } else if (name.includes('jenkins') || name.includes('gitlab') || 
+              name.includes('prometheus') || name.includes('grafana')) {
+      return 'devops';
+    } else if (name.includes('game')) {
+      return 'game-server';
+    } else {
+      return 'application'; // Default type
     }
   }
 
@@ -1105,24 +1140,20 @@ runcmd:
   
   // Firewall methods
   async getFirewalls(): Promise<Firewall[]> {
-    if (this.useMock) {
-      return Object.values(this.mockFirewalls);
-    }
-
     try {
       const response = await this.apiRequest<{ firewalls: Firewall[] }>('/firewalls');
       return response.firewalls;
     } catch (error) {
       console.error('Error fetching firewalls:', error);
-      return Object.values(this.mockFirewalls);
+      throw error; // Don't fall back to mock data
     }
   }
 
   async getFirewallByDropletId(dropletId: string): Promise<Firewall | null> {
     const dropletIdNumber = parseInt(dropletId);
     
-    // First check in the mock firewalls, regardless of useMock flag
-    // This ensures that any mock firewalls created as fallbacks will be found
+    // Check if we have any temporary mock firewalls in the map (for fallback cases)
+    // This is important for backward compatibility and UI reliability
     const mockFirewall = Object.values(this.mockFirewalls).find(
       firewall => firewall.droplet_ids.includes(dropletIdNumber)
     );
@@ -1132,10 +1163,7 @@ runcmd:
       return mockFirewall;
     }
     
-    if (this.useMock) {
-      return null;
-    }
-
+    // No mock firewall, make a real API call
     try {
       const firewalls = await this.getFirewalls();
       return firewalls.find(firewall => 
@@ -1143,7 +1171,8 @@ runcmd:
       ) || null;
     } catch (error) {
       console.error(`Error fetching firewall for droplet ${dropletId}:`, error);
-      return null;
+      console.log(`No firewall found for server ${dropletId}`);
+      return null; // Don't create a mock fallback, just return null
     }
   }
 

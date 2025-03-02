@@ -1773,22 +1773,11 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       } catch (updateError) {
         console.error("Error updating firewall rules:", updateError);
         
-        // Return a mock response with the rules removed to prevent UI errors
-        const mockFirewall = { ...firewall };
-        if (rule_type === 'inbound') {
-          mockFirewall.inbound_rules = mockFirewall.inbound_rules.filter(r => 
-            !(r.protocol === rule.protocol && 
-              r.ports === rule.ports && 
-              JSON.stringify(r.sources) === JSON.stringify(rule.sources)));
-        } else {
-          mockFirewall.outbound_rules = mockFirewall.outbound_rules.filter(r => 
-            !(r.protocol === rule.protocol && 
-              r.ports === rule.ports && 
-              JSON.stringify(r.destinations) === JSON.stringify(rule.destinations)));
-        }
-        
-        console.log("Returning mock firewall after rule deletion:", mockFirewall);
-        res.json(mockFirewall);
+        // No mock fallback - properly handle the error
+        res.status(500).json({ 
+          message: "Failed to update firewall rules", 
+          error: (updateError as Error).message 
+        });
       }
     } catch (error) {
       console.error("Error deleting firewall rule:", error);
