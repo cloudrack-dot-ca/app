@@ -689,23 +689,15 @@ export default function ServerDetailPage() {
           Back to Dashboard
         </Button>
         <h1 className="text-3xl font-bold">{server.name}</h1>
-        {/* Server status badge directly from DigitalOcean API */}
-        <Badge variant={
-          server.status === "active" 
-            ? "default" 
-            : (server.status === "starting" || server.status === "rebooting" || server.status === "stopping" || server.status === "restoring")
-              ? "outline"
-              : "secondary"
-        }>
-          {server.status === "restoring" 
-            ? (
-              <>
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                Restoring
-              </>
-            ) 
-            : server.status
-          }
+        {/* Simple VPS status badge */}
+        <Badge 
+          variant={server.status === "active" ? "default" : "secondary"}
+          className={server.status === "restoring" ? "animate-pulse" : ""}
+        >
+          {server.status === "active" && <span className="h-2 w-2 mr-1 rounded-full bg-green-500 inline-block" />}
+          {server.status === "off" && <span className="h-2 w-2 mr-1 rounded-full bg-gray-500 inline-block" />}
+          {server.status === "restoring" && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+          {server.status}
         </Badge>
       </div>
 
@@ -1083,7 +1075,7 @@ export default function ServerDetailPage() {
                                     <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                                     Creating...
                                   </Badge>
-                                ) : server.status === 'restoring' && snapshot.id === Number(server.pendingOperation?.split('_')[1]) ? (
+                                ) : server.status === 'restoring' ? (
                                   <Badge variant="secondary" className="animate-pulse bg-blue-50 text-blue-700 ml-2">
                                     <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                                     Restoring...
