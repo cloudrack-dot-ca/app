@@ -288,6 +288,26 @@ export default function AdminDashboard() {
       return data as IPBan[];
     }
   });
+  
+  // Fetch volumes
+  const { data: volumes, isLoading: volumesLoading } = useQuery({
+    queryKey: ['/api/admin/volumes'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/admin/volumes');
+      const data = await response.json();
+      return data;
+    }
+  });
+  
+  // Fetch volume stats
+  const { data: volumeStats, isLoading: volumeStatsLoading } = useQuery({
+    queryKey: ['/api/admin/volume-stats'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/admin/volume-stats');
+      const data = await response.json();
+      return data;
+    }
+  });
 
   // Update user balance mutation
   const updateUserBalanceMutation = useMutation({
@@ -1427,55 +1447,64 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Example placeholder volume data - would be populated from API */}
-                  <TableRow>
-                    <TableCell className="font-medium">1</TableCell>
-                    <TableCell>data-volume-nyc1-01</TableCell>
-                    <TableCell>100</TableCell>
-                    <TableCell>
-                      <Link href="/servers/51" className="text-blue-600 hover:underline">51</Link>
-                    </TableCell>
-                    <TableCell>nyc1</TableCell>
-                    <TableCell>
-                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">attached</span>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">vol-nyc1-01</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <Pencil className="h-4 w-4 mr-1" />
-                          Detach
-                        </Button>
-                        <Button variant="destructive" size="sm">
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">2</TableCell>
-                    <TableCell>backup-volume-sfo3-01</TableCell>
-                    <TableCell>250</TableCell>
-                    <TableCell>-</TableCell>
-                    <TableCell>sfo3</TableCell>
-                    <TableCell>
-                      <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-800">unattached</span>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">vol-sfo3-01</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <Server className="h-4 w-4 mr-1" />
-                          Attach
-                        </Button>
-                        <Button variant="destructive" size="sm">
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  {volumesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-4">
+                        Loading volumes...
+                      </TableCell>
+                    </TableRow>
+                  ) : !volumes || volumes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-4">
+                        No volumes found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    volumes.map((volume) => (
+                      <TableRow key={volume.id}>
+                        <TableCell className="font-medium">{volume.id}</TableCell>
+                        <TableCell>{volume.name}</TableCell>
+                        <TableCell>{volume.sizeGb}</TableCell>
+                        <TableCell>
+                          {volume.serverId ? (
+                            <Link href={`/servers/${volume.serverId}`} className="text-blue-600 hover:underline">
+                              {volume.serverId}
+                            </Link>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>{volume.region}</TableCell>
+                        <TableCell>
+                          {volume.serverId ? (
+                            <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">attached</span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-800">unattached</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{volume.volumeId}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {volume.serverId ? (
+                              <Button variant="outline" size="sm" title="Detach volume from server">
+                                <Pencil className="h-4 w-4 mr-1" />
+                                Detach
+                              </Button>
+                            ) : (
+                              <Button variant="outline" size="sm" title="Attach volume to a server">
+                                <Server className="h-4 w-4 mr-1" />
+                                Attach
+                              </Button>
+                            )}
+                            <Button variant="destructive" size="sm" title="Permanently delete volume">
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -1493,8 +1522,19 @@ export default function AdminDashboard() {
                     <CardTitle className="text-sm font-medium">Total Storage</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">350 GB</div>
-                    <p className="text-xs text-muted-foreground">Across 2 volumes</p>
+                    {volumeStatsLoading ? (
+                      <div>Loading...</div>
+                    ) : volumeStats ? (
+                      <>
+                        <div className="text-2xl font-bold">{volumeStats.totalStorage} GB</div>
+                        <p className="text-xs text-muted-foreground">Across {volumeStats.volumeCount} volumes</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold">0 GB</div>
+                        <p className="text-xs text-muted-foreground">No volumes found</p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
                 
@@ -1503,8 +1543,23 @@ export default function AdminDashboard() {
                     <CardTitle className="text-sm font-medium">Attached Storage</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">100 GB</div>
-                    <p className="text-xs text-muted-foreground">28.6% of total storage</p>
+                    {volumeStatsLoading ? (
+                      <div>Loading...</div>
+                    ) : volumeStats ? (
+                      <>
+                        <div className="text-2xl font-bold">{volumeStats.attachedStorage} GB</div>
+                        <p className="text-xs text-muted-foreground">
+                          {volumeStats.totalStorage > 0 
+                            ? `${Math.round((volumeStats.attachedStorage / volumeStats.totalStorage) * 100)}% of total storage` 
+                            : '0% of total storage'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold">0 GB</div>
+                        <p className="text-xs text-muted-foreground">No attached volumes</p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
                 
@@ -1513,14 +1568,25 @@ export default function AdminDashboard() {
                     <CardTitle className="text-sm font-medium">Unattached Storage</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">250 GB</div>
-                    <p className="text-xs text-muted-foreground">71.4% of total storage</p>
+                    {volumeStatsLoading ? (
+                      <div>Loading...</div>
+                    ) : volumeStats ? (
+                      <>
+                        <div className="text-2xl font-bold">{volumeStats.unattachedStorage} GB</div>
+                        <p className="text-xs text-muted-foreground">
+                          {volumeStats.totalStorage > 0 
+                            ? `${Math.round((volumeStats.unattachedStorage / volumeStats.totalStorage) * 100)}% of total storage` 
+                            : '0% of total storage'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold">0 GB</div>
+                        <p className="text-xs text-muted-foreground">No unattached volumes</p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
-              </div>
-              
-              <div className="text-sm text-muted-foreground italic mb-4">
-                Note: These are placeholder statistics. Real data would be calculated from the database.
               </div>
             </CardContent>
           </Card>
