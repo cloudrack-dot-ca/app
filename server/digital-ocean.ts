@@ -999,11 +999,13 @@ runcmd:
     }
     
     try {
-      await this.apiRequest(
-        `/droplets/${dropletId}/actions`, 
-        'POST', 
-        { type: action }
-      );
+      // We need to directly use the endpoint to make it more robust
+      const endpoint = `/droplets/${dropletId}/actions`;
+      const method = 'POST';
+      const data = { type: action };
+      
+      await this.apiRequest(endpoint, method, data);
+      
       console.log(`Successfully performed ${action} on droplet ${dropletId}`);
     } catch (error) {
       console.error(`Error performing ${action} on droplet ${dropletId}:`, error);
