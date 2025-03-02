@@ -687,10 +687,16 @@ export default function ServerDetailPage() {
           Back to Dashboard
         </Button>
         <h1 className="text-3xl font-bold">{server.name}</h1>
-        {createSnapshotMutation.isPending || restoreSnapshotMutation.isPending ? (
+        {/* Server status badge - handle different states with proper labels */}
+        {createSnapshotMutation.isPending ? (
           <Badge variant="outline" className="animate-pulse bg-yellow-50 text-yellow-700">
             <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            {createSnapshotMutation.isPending ? "Creating Snapshot..." : "Restoring..."}
+            Creating Snapshot...
+          </Badge>
+        ) : restoreSnapshotMutation.isPending ? (
+          <Badge variant="outline" className="animate-pulse bg-yellow-50 text-yellow-700">
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            Restoring Snapshot...
           </Badge>
         ) : (
           <Badge variant={
@@ -700,7 +706,7 @@ export default function ServerDetailPage() {
                 ? "outline"
                 : "secondary"
           }>
-            {server.status === "restoring" ? "Restoring from Snapshot" : server.status}
+            {server.status === "restoring" ? "Restoring" : server.status}
           </Badge>
         )}
       </div>
