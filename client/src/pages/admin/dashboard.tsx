@@ -160,6 +160,13 @@ export default function AdminDashboard() {
   const [selectedTab, setSelectedTab] = useState('overview');
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [editUserBalance, setEditUserBalance] = useState<string>('');
+  const [editUserData, setEditUserData] = useState<{
+    username: string;
+    password: string;
+    isAdmin: boolean;
+    isSuspended: boolean;
+  }>({ username: '', password: '', isAdmin: false, isSuspended: false });
+  const [editUserMode, setEditUserMode] = useState<'balance' | 'details'>('balance');
   const [ipBanData, setIpBanData] = useState({ ipAddress: '', reason: '', expiresAt: '' });
   const [ipBanDialogOpen, setIpBanDialogOpen] = useState(false);
   

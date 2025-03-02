@@ -21,20 +21,34 @@ CloudRack is a comprehensive VPS hosting reseller platform with advanced SSH ter
 - PostgreSQL database
 - Digital Ocean API key (for production use)
 
-### Environment Variables
+### Environment Variables and Secrets
 
-Create a `.env` file in the root directory with the following variables:
+The application uses both environment variables and Replit Secrets for configuration.
+
+#### Replit Secrets (Recommended for sensitive data)
+
+Add the following as Replit Secrets for secure storage:
 
 ```
-DATABASE_URL=postgresql://username:password@localhost:5432/cloudrack
-SESSION_SECRET=your_session_secret_here
 PAYPAL_CLIENT_ID=your_paypal_client_id
 PAYPAL_CLIENT_SECRET=your_paypal_client_secret
 PAYPAL_MODE=sandbox  # Use 'live' for production
 DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
+DATABASE_URL=postgresql://username:password@localhost:5432/cloudrack
+SESSION_SECRET=your_session_secret_here
+FORCE_MOCK_FIREWALLS=true  # Optional: Set to 'true' to use mock firewalls
 ```
 
-### Required Secrets
+#### Environment Variables (Alternative)
+
+You can also use a `.env` file in the root directory for development, but secrets are preferred for production:
+
+```
+DATABASE_URL=postgresql://username:password@localhost:5432/cloudrack
+SESSION_SECRET=your_session_secret_here
+```
+
+### Required Configuration
 
 1. **PayPal API Credentials**: Needed for payment processing
    - PAYPAL_CLIENT_ID
@@ -47,6 +61,10 @@ DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
 
 3. **Database Connection String**: PostgreSQL connection URL
    - DATABASE_URL
+
+4. **Firewall Configuration**:
+   - FORCE_MOCK_FIREWALLS: When set to 'true', the system will use mock firewalls instead of creating real Digital Ocean firewalls
+   - This is useful for development environments or when testing firewall UI without making actual API calls
 
 ### Installation Steps
 
@@ -124,6 +142,36 @@ DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
 - SSH terminal connections are handled through a secure WebSocket bridge
 - Cloud firewall rules are synchronized with Digital Ocean's firewall service
 - The billing system automatically calculates and deducts costs every hour
+
+### Mock Mode Configuration
+
+The application supports a mock mode for development and testing without needing to make actual API calls to Digital Ocean.
+
+#### Mock Firewalls
+
+By setting `FORCE_MOCK_FIREWALLS=true` in your Replit Secrets:
+
+- All firewall operations will use in-memory mock data instead of making API calls
+- The UI will function normally, but no actual firewalls will be created/modified at Digital Ocean
+- This is useful for UI development or demo instances
+
+#### Mock Digital Ocean API
+
+If no `DIGITAL_OCEAN_API_KEY` is provided:
+
+- The application automatically switches to mock mode for all Digital Ocean operations
+- Predefined mock data for regions, sizes, and applications will be used
+- Server creation will still work but will use simulated data
+
+#### Pricing Markup Configuration
+
+By default, the system applies a 0.5% markup over Digital Ocean's base pricing. Administrators can adjust this markup percentage in the Admin Panel under the "Settings" tab.
+
+#### Development vs. Production Mode
+
+It's important to use the correct mode based on your needs:
+- For development: Use mock mode with `FORCE_MOCK_FIREWALLS=true`
+- For production: Provide valid API keys and disable mock modes
 
 ## Troubleshooting
 
