@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Editor } from "@tinymce/tinymce-react";
+import RichTextEditor from "react-simple-wysiwyg";
 import {
   ChevronDown,
   ChevronRight,
@@ -1033,27 +1033,11 @@ export default function DocsPage() {
                   <div className="space-y-2">
                     <Label htmlFor="article-content">Content (HTML Editor)</Label>
                     <div className="border rounded-md">
-                      <Editor
+                      <RichTextEditor
                         id="article-content"
-                        apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
                         value={articleContent}
-                        onEditorChange={(content: string) => setArticleContent(content)}
-                        init={{
-                          height: 400,
-                          menubar: true,
-                          plugins: [
-                            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                            'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
-                          ],
-                          toolbar: 'undo redo | blocks | ' +
-                            'bold italic forecolor | alignleft aligncenter ' +
-                            'alignright alignjustify | bullist numlist outdent indent | ' +
-                            'removeformat | help',
-                          content_style: 'body { font-family:Inter,ui-sans-serif,system-ui,sans-serif; font-size:14px }',
-                          skin: document.documentElement.classList.contains('dark') ? 'oxide-dark' : 'oxide',
-                          content_css: document.documentElement.classList.contains('dark') ? 'dark' : 'default'
-                        }}
+                        onChange={(e) => setArticleContent(e.target.value)}
+                        className="min-h-[400px] w-full bg-background p-4"
                       />
                     </div>
                   </div>
