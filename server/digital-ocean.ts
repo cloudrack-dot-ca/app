@@ -1149,10 +1149,18 @@ runcmd:
   // Firewall methods
   async getFirewalls(): Promise<Firewall[]> {
     try {
+      console.log('Fetching all firewalls from DigitalOcean API');
       const response = await this.apiRequest<{ firewalls: Firewall[] }>('/firewalls');
-      return response.firewalls;
+      
+      if (response && response.firewalls) {
+        console.log(`Retrieved ${response.firewalls.length} real firewalls from DigitalOcean API`);
+        return response.firewalls;
+      } else {
+        console.log('No firewalls returned from DigitalOcean API');
+        return [];
+      }
     } catch (error) {
-      console.error('Error fetching firewalls:', error);
+      console.error('Error fetching firewalls from DigitalOcean API:', error);
       throw error; // Don't fall back to mock data
     }
   }
@@ -1160,27 +1168,32 @@ runcmd:
   async getFirewallByDropletId(dropletId: string): Promise<Firewall | null> {
     const dropletIdNumber = parseInt(dropletId);
     
-    // Check if we have any temporary mock firewalls in the map (for fallback cases)
-    // This is important for backward compatibility and UI reliability
-    const mockFirewall = Object.values(this.mockFirewalls).find(
-      firewall => firewall.droplet_ids.includes(dropletIdNumber)
-    );
-    
-    if (mockFirewall) {
-      console.log(`Found mock firewall ${mockFirewall.id} for droplet ${dropletId}`);
-      return mockFirewall;
-    }
-    
-    // No mock firewall, make a real API call
+    // Make a direct API call to get firewalls - no mock usage
     try {
-      const firewalls = await this.getFirewalls();
-      return firewalls.find(firewall => 
-        firewall.droplet_ids.includes(dropletIdNumber)
-      ) || null;
+      console.log(`Fetching firewalls for droplet ${dropletId} from DigitalOcean API`);
+      const response = await this.apiRequest<{ firewalls: Firewall[] }>('/firewalls');
+      
+      if (!response.firewalls || response.firewalls.length === 0) {
+        console.log(`No firewalls found on DigitalOcean account`);
+        return null;
+      }
+      
+      // Find the firewall that has this droplet ID in its droplet_ids array
+      const firewall = response.firewalls.find(firewall => 
+        firewall.droplet_ids && firewall.droplet_ids.includes(dropletIdNumber)
+      );
+      
+      if (firewall) {
+        console.log(`Found real DigitalOcean firewall ${firewall.id} for droplet ${dropletId}`);
+        return firewall;
+      } else {
+        console.log(`No firewall found for server ${dropletId}`);
+        return null;
+      }
     } catch (error) {
-      console.error(`Error fetching firewall for droplet ${dropletId}:`, error);
+      console.error(`Error fetching firewall for droplet ${dropletId} from DigitalOcean API:`, error);
       console.log(`No firewall found for server ${dropletId}`);
-      return null; // Don't create a mock fallback, just return null
+      return null; // Don't create any mock fallbacks, just return null
     }
   }
 
@@ -1190,77 +1203,35 @@ runcmd:
     inbound_rules: FirewallRule[];
     outbound_rules: FirewallRule[];
   }): Promise<Firewall> {
-    if (this.useMock || process.env.FORCE_MOCK_FIREWALLS === 'true') {
-      // Check if a firewall already exists for any of these droplets
-      const existingFirewall = Object.values(this.mockFirewalls).find(
-        firewall => options.droplet_ids.some(id => firewall.droplet_ids.includes(id))
-      );
-      
-      if (existingFirewall) {
-        // Update existing firewall instead of creating a new one
-        console.log('Using existing firewall for droplet');
-        existingFirewall.inbound_rules = options.inbound_rules;
-        existingFirewall.outbound_rules = options.outbound_rules;
-        
-        // Make sure all requested droplet IDs are included
-        const combinedDropletIds = new Set([...existingFirewall.droplet_ids, ...options.droplet_ids]);
-        existingFirewall.droplet_ids = Array.from(combinedDropletIds);
-        
-        return existingFirewall;
-      }
-      
-      // Create a new firewall
-      const id = `firewall-${Math.random().toString(36).substring(7)}`;
-      const firewall: Firewall = {
-        id,
-        name: options.name,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        droplet_ids: options.droplet_ids,
-        inbound_rules: options.inbound_rules,
-        outbound_rules: options.outbound_rules
-      };
-
-      this.mockFirewalls[id] = firewall;
-      return firewall;
-    }
-
+    // Always attempt to use the real API, no more mock fallbacks
     try {
       // Check if a firewall already exists for this droplet to avoid 409 Conflict
       const existingFirewall = await this.getFirewallByDropletId(options.droplet_ids[0].toString());
-      if (existingFirewall) {
-        console.log('Firewall already exists for droplet, updating instead of creating');
-        return await this.updateFirewall(existingFirewall.id!, {
+      if (existingFirewall && existingFirewall.id && !existingFirewall.id.includes('firewall-')) {
+        console.log('Real DigitalOcean firewall already exists for droplet, updating instead of creating');
+        return await this.updateFirewall(existingFirewall.id, {
           inbound_rules: options.inbound_rules,
           outbound_rules: options.outbound_rules
         });
       }
       
-      // Create a new firewall
+      // Create a new firewall through the real API
+      console.log('Creating new real DigitalOcean firewall with rules:', {
+        inbound_count: options.inbound_rules.length,
+        outbound_count: options.outbound_rules.length
+      });
+      
       const response = await this.apiRequest<{ firewall: Firewall }>(
         '/firewalls',
         'POST',
         options
       );
+      
+      console.log('Successfully created real DigitalOcean firewall:', response.firewall.id);
       return response.firewall;
     } catch (error) {
-      console.error('Error creating firewall:', error);
-      
-      // Create a mock firewall if API call fails
-      console.log('Creating mock firewall due to API failure');
-      const id = `firewall-fallback-${Math.random().toString(36).substring(7)}`;
-      const firewall: Firewall = {
-        id,
-        name: options.name,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        droplet_ids: options.droplet_ids,
-        inbound_rules: options.inbound_rules,
-        outbound_rules: options.outbound_rules
-      };
-
-      this.mockFirewalls[id] = firewall;
-      return firewall;
+      console.error('ERROR: Failed to create real DigitalOcean firewall:', error);
+      throw new Error(`Failed to create DigitalOcean firewall: ${error}`);
     }
   }
 
@@ -1272,104 +1243,54 @@ runcmd:
     console.log(`updateFirewall called for ${firewallId}`, {
       has_inbound_rules: !!updates.inbound_rules,
       inbound_count: updates.inbound_rules?.length || 0,
-      has_outbound_rules: !!updates.outbound_rules,
+      has_outbound_rules: !!updates.outbound_rules, 
       outbound_count: updates.outbound_rules?.length || 0,
       droplet_count: updates.droplet_ids?.length || 0
     });
     
-    // Handle mock mode or custom firewall IDs (containing 'firewall-')
-    if (this.useMock || !this.apiKey || firewallId.includes('firewall-')) {
-      // Create the firewall if it doesn't exist yet
-      if (!this.mockFirewalls[firewallId]) {
-        console.log(`Creating new mock firewall for ID ${firewallId}`);
-        this.mockFirewalls[firewallId] = {
-          id: firewallId,
-          name: updates.name || `firewall-${Math.random().toString(36).substr(2, 5)}`,
-          status: 'active',
-          created_at: new Date().toISOString(),
-          droplet_ids: updates.droplet_ids || [],
+    // Handle local mock firewalls (containing 'firewall-')
+    if (firewallId.includes('firewall-')) {
+      console.log(`WARNING: Cannot update a mock firewall ID with real DigitalOcean API. Creating a real one instead.`);
+      
+      // We need to create a real firewall since this is a mock ID
+      try {
+        // Get the droplet IDs from the mock firewall
+        const dropletIds = this.mockFirewalls[firewallId]?.droplet_ids || [];
+        if (dropletIds.length === 0) {
+          throw new Error(`Mock firewall ${firewallId} has no droplet IDs`);
+        }
+        
+        // Create a new real firewall
+        const newFirewall = await this.createFirewall({
+          name: updates.name || `firewall-${dropletIds[0]}`,
+          droplet_ids: dropletIds,
           inbound_rules: updates.inbound_rules || [],
           outbound_rules: updates.outbound_rules || []
-        };
-      } else {
-        // Update existing mock firewall with enhanced logging
-        console.log(`Updating mock firewall ${firewallId}`);
+        });
         
-        // Handle updating inbound and outbound rules explicitly to ensure they're properly updated
-        if (updates.inbound_rules !== undefined) {
-          console.log(`Setting inbound rules for ${firewallId}:`, updates.inbound_rules.length);
-          this.mockFirewalls[firewallId].inbound_rules = [...updates.inbound_rules];
-        }
+        // Delete the mock firewall
+        delete this.mockFirewalls[firewallId];
         
-        if (updates.outbound_rules !== undefined) {
-          console.log(`Setting outbound rules for ${firewallId}:`, updates.outbound_rules.length);
-          this.mockFirewalls[firewallId].outbound_rules = [...updates.outbound_rules];
-        }
-        
-        // Update other fields
-        if (updates.name) this.mockFirewalls[firewallId].name = updates.name;
-        if (updates.droplet_ids) this.mockFirewalls[firewallId].droplet_ids = [...updates.droplet_ids];
-        if (updates.status) this.mockFirewalls[firewallId].status = updates.status;
+        return newFirewall;
+      } catch (error) {
+        console.error(`Failed to migrate mock firewall to real one:`, error);
+        throw new Error(`Cannot update mock firewall with real API: ${error}`);
       }
-      
-      console.log(`Updated mock firewall ${firewallId} now has:`, {
-        inbound_rules: this.mockFirewalls[firewallId].inbound_rules.length,
-        outbound_rules: this.mockFirewalls[firewallId].outbound_rules.length
-      });
-
-      return this.mockFirewalls[firewallId];
     }
 
+    // This is a real firewall ID, update it
     try {
+      console.log(`Updating real DigitalOcean firewall ${firewallId}`);
       const response = await this.apiRequest<{ firewall: Firewall }>(
         `/firewalls/${firewallId}`,
         'PUT',
         updates
       );
+      console.log(`Successfully updated real DigitalOcean firewall: ${firewallId}`);
       return response.firewall;
     } catch (error) {
-      console.error(`Error updating firewall ${firewallId}:`, error);
-      
-      // If API call fails, update the mock firewall instead to keep UI functional
-      if (firewallId.includes('firewall-')) {
-        console.log(`Falling back to mock firewall update for ${firewallId}`);
-        // Create if it doesn't exist
-        if (!this.mockFirewalls[firewallId]) {
-          this.mockFirewalls[firewallId] = {
-            id: firewallId,
-            name: updates.name || `firewall-fallback-${Math.random().toString(36).substr(2, 5)}`,
-            status: 'active',
-            created_at: new Date().toISOString(),
-            droplet_ids: updates.droplet_ids || [],
-            inbound_rules: updates.inbound_rules || [],
-            outbound_rules: updates.outbound_rules || []
-          };
-        } else {
-          // Update existing with explicit rule handling
-          if (updates.inbound_rules !== undefined) {
-            console.log(`Fallback: Setting inbound rules for ${firewallId}:`, updates.inbound_rules.length);
-            this.mockFirewalls[firewallId].inbound_rules = [...updates.inbound_rules];
-          }
-          
-          if (updates.outbound_rules !== undefined) {
-            console.log(`Fallback: Setting outbound rules for ${firewallId}:`, updates.outbound_rules.length);
-            this.mockFirewalls[firewallId].outbound_rules = [...updates.outbound_rules];
-          }
-          
-          // Update other fields
-          if (updates.name) this.mockFirewalls[firewallId].name = updates.name;
-          if (updates.droplet_ids) this.mockFirewalls[firewallId].droplet_ids = [...updates.droplet_ids];
-          if (updates.status) this.mockFirewalls[firewallId].status = updates.status;
-          
-          console.log(`Fallback: Updated mock firewall ${firewallId} now has:`, {
-            inbound_rules: this.mockFirewalls[firewallId].inbound_rules.length,
-            outbound_rules: this.mockFirewalls[firewallId].outbound_rules.length
-          });
-        }
-        return this.mockFirewalls[firewallId];
-      }
-      
-      throw error;
+      console.error(`ERROR: Failed to update real DigitalOcean firewall ${firewallId}:`, error);
+      throw new Error(`Failed to update DigitalOcean firewall: ${error}`);
     }
   }
 
@@ -1377,27 +1298,51 @@ runcmd:
     firewallId: string,
     dropletIds: number[]
   ): Promise<void> {
-    if (this.useMock) {
-      if (!this.mockFirewalls[firewallId]) {
-        throw new Error(`Firewall with ID ${firewallId} not found`);
+    // Handle mock firewalls - migrate to real firewall if possible
+    if (firewallId.includes('firewall-')) {
+      console.log(`WARNING: Cannot add droplets to a mock firewall. Need to create a real firewall.`);
+      
+      try {
+        // See if we can get the existing mock firewall
+        const mockFirewall = this.mockFirewalls[firewallId];
+        if (!mockFirewall) {
+          throw new Error(`Mock firewall ${firewallId} not found`);
+        }
+        
+        // Create a real firewall with all droplets combined
+        const allDropletIds = [...new Set([
+          ...mockFirewall.droplet_ids,
+          ...dropletIds
+        ])];
+        
+        await this.createFirewall({
+          name: mockFirewall.name || `firewall-migrated`,
+          droplet_ids: allDropletIds,
+          inbound_rules: mockFirewall.inbound_rules || [],
+          outbound_rules: mockFirewall.outbound_rules || []
+        });
+        
+        // Remove the mock firewall
+        delete this.mockFirewalls[firewallId];
+        return;
+      } catch (error) {
+        console.error(`Failed to migrate mock firewall ${firewallId} to real firewall:`, error);
+        throw new Error(`Cannot add droplets to mock firewall with real API: ${error}`);
       }
-
-      this.mockFirewalls[firewallId].droplet_ids = [
-        ...this.mockFirewalls[firewallId].droplet_ids,
-        ...dropletIds.filter(id => !this.mockFirewalls[firewallId].droplet_ids.includes(id))
-      ];
-      return;
     }
 
+    // This is a real firewall ID, make the real API call
     try {
+      console.log(`Adding droplets ${dropletIds.join(', ')} to real firewall ${firewallId}`);
       await this.apiRequest(
         `/firewalls/${firewallId}/droplets`,
         'POST',
         { droplet_ids: dropletIds }
       );
+      console.log(`Successfully added droplets to real firewall ${firewallId}`);
     } catch (error) {
       console.error(`Error adding droplets to firewall ${firewallId}:`, error);
-      throw error;
+      throw new Error(`Failed to add droplets to DigitalOcean firewall: ${error}`);
     }
   }
 
@@ -1405,25 +1350,49 @@ runcmd:
     firewallId: string,
     dropletIds: number[]
   ): Promise<void> {
-    if (this.useMock) {
-      if (!this.mockFirewalls[firewallId]) {
-        throw new Error(`Firewall with ID ${firewallId} not found`);
+    // Handle mock firewalls
+    if (firewallId.includes('firewall-')) {
+      console.log(`WARNING: Cannot remove droplets from a mock firewall with real API calls`);
+      
+      try {
+        const mockFirewall = this.mockFirewalls[firewallId];
+        if (!mockFirewall) {
+          throw new Error(`Mock firewall ${firewallId} not found`);
+        }
+        
+        // Create a real firewall but exclude the droplets to be removed
+        const remainingDropletIds = mockFirewall.droplet_ids.filter(id => !dropletIds.includes(id));
+        
+        if (remainingDropletIds.length > 0) {
+          await this.createFirewall({
+            name: mockFirewall.name || `firewall-migrated`,
+            droplet_ids: remainingDropletIds,
+            inbound_rules: mockFirewall.inbound_rules || [],
+            outbound_rules: mockFirewall.outbound_rules || []
+          });
+        }
+        
+        // Remove the mock firewall
+        delete this.mockFirewalls[firewallId];
+        return;
+      } catch (error) {
+        console.error(`Failed to migrate mock firewall ${firewallId} to real firewall:`, error);
+        throw new Error(`Cannot remove droplets from mock firewall with real API: ${error}`);
       }
-
-      this.mockFirewalls[firewallId].droplet_ids = 
-        this.mockFirewalls[firewallId].droplet_ids.filter(id => !dropletIds.includes(id));
-      return;
     }
 
+    // This is a real firewall ID, make the real API call
     try {
+      console.log(`Removing droplets ${dropletIds.join(', ')} from real firewall ${firewallId}`);
       await this.apiRequest(
         `/firewalls/${firewallId}/droplets`,
         'DELETE',
         { droplet_ids: dropletIds }
       );
+      console.log(`Successfully removed droplets from real firewall ${firewallId}`);
     } catch (error) {
       console.error(`Error removing droplets from firewall ${firewallId}:`, error);
-      throw error;
+      throw new Error(`Failed to remove droplets from DigitalOcean firewall: ${error}`);
     }
   }
 
@@ -1432,28 +1401,45 @@ runcmd:
     inboundRules: FirewallRule[] = [],
     outboundRules: FirewallRule[] = []
   ): Promise<void> {
-    if (this.useMock) {
-      if (!this.mockFirewalls[firewallId]) {
-        throw new Error(`Firewall with ID ${firewallId} not found`);
+    // Handle mock firewalls - migrate to real firewall
+    if (firewallId.includes('firewall-')) {
+      console.log(`WARNING: Cannot add rules to a mock firewall with real API. Creating a real one.`);
+      
+      try {
+        const mockFirewall = this.mockFirewalls[firewallId];
+        if (!mockFirewall) {
+          throw new Error(`Mock firewall ${firewallId} not found`);
+        }
+        
+        const combinedInboundRules = [...(mockFirewall.inbound_rules || []), ...inboundRules];
+        const combinedOutboundRules = [...(mockFirewall.outbound_rules || []), ...outboundRules];
+        
+        if (mockFirewall.droplet_ids.length === 0) {
+          throw new Error(`Mock firewall ${firewallId} has no droplet IDs`);
+        }
+        
+        await this.createFirewall({
+          name: mockFirewall.name || `firewall-migrated`,
+          droplet_ids: mockFirewall.droplet_ids,
+          inbound_rules: combinedInboundRules,
+          outbound_rules: combinedOutboundRules
+        });
+        
+        // Remove the mock firewall
+        delete this.mockFirewalls[firewallId];
+        return;
+      } catch (error) {
+        console.error(`Failed to migrate mock firewall ${firewallId} to real firewall:`, error);
+        throw new Error(`Cannot add rules to mock firewall with real API: ${error}`);
       }
-
-      if (inboundRules.length > 0) {
-        this.mockFirewalls[firewallId].inbound_rules = [
-          ...this.mockFirewalls[firewallId].inbound_rules,
-          ...inboundRules
-        ];
-      }
-
-      if (outboundRules.length > 0) {
-        this.mockFirewalls[firewallId].outbound_rules = [
-          ...this.mockFirewalls[firewallId].outbound_rules,
-          ...outboundRules
-        ];
-      }
-      return;
     }
 
+    // This is a real firewall ID, make the real API call
     try {
+      console.log(`Adding rules to real firewall ${firewallId}: `, {
+        inbound: inboundRules.length,
+        outbound: outboundRules.length
+      });
       await this.apiRequest(
         `/firewalls/${firewallId}/rules`,
         'POST',
@@ -1462,9 +1448,10 @@ runcmd:
           outbound_rules: outboundRules
         }
       );
+      console.log(`Successfully added rules to real firewall ${firewallId}`);
     } catch (error) {
       console.error(`Error adding rules to firewall ${firewallId}:`, error);
-      throw error;
+      throw new Error(`Failed to add rules to DigitalOcean firewall: ${error}`);
     }
   }
 
@@ -1473,30 +1460,53 @@ runcmd:
     inboundRules: FirewallRule[] = [],
     outboundRules: FirewallRule[] = []
   ): Promise<void> {
-    if (this.useMock) {
-      if (!this.mockFirewalls[firewallId]) {
-        throw new Error(`Firewall with ID ${firewallId} not found`);
-      }
-
-      if (inboundRules.length > 0) {
+    // Handle mock firewalls - migrate to real firewall
+    if (firewallId.includes('firewall-')) {
+      console.log(`WARNING: Cannot remove rules from a mock firewall with real API. Creating a real one.`);
+      
+      try {
+        const mockFirewall = this.mockFirewalls[firewallId];
+        if (!mockFirewall) {
+          throw new Error(`Mock firewall ${firewallId} not found`);
+        }
+        
+        // Remove rules from the mock firewall
         const inboundPorts = inboundRules.map(rule => rule.ports);
-        this.mockFirewalls[firewallId].inbound_rules = 
-          this.mockFirewalls[firewallId].inbound_rules.filter(
-            rule => !inboundPorts.includes(rule.ports)
-          );
-      }
-
-      if (outboundRules.length > 0) {
+        const remainingInboundRules = (mockFirewall.inbound_rules || []).filter(
+          rule => !inboundPorts.includes(rule.ports)
+        );
+        
         const outboundPorts = outboundRules.map(rule => rule.ports);
-        this.mockFirewalls[firewallId].outbound_rules = 
-          this.mockFirewalls[firewallId].outbound_rules.filter(
-            rule => !outboundPorts.includes(rule.ports)
-          );
+        const remainingOutboundRules = (mockFirewall.outbound_rules || []).filter(
+          rule => !outboundPorts.includes(rule.ports)
+        );
+        
+        if (mockFirewall.droplet_ids.length === 0) {
+          throw new Error(`Mock firewall ${firewallId} has no droplet IDs`);
+        }
+        
+        await this.createFirewall({
+          name: mockFirewall.name || `firewall-migrated`,
+          droplet_ids: mockFirewall.droplet_ids,
+          inbound_rules: remainingInboundRules,
+          outbound_rules: remainingOutboundRules
+        });
+        
+        // Remove the mock firewall
+        delete this.mockFirewalls[firewallId];
+        return;
+      } catch (error) {
+        console.error(`Failed to migrate mock firewall ${firewallId} to real firewall:`, error);
+        throw new Error(`Cannot remove rules from mock firewall with real API: ${error}`);
       }
-      return;
     }
 
+    // This is a real firewall ID, make the real API call
     try {
+      console.log(`Removing rules from real firewall ${firewallId}: `, {
+        inbound: inboundRules.length,
+        outbound: outboundRules.length
+      });
       await this.apiRequest(
         `/firewalls/${firewallId}/rules`,
         'DELETE',
@@ -1505,15 +1515,16 @@ runcmd:
           outbound_rules: outboundRules
         }
       );
+      console.log(`Successfully removed rules from real firewall ${firewallId}`);
     } catch (error) {
       console.error(`Error removing rules from firewall ${firewallId}:`, error);
-      throw error;
+      throw new Error(`Failed to remove rules from DigitalOcean firewall: ${error}`);
     }
   }
 
   async deleteFirewall(firewallId: string): Promise<void> {
-    if (this.useMock || !this.apiKey || firewallId.includes('firewall-')) {
-      // In mock mode or with custom firewall IDs, just remove from our local storage
+    // Handle mock firewalls 
+    if (firewallId.includes('firewall-')) {
       console.log(`Deleting mock firewall: ${firewallId}`);
       if (this.mockFirewalls && this.mockFirewalls[firewallId]) {
         delete this.mockFirewalls[firewallId];
@@ -1524,13 +1535,14 @@ runcmd:
       return;
     }
 
+    // This is a real firewall ID, make the real API call
     try {
+      console.log(`Deleting real DigitalOcean firewall: ${firewallId}`);
       await this.apiRequest(`/firewalls/${firewallId}`, 'DELETE');
+      console.log(`Successfully deleted real DigitalOcean firewall: ${firewallId}`);
     } catch (error) {
-      console.error(`Error deleting firewall ${firewallId}:`, error);
-      // Don't throw the error, just log it - this allows the UI to continue functioning
-      // even if there are API issues
-      console.log(`Continuing despite firewall deletion error`);
+      console.error(`Error deleting real DigitalOcean firewall ${firewallId}:`, error);
+      throw new Error(`Failed to delete DigitalOcean firewall: ${error}`);
     }
   }
 }
