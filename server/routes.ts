@@ -2407,13 +2407,37 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         }
         
         // Update server status to indicate restore in progress
-        await storage.updateServer(serverId, { status: 'restoring' });
+        await storage.updateServer(serverId, { 
+          status: 'restoring',
+          lastMonitored: new Date()
+        });
+        
+        // Set a timeout to automatically check and update the status after the restore
+        setTimeout(async () => {
+          try {
+            const server = await storage.getServer(serverId);
+            if (server && server.status === 'restoring') {
+              // Only update if it's still in 'restoring' state to avoid overwriting other status changes
+              console.log(`Auto-checking restore status for server ${serverId}`);
+              await storage.updateServer(serverId, {
+                status: 'active',
+                lastMonitored: new Date()
+              });
+              console.log(`Server ${serverId} restore status automatically updated to 'active'`);
+            }
+          } catch (error) {
+            console.error(`Error auto-updating restore status for server ${serverId}:`, error);
+          }
+        }, 120000); // 2 minutes should be enough for most restore operations
       } catch (err) {
         console.error(`Error during snapshot restore: ${err}`);
         // Even if Digital Ocean fails, we can simulate success in development
         if (process.env.NODE_ENV !== 'production') {
           console.log(`[DEV] Simulating successful snapshot restore despite DO API error`);
-          await storage.updateServer(serverId, { status: 'restoring' });
+          await storage.updateServer(serverId, { 
+            status: 'restoring',
+            lastMonitored: new Date() 
+          });
         } else {
           throw err; // In production, propagate the error
         }
