@@ -413,7 +413,7 @@ export default function AdminDashboard() {
   // Reboot server mutation
   const rebootServerMutation = useMutation({
     mutationFn: async (serverId: number) => {
-      await apiRequest('POST', `/api/servers/${serverId}/reboot`);
+      await apiRequest('POST', `/api/servers/${serverId}/actions/reboot`);
       return serverId;
     },
     onSuccess: () => {
@@ -1240,6 +1240,157 @@ export default function AdminDashboard() {
               ) : (
                 <div className="text-center py-8 text-red-500">Failed to load servers</div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Volumes Tab */}
+        <TabsContent value="volumes" className="space-y-4">
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle>Volume Management</CardTitle>
+              <CardDescription>Manage attached and unattached volumes across the platform</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
+                <Input 
+                  placeholder="Search volumes by name or region..."
+                  className="max-w-md"
+                />
+                
+                <div className="flex gap-2">
+                  <Select defaultValue="all">
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter volumes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Volumes</SelectItem>
+                      <SelectItem value="attached">Attached Volumes</SelectItem>
+                      <SelectItem value="unattached">Unattached Volumes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={() => window.open('https://cloud.digitalocean.com/volumes', '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    <span>Open DO Console</span>
+                  </Button>
+                </div>
+              </div>
+              
+              <Table>
+                <TableCaption>List of all storage volumes on the platform</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Size (GB)</TableHead>
+                    <TableHead>Server ID</TableHead>
+                    <TableHead>Region</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Volume ID</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {/* Example placeholder volume data - would be populated from API */}
+                  <TableRow>
+                    <TableCell className="font-medium">1</TableCell>
+                    <TableCell>data-volume-nyc1-01</TableCell>
+                    <TableCell>100</TableCell>
+                    <TableCell>
+                      <Link href="/servers/51" className="text-blue-600 hover:underline">51</Link>
+                    </TableCell>
+                    <TableCell>nyc1</TableCell>
+                    <TableCell>
+                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">attached</span>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">vol-nyc1-01</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Detach
+                        </Button>
+                        <Button variant="destructive" size="sm">
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">2</TableCell>
+                    <TableCell>backup-volume-sfo3-01</TableCell>
+                    <TableCell>250</TableCell>
+                    <TableCell>-</TableCell>
+                    <TableCell>sfo3</TableCell>
+                    <TableCell>
+                      <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-800">unattached</span>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">vol-sfo3-01</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Server className="h-4 w-4 mr-1" />
+                          Attach
+                        </Button>
+                        <Button variant="destructive" size="sm">
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Volume Analytics</CardTitle>
+              <CardDescription>Storage allocation across the platform</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Total Storage</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">350 GB</div>
+                    <p className="text-xs text-muted-foreground">Across 2 volumes</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Attached Storage</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">100 GB</div>
+                    <p className="text-xs text-muted-foreground">28.6% of total storage</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Unattached Storage</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">250 GB</div>
+                    <p className="text-xs text-muted-foreground">71.4% of total storage</p>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="text-sm text-muted-foreground italic mb-4">
+                Note: These are placeholder statistics. Real data would be calculated from the database.
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
