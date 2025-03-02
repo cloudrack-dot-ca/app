@@ -268,16 +268,48 @@ export default function VolumeManagement({
                       <span className="font-mono text-xs">{volume.volumeId}</span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
+                        {volume.serverId ? (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            title="Detach volume from server"
+                            onClick={() => {
+                              window.open(`/servers/${volume.serverId}`, '_blank');
+                            }}
+                          >
+                            Detach
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            disabled
+                            title="Volume is already detached"
+                          >
+                            Attach
+                          </Button>
+                        )}
                         <Button 
-                          variant="ghost" 
-                          size="icon"
-                          title="View volume details"
+                          variant="outline" 
+                          size="sm"
                           onClick={() => {
-                            window.open(`https://cloud.digitalocean.com/volumes/${volume.volumeId}`, '_blank');
+                            window.open(`/servers/${volume.serverId}`, '_blank');
                           }}
                         >
-                          <ExternalLink className="h-4 w-4" />
+                          Resize
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          title="Permanently delete volume"
+                          onClick={() => {
+                            if (confirm("Are you sure you want to delete this volume? This action cannot be undone.")) {
+                              window.open(`/servers/${volume.serverId}`, '_blank');
+                            }
+                          }}
+                        >
+                          Delete
                         </Button>
                       </div>
                     </TableCell>
