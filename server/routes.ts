@@ -2466,9 +2466,25 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
             serverUpdateData.ipv6Address = dropletDetails.droplet.networks.v6[0].ip_address;
           }
           
-          // Update server status
+          // Update server status directly from DigitalOcean API
           if (dropletDetails.droplet.status) {
-            serverUpdateData.status = dropletDetails.droplet.status;
+            // Map DigitalOcean status values to our application's status values
+            let mappedStatus = dropletDetails.droplet.status;
+            
+            // Log the actual status from DigitalOcean for debugging
+            console.log(`[STATUS DEBUG] Server ${serverId} DO status: ${dropletDetails.droplet.status}`);
+            
+            // Simplify status representation
+            if (mappedStatus === 'active' || mappedStatus === 'running') {
+              serverUpdateData.status = 'active';
+            } else if (mappedStatus === 'new' || mappedStatus === 'off') {
+              serverUpdateData.status = 'off';
+            } else {
+              // Pass through any other statuses as-is
+              serverUpdateData.status = mappedStatus;
+            }
+            
+            console.log(`[STATUS DEBUG] Server ${serverId} mapped status: ${serverUpdateData.status}`);
           }
           
           await storage.updateServer(serverId, serverUpdateData);

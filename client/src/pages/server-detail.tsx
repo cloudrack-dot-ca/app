@@ -697,7 +697,10 @@ export default function ServerDetailPage() {
           {server.status === "active" && <span className="h-2 w-2 mr-1 rounded-full bg-green-500 inline-block" />}
           {server.status === "off" && <span className="h-2 w-2 mr-1 rounded-full bg-gray-500 inline-block" />}
           {server.status === "restoring" && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-          {server.status}
+          {server.status === "active" ? "Running" : 
+           server.status === "off" ? "Offline" : 
+           server.status === "restoring" ? "Restoring" : 
+           server.status}
         </Badge>
       </div>
 
