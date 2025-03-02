@@ -1024,7 +1024,8 @@ export default function ServerDetailPage() {
                   </div>
                   
                   {/* Network Usage Monitoring */}
-                  <div className="mt-4">
+                  <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
+                    <h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-2">Bandwidth Monitoring</h3>
                     <NetworkUsage serverId={serverId} size={server.size} />
                   </div>
                 </div>

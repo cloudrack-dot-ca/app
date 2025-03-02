@@ -43,8 +43,10 @@ const NetworkIcon = () => (
 
 export default function NetworkUsage({ serverId, size }: NetworkUsageProps) {
   // Get bandwidth data from the server
-  const { data: bandwidthData, isLoading } = useQuery<BandwidthData>({
+  const { data: bandwidthData, isLoading, isError, error } = useQuery<BandwidthData>({
     queryKey: [`/api/servers/${serverId}/bandwidth`],
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 60000, // Refresh every minute
   });
 
   // Determine bandwidth cap based on the server size
