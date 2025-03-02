@@ -1,4 +1,4 @@
-import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, serverMetrics, ipBans, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey, type ServerMetric, type IPBan, type InsertIPBan } from "@shared/schema";
+import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, serverMetrics, ipBans, snapshots, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey, type ServerMetric, type IPBan, type InsertIPBan, type Snapshot, type InsertSnapshot } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, isNull } from "drizzle-orm";
 import session from "express-session";
@@ -66,6 +66,14 @@ export interface IStorage {
   createIPBan(ban: Omit<IPBan, "id" | "createdAt">): Promise<IPBan>;
   updateIPBan(id: number, updates: Partial<IPBan>): Promise<IPBan>;
   deleteIPBan(id: number): Promise<void>;
+  
+  // Snapshot functionality
+  getSnapshot(id: number): Promise<Snapshot | undefined>;
+  getSnapshotsByServer(serverId: number): Promise<Snapshot[]>;
+  getSnapshotsByUser(userId: number): Promise<Snapshot[]>;
+  createSnapshot(snapshot: Omit<Snapshot, "id">): Promise<Snapshot>;
+  updateSnapshot(id: number, updates: Partial<Snapshot>): Promise<Snapshot>;
+  deleteSnapshot(id: number): Promise<void>;
   
   sessionStore: session.Store;
 }
@@ -455,6 +463,47 @@ export class DatabaseStorage implements IStorage {
 
   async deleteIPBan(id: number): Promise<void> {
     await db.delete(ipBans).where(eq(ipBans.id, id));
+  }
+
+  // Snapshot implementation
+  async getSnapshot(id: number): Promise<Snapshot | undefined> {
+    const [snapshot] = await db.select()
+      .from(snapshots)
+      .where(eq(snapshots.id, id));
+    return snapshot;
+  }
+
+  async getSnapshotsByServer(serverId: number): Promise<Snapshot[]> {
+    return await db.select()
+      .from(snapshots)
+      .where(eq(snapshots.serverId, serverId))
+      .orderBy(desc(snapshots.createdAt));
+  }
+
+  async getSnapshotsByUser(userId: number): Promise<Snapshot[]> {
+    return await db.select()
+      .from(snapshots)
+      .where(eq(snapshots.userId, userId))
+      .orderBy(desc(snapshots.createdAt));
+  }
+
+  async createSnapshot(snapshot: Omit<Snapshot, "id">): Promise<Snapshot> {
+    const [newSnapshot] = await db.insert(snapshots)
+      .values(snapshot)
+      .returning();
+    return newSnapshot;
+  }
+
+  async updateSnapshot(id: number, updates: Partial<Snapshot>): Promise<Snapshot> {
+    const [updatedSnapshot] = await db.update(snapshots)
+      .set(updates)
+      .where(eq(snapshots.id, id))
+      .returning();
+    return updatedSnapshot;
+  }
+
+  async deleteSnapshot(id: number): Promise<void> {
+    await db.delete(snapshots).where(eq(snapshots.id, id));
   }
 }
 

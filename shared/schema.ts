@@ -114,6 +114,20 @@ export const ipBans = pgTable("ip_bans", {
   isActive: boolean("is_active").notNull().default(true),
 });
 
+// Snapshots table for storing server snapshots
+export const snapshots = pgTable("snapshots", {
+  id: serial("id").primaryKey(),
+  serverId: integer("server_id").notNull(),
+  userId: integer("user_id").notNull(),
+  name: text("name").notNull(),
+  snapshotId: text("snapshot_id").notNull(),
+  sizeGb: integer("size_gb").notNull(), // Size in GB
+  description: text("description"),
+  status: text("status").notNull().default("in-progress"), // in-progress, completed, error
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"), // Optional expiration date for auto-delete
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -177,6 +191,14 @@ export const insertIPBanSchema = createInsertSchema(ipBans).pick({
   expiresAt: z.date().optional(),
 });
 
+export const insertSnapshotSchema = createInsertSchema(snapshots).pick({
+  serverId: true,
+  name: true,
+  description: true,
+}).extend({
+  expiresAt: z.date().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Server = typeof servers.$inferSelect;
@@ -189,3 +211,5 @@ export type InsertSSHKey = z.infer<typeof insertSSHKeySchema>;
 export type SSHKey = typeof sshKeys.$inferSelect;
 export type InsertIPBan = z.infer<typeof insertIPBanSchema>;
 export type IPBan = typeof ipBans.$inferSelect;
+export type InsertSnapshot = z.infer<typeof insertSnapshotSchema>;
+export type Snapshot = typeof snapshots.$inferSelect;
