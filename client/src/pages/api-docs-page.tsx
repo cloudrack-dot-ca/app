@@ -25,7 +25,7 @@ export default function ApiDocsPage() {
     requestSample?: string;
     responseSample: string;
   }) => {
-    const baseUrl = "https://api.cloudrack.com";
+    const baseUrl = "https://api.cloudrack.ca";
     const fullEndpoint = `${baseUrl}${endpoint}`;
     const isCopied = copiedEndpoint === endpoint;
     
@@ -147,7 +147,7 @@ export default function ApiDocsPage() {
                 </p>
                 <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs">
                   <code>
-                    {`curl -X GET https://api.cloudrack.com/v1/servers \\
+                    {`curl -X GET https://api.cloudrack.ca/v1/servers \\
   -H "X-API-Key: YOUR_API_KEY"`}
                   </code>
                 </pre>

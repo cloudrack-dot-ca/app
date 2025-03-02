@@ -199,7 +199,7 @@ export default function ApiKeyPage() {
               </p>
               <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                 <code>
-                  {`curl -X GET https://api.cloudrack.com/v1/servers \\
+                  {`curl -X GET https://api.cloudrack.ca/v1/servers \\
   -H "X-API-Key: YOUR_API_KEY"`}
                 </code>
               </pre>
@@ -209,7 +209,7 @@ export default function ApiKeyPage() {
               <h4>List Servers</h4>
               <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                 <code>
-                  {`curl -X GET https://api.cloudrack.com/v1/servers \\
+                  {`curl -X GET https://api.cloudrack.ca/v1/servers \\
   -H "X-API-Key: YOUR_API_KEY"`}
                 </code>
               </pre>
@@ -217,7 +217,7 @@ export default function ApiKeyPage() {
               <h4>Get Server Details</h4>
               <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                 <code>
-                  {`curl -X GET https://api.cloudrack.com/v1/servers/SERVER_ID \\
+                  {`curl -X GET https://api.cloudrack.ca/v1/servers/SERVER_ID \\
   -H "X-API-Key: YOUR_API_KEY"`}
                 </code>
               </pre>
@@ -225,7 +225,7 @@ export default function ApiKeyPage() {
               <h4>Reboot Server</h4>
               <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                 <code>
-                  {`curl -X POST https://api.cloudrack.com/v1/servers/SERVER_ID/reboot \\
+                  {`curl -X POST https://api.cloudrack.ca/v1/servers/SERVER_ID/reboot \\
   -H "X-API-Key: YOUR_API_KEY"`}
                 </code>
               </pre>

@@ -384,17 +384,17 @@ export function registerAdminRoutes(app: Express) {
       volumes.push(...unattachedVolumes);
 
       // Calculate total storage
-      const totalStorage = volumes.reduce((total, volume) => total + volume.sizeGb, 0);
+      const totalStorage = volumes.reduce((total, volume) => total + volume.size, 0);
       
       // Calculate attached storage
       const attachedStorage = volumes
         .filter(volume => volume.serverId !== null)
-        .reduce((total, volume) => total + volume.sizeGb, 0);
+        .reduce((total, volume) => total + volume.size, 0);
       
       // Calculate unattached storage
       const unattachedStorage = volumes
         .filter(volume => volume.serverId === null)
-        .reduce((total, volume) => total + volume.sizeGb, 0);
+        .reduce((total, volume) => total + volume.size, 0);
       
       // Return stats
       res.status(200).json({
