@@ -159,40 +159,113 @@ export default function TerminalPage() {
     term.clear();
     term.write('\r\n\x1b[33mConnecting to server...\x1b[0m\r\n');
     
-    // Create WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socket = new WebSocket(`${protocol}//${window.location.host}/terminal/${id}`);
+    // Set up Socket.IO connection - matches the server terminal handler
+    const { io } = require('socket.io-client');
+    
+    // Debug logging
+    console.log(`Connecting to Socket.IO for server ID: ${id}, userId: ${user?.id}`);
+    
+    // Create Socket.IO connection with query parameters
+    const socket = io('/', {
+      query: {
+        serverId: id.toString(),
+        userId: user?.id.toString()
+      },
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+    
     socketRef.current = socket;
     
-    socket.onopen = () => {
-      term.clear();
-      term.write('\r\n\x1b[32mConnected! Authenticating...\x1b[0m\r\n');
-      setIsConnected(true);
-    };
+    // Debug server connection progress
+    term.clear();
+    term.write('\r\n\x1b[33mConnecting to terminal server...\x1b[0m\r\n');
     
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'data') {
-        term.write(data.data);
-      } else if (data.type === 'error') {
-        term.write(`\r\n\x1b[31mError: ${data.message}\x1b[0m\r\n`);
+    // Terminal connection status handlers
+    socket.on('connect', () => {
+      console.log('Socket.IO connected successfully');
+      term.write('\r\n\x1b[36mSocket connected, establishing SSH connection...\x1b[0m\r\n');
+    });
+    
+    socket.on('status', (status) => {
+      console.log('Terminal status update:', status);
+      
+      if (status.status === 'connecting') {
+        term.write(`\r\n\x1b[33m${status.message || 'Connecting to server...'}\x1b[0m\r\n`);
+      } else if (status.status === 'connected') {
+        term.clear();
+        term.write(`\r\n\x1b[32m${status.message || 'Connected!'}\x1b[0m\r\n\r\n`);
+        setIsConnected(true);
+      } else if (status.status === 'auth_in_progress') {
+        term.write(`\r\n\x1b[33m${status.message || 'Authenticating...'}\x1b[0m\r\n`);
+      } else if (status.status === 'disconnected') {
+        term.write('\r\n\x1b[31mDisconnected from server\x1b[0m\r\n');
+        setIsConnected(false);
       }
-    };
+    });
     
-    socket.onclose = () => {
+    socket.on('ready', () => {
+      console.log('Terminal ready');
+      term.clear();
+      term.write('\r\n\x1b[32mTerminal session ready!\x1b[0m\r\n\r\n');
+      
+      // Fit terminal after connection to ensure proper sizing
+      setTimeout(() => {
+        if (fitAddon.current) {
+          fitAddon.current.fit();
+        }
+      }, 200);
+    });
+    
+    socket.on('data', (data) => {
+      // Data from the server
+      if (typeof data === 'string') {
+        term.write(data);
+      }
+    });
+    
+    socket.on('error', (errorMsg) => {
+      console.error('Terminal error:', errorMsg);
+      term.write(`\r\n\x1b[31mError: ${errorMsg}\x1b[0m\r\n`);
+      setIsConnected(false);
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('Socket.IO disconnected');
       term.write('\r\n\x1b[31mConnection closed\x1b[0m\r\n');
       setIsConnected(false);
-    };
+    });
     
-    socket.onerror = (error) => {
-      term.write(`\r\n\x1b[31mWebSocket error: ${JSON.stringify(error)}\x1b[0m\r\n`);
+    socket.on('connect_error', (error) => {
+      console.error('Socket.IO connection error:', error);
+      term.write(`\r\n\x1b[31mConnection error: ${error.message}\x1b[0m\r\n`);
       setIsConnected(false);
-    };
+    });
     
-    // Handle terminal input
+    // Forward terminal input to the server
     term.onData((data) => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'data', data }));
+      if (socket.connected) {
+        socket.emit('data', data);
+      }
+    });
+    
+    // Handle terminal resize
+    fitAddon.current.fit();
+    const size = {
+      cols: term.cols,
+      rows: term.rows
+    };
+    socket.emit('resize', size);
+    
+    // Set resize handler
+    term.onResize((dimensions) => {
+      if (socket.connected) {
+        socket.emit('resize', {
+          cols: dimensions.cols,
+          rows: dimensions.rows
+        });
       }
     });
   };
@@ -201,11 +274,19 @@ export default function TerminalPage() {
     if (terminalInstance.current) {
       // Close existing socket if any
       if (socketRef.current) {
-        socketRef.current.close();
+        // For Socket.IO
+        if (typeof socketRef.current.disconnect === 'function') {
+          socketRef.current.disconnect();
+        }
+        // For regular WebSocket
+        else if (typeof socketRef.current.close === 'function') {
+          socketRef.current.close();
+        }
         socketRef.current = null;
       }
       
       // Connect to server again
+      console.log("Reconnecting to terminal server...");
       connectToServer(terminalInstance.current);
     }
   };
