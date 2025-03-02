@@ -1022,6 +1022,11 @@ export default function ServerDetailPage() {
                       Outbound data transfer is limited to {server.specs?.disk ? Math.max(1, Math.floor(server.specs.disk/25)) : 1}TB per month.
                     </p>
                   </div>
+                  
+                  {/* Network Usage Monitoring */}
+                  <div className="mt-4">
+                    <NetworkUsage serverId={serverId} size={server.size} />
+                  </div>
                 </div>
               </div>
 
