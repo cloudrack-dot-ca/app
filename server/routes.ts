@@ -2071,6 +2071,218 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       });
     }
   });
+  
+  // Get all snapshots for a server
+  app.get("/api/servers/:id/snapshots", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const serverId = parseInt(req.params.id);
+      const server = await storage.getServer(serverId);
+      
+      if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
+        return res.sendStatus(404);
+      }
+      
+      // Get all snapshots for this server
+      const snapshots = await storage.getSnapshotsByServer(serverId);
+      
+      return res.json(snapshots);
+    } catch (error) {
+      console.error(`Error getting server snapshots:`, error);
+      res.status(500).json({ 
+        message: "Failed to retrieve server snapshots",
+        error: (error as Error).message
+      });
+    }
+  });
+  
+  // Create a new snapshot for a server
+  app.post("/api/servers/:id/snapshots", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const serverId = parseInt(req.params.id);
+      const server = await storage.getServer(serverId);
+      
+      if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
+        return res.sendStatus(404);
+      }
+      
+      // Check if user already has 2 snapshots for this server (limit)
+      const existingSnapshots = await storage.getSnapshotsByServer(serverId);
+      if (existingSnapshots.length >= 2) {
+        return res.status(400).json({
+          message: "Snapshot limit reached. Delete an existing snapshot before creating a new one."
+        });
+      }
+      
+      const { name } = req.body;
+      if (!name || typeof name !== 'string' || name.trim() === '') {
+        return res.status(400).json({ message: "Valid snapshot name is required" });
+      }
+      
+      // Create the snapshot in DigitalOcean
+      const snapshotId = await digitalOcean.createDropletSnapshot(server.dropletId, name);
+      
+      // Get server specs to calculate size
+      const serverSize = server.specs?.disk || 25; // Default to 25GB if not specified
+      
+      // Create the snapshot record in our database
+      const newSnapshot = await storage.createSnapshot({
+        userId: server.userId,
+        serverId: serverId,
+        name: name,
+        snapshotId: snapshotId,
+        sizeGb: serverSize,
+        createdAt: new Date(),
+        status: 'creating'
+      });
+      
+      // Create a billing transaction for the snapshot
+      // Snapshots are billed at $0.06 per GB per month + 0.5% markup
+      const pricePerGbPerMonth = 0.06 * 1.005; // With 0.5% markup
+      const costInDollars = pricePerGbPerMonth * serverSize;
+      
+      await storage.createTransaction({
+        userId: server.userId,
+        amount: toCents(costInDollars),
+        type: 'charge',
+        status: 'completed',
+        description: `Snapshot creation: ${name} (${serverSize}GB)`,
+        createdAt: new Date()
+      });
+      
+      // Deduct the cost from user balance
+      await storage.updateUserBalance(server.userId, -toCents(costInDollars));
+      
+      return res.status(201).json(newSnapshot);
+    } catch (error) {
+      console.error(`Error creating snapshot:`, error);
+      res.status(500).json({ 
+        message: "Failed to create snapshot",
+        error: (error as Error).message
+      });
+    }
+  });
+  
+  // Get a specific snapshot
+  app.get("/api/snapshots/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const snapshotId = parseInt(req.params.id);
+      const snapshot = await storage.getSnapshot(snapshotId);
+      
+      if (!snapshot || (snapshot.userId !== req.user.id && !req.user.isAdmin)) {
+        return res.sendStatus(404);
+      }
+      
+      // Get detailed info from DigitalOcean
+      try {
+        const snapshotDetails = await digitalOcean.getSnapshotDetails(snapshot.snapshotId);
+        
+        // Update the snapshot size if it's different
+        if (snapshotDetails.size_gigabytes !== snapshot.sizeGb) {
+          await storage.updateSnapshot(snapshot.id, {
+            sizeGb: snapshotDetails.size_gigabytes
+          });
+          snapshot.sizeGb = snapshotDetails.size_gigabytes;
+        }
+        
+        return res.json({
+          ...snapshot,
+          details: snapshotDetails
+        });
+      } catch (doError) {
+        console.warn(`Error getting DigitalOcean snapshot details:`, doError);
+        // Return basic info if DO API fails
+        return res.json(snapshot);
+      }
+    } catch (error) {
+      console.error(`Error getting snapshot details:`, error);
+      res.status(500).json({ 
+        message: "Failed to retrieve snapshot details",
+        error: (error as Error).message
+      });
+    }
+  });
+  
+  // Delete a snapshot
+  app.delete("/api/snapshots/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const snapshotId = parseInt(req.params.id);
+      const snapshot = await storage.getSnapshot(snapshotId);
+      
+      if (!snapshot || (snapshot.userId !== req.user.id && !req.user.isAdmin)) {
+        return res.sendStatus(404);
+      }
+      
+      // Delete from DigitalOcean
+      try {
+        await digitalOcean.deleteSnapshot(snapshot.snapshotId);
+      } catch (doError) {
+        console.warn(`Error deleting DigitalOcean snapshot:`, doError);
+        // Continue with DB deletion even if DO deletion fails
+      }
+      
+      // Delete from database
+      await storage.deleteSnapshot(snapshotId);
+      
+      // We don't refund snapshot costs - they are non-refundable
+      
+      return res.status(200).json({ message: "Snapshot deleted successfully" });
+    } catch (error) {
+      console.error(`Error deleting snapshot:`, error);
+      res.status(500).json({ 
+        message: "Failed to delete snapshot",
+        error: (error as Error).message
+      });
+    }
+  });
+  
+  // Restore a server from a snapshot
+  app.post("/api/servers/:id/restore", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const serverId = parseInt(req.params.id);
+      const server = await storage.getServer(serverId);
+      
+      if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
+        return res.sendStatus(404);
+      }
+      
+      const { snapshotId } = req.body;
+      if (!snapshotId) {
+        return res.status(400).json({ message: "Snapshot ID is required" });
+      }
+      
+      const snapshot = await storage.getSnapshot(parseInt(snapshotId));
+      if (!snapshot || snapshot.userId !== req.user.id) {
+        return res.status(404).json({ message: "Snapshot not found" });
+      }
+      
+      // Restore the server from the snapshot
+      await digitalOcean.restoreDropletFromSnapshot(server.dropletId, snapshot.snapshotId);
+      
+      // Update server status to indicate restore in progress
+      await storage.updateServer(serverId, { status: 'restoring' });
+      
+      return res.json({ 
+        message: "Server restore initiated successfully",
+        status: 'restoring' 
+      });
+    } catch (error) {
+      console.error(`Error restoring server from snapshot:`, error);
+      res.status(500).json({ 
+        message: "Failed to restore server from snapshot",
+        error: (error as Error).message
+      });
+    }
+  });
 
   // Force refresh metrics for a server
   app.post("/api/servers/:id/metrics/refresh", async (req, res) => {

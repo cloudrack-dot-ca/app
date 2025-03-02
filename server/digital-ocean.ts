@@ -1572,7 +1572,7 @@ runcmd:
           type: string;
           resource_id: number;
         }
-      }>("POST", url, {
+      }>("POST" as any, url, {
         type: "snapshot",
         name: name
       });
@@ -1621,7 +1621,7 @@ runcmd:
     try {
       console.log(`Getting real snapshots for DigitalOcean droplet ${dropletId}`);
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/snapshots`;
-      const response = await this.apiRequest<{ snapshots: any[] }>("GET", url);
+      const response = await this.apiRequest<{ snapshots: any[] }>("GET" as any, url);
       
       return response.snapshots.map(snapshot => ({
         id: snapshot.id,
