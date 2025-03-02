@@ -893,16 +893,6 @@ export default function ServerDetailPage() {
                     Fullscreen Terminal
                   </Button>
                 </Link>
-                
-                <Link href={`/servers/${serverId}/bandwidth-details`}>
-                  <Button 
-                    variant="outline" 
-                    className="w-full mt-2"
-                  >
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    View Bandwidth
-                  </Button>
-                </Link>
 
                 <Separator />
 
@@ -1281,21 +1271,6 @@ export default function ServerDetailPage() {
                       )}
                     </CardContent>
                   </Card>
-
-                  {/* Network Performance Hint */}
-                  <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md p-3 text-xs">
-                    <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Network Performance</p>
-                    <p className="text-blue-600 dark:text-blue-400">
-                      Your server includes {server.size.includes('g-') ? '1Gbps' : '500Mbps'} network throughput. 
-                      Outbound data transfer is limited to {server.specs?.disk ? Math.max(1, Math.floor(server.specs.disk/25)) : 1}TB per month.
-                    </p>
-                  </div>
-                  
-                  {/* Network Usage Monitoring */}
-                  <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
-                    <h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-2">Bandwidth Monitoring</h3>
-                    <NetworkUsage serverId={serverId} size={server.size} />
-                  </div>
                 </div>
               </div>
 
@@ -1468,17 +1443,56 @@ export default function ServerDetailPage() {
         
         {/* Metrics Tab */}
         <TabsContent value="metrics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Metrics</CardTitle>
-              <CardDescription>
-                Monitor your server's resource usage and performance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ServerMonitoring serverId={serverId} />
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 gap-6">
+            {/* Server Performance Metrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Performance Metrics</CardTitle>
+                <CardDescription>
+                  Monitor your server's resource usage and performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ServerMonitoring serverId={serverId} />
+              </CardContent>
+            </Card>
+            
+            {/* Network Performance & Bandwidth Monitoring */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Network Performance</CardTitle>
+                <CardDescription>
+                  Network throughput and bandwidth usage
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Network Performance Info */}
+                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                  <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Network Throughput</p>
+                  <p className="text-blue-600 dark:text-blue-400">
+                    Your server includes {server.size.includes('g-') ? '1Gbps' : '500Mbps'} network throughput. 
+                    Outbound data transfer is limited to {server.specs?.disk ? Math.max(1, Math.floor(server.specs.disk/25)) : 1}TB per month.
+                  </p>
+                </div>
+                
+                {/* Network Usage Monitoring */}
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
+                  <h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-2">Bandwidth Monitoring</h3>
+                  <NetworkUsage serverId={serverId} size={server.size} />
+                </div>
+                
+                {/* Bandwidth Details Link */}
+                <div className="flex justify-end">
+                  <Link href={`/servers/${serverId}/bandwidth-details`}>
+                    <Button variant="outline" size="sm">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      View Detailed Bandwidth Analytics
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Console Tab */}
