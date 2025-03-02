@@ -120,11 +120,11 @@ export default function NetworkUsage({ serverId, size }: NetworkUsageProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
+    <Card className="border-2 border-primary/20 shadow-md">
+      <CardHeader className="pb-2 bg-primary/5">
+        <CardTitle className="flex items-center gap-2 text-primary">
           <NetworkIcon />
-          <span>Network Usage</span>
+          <span>Network Usage & Bandwidth Monitoring</span>
         </CardTitle>
         <CardDescription>
           Monthly bandwidth consumption
@@ -143,48 +143,78 @@ export default function NetworkUsage({ serverId, size }: NetworkUsageProps) {
           </TooltipProvider>
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4">
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-sm">
-              Used: <span className="font-medium">{formatBandwidth(bandwidthData.current)}</span>
-            </span>
-            <span className="text-sm">
-              Limit: <span className="font-medium">{formatBandwidth(bandwidthData.limit)}</span>
-            </span>
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 gap-4 mb-2">
+            <div className="bg-primary/5 p-3 rounded-md">
+              <div className="text-xs text-muted-foreground mb-1">Current Usage</div>
+              <div className="text-2xl font-semibold">{formatBandwidth(bandwidthData.current)}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Last updated: {new Date(bandwidthData.lastUpdated).toLocaleString()}
+              </div>
+            </div>
+            <div className="bg-primary/5 p-3 rounded-md">
+              <div className="text-xs text-muted-foreground mb-1">Monthly Limit</div>
+              <div className="text-2xl font-semibold">{formatBandwidth(bandwidthData.limit)}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Resets on {new Date(bandwidthData.periodEnd).toLocaleDateString()}
+              </div>
+            </div>
           </div>
           
-          <Progress 
-            value={Math.min(100, bandwidthInfo?.usagePercent || 0)} 
-            className={`h-2 ${
-              bandwidthInfo?.isOverLimit 
-                ? "[&>div]:bg-destructive" 
-                : bandwidthInfo?.isCloseToLimit 
-                ? "[&>div]:bg-amber-500" 
-                : ""
-            }`}
-          />
+          {/* Usage percentage */}
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm font-medium">Usage: {bandwidthInfo?.usagePercent.toFixed(1)}%</span>
+              <span className="text-xs text-muted-foreground">
+                {formatBandwidth(bandwidthInfo?.remaining || 0)} remaining
+              </span>
+            </div>
+            <Progress 
+              value={Math.min(100, bandwidthInfo?.usagePercent || 0)} 
+              className={`h-3 ${
+                bandwidthInfo?.isOverLimit 
+                  ? "[&>div]:bg-destructive" 
+                  : bandwidthInfo?.isCloseToLimit 
+                  ? "[&>div]:bg-amber-500" 
+                  : "[&>div]:bg-primary"
+              }`}
+            />
+          </div>
           
-          <div className="text-sm text-muted-foreground">
+          {/* Status message */}
+          <div className="text-sm">
             {bandwidthInfo?.isOverLimit ? (
-              <div className="text-destructive">
-                <AlertCircle className="h-4 w-4 inline-block mr-1" />
-                You've exceeded your bandwidth limit. Additional usage is charged at ${bandwidthData.overageRate.toFixed(3)} per GB.
+              <div className="text-destructive flex items-start">
+                <AlertCircle className="h-4 w-4 mt-0.5 mr-1.5 flex-shrink-0" />
+                <div>
+                  <span className="font-medium">Bandwidth Limit Exceeded</span>
+                  <p className="text-xs mt-0.5">Additional usage is charged at ${bandwidthData.overageRate.toFixed(3)} per GB (0.5% of monthly server cost).</p>
+                </div>
               </div>
             ) : bandwidthInfo?.isCloseToLimit ? (
-              <div className="text-amber-500">
-                <AlertCircle className="h-4 w-4 inline-block mr-1" />
-                You're at {bandwidthInfo.usagePercent.toFixed(1)}% of your monthly bandwidth limit.
+              <div className="text-amber-500 flex items-start">
+                <AlertCircle className="h-4 w-4 mt-0.5 mr-1.5 flex-shrink-0" />
+                <div>
+                  <span className="font-medium">Approaching Bandwidth Limit</span>
+                  <p className="text-xs mt-0.5">You're at {bandwidthInfo.usagePercent.toFixed(1)}% of your monthly bandwidth limit. Consider reducing data transfer or upgrading your plan.</p>
+                </div>
               </div>
             ) : (
-              <div>
-                {formatBandwidth(bandwidthInfo?.remaining || 0)} remaining until {new Date(bandwidthData.periodEnd).toLocaleDateString()}
+              <div className="text-green-600 dark:text-green-400 flex items-start">
+                <AlertCircle className="h-4 w-4 mt-0.5 mr-1.5 flex-shrink-0" />
+                <div>
+                  <span className="font-medium">Bandwidth Usage Normal</span>
+                  <p className="text-xs mt-0.5">Your usage is within the included monthly bandwidth limit.</p>
+                </div>
               </div>
             )}
           </div>
 
+          {/* Overage warning */}
           {bandwidthInfo?.isOverLimit && (
-            <Alert variant="destructive" className="mt-4">
+            <Alert variant="destructive" className="mt-2">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Bandwidth Overage</AlertTitle>
               <AlertDescription>
@@ -193,12 +223,17 @@ export default function NetworkUsage({ serverId, size }: NetworkUsageProps) {
             </Alert>
           )}
           
+          {/* Billing period info */}
+          <div className="bg-muted p-3 rounded-md text-xs">
+            <p><strong>Billing Period:</strong> {new Date(bandwidthData.periodStart).toLocaleDateString()} to {new Date(bandwidthData.periodEnd).toLocaleDateString()}</p>
+            <p><strong>Overage Rate:</strong> ${bandwidthData.overageRate.toFixed(3)}/GB (0.5% of server monthly cost)</p>
+            <p><strong>Billing Method:</strong> Overages are automatically calculated and charged at the end of each billing period</p>
+          </div>
+          
           <div className="flex justify-end pt-2">
-            <Button variant="outline" size="sm" className="flex items-center gap-1" asChild>
-              <a href="#" target="_blank" rel="noopener noreferrer">
-                <span>View Details</span>
-                <ExternalLink className="h-3 w-3" />
-              </a>
+            <Button variant="outline" size="sm" className="flex items-center gap-1">
+              <span>View Bandwidth Details</span>
+              <ExternalLink className="h-3 w-3" />
             </Button>
           </div>
         </div>
