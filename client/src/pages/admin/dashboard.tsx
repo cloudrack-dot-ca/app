@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight, KeyRound, AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, KeyRound, AlertTriangle, ExternalLink, RefreshCw, Download, HardDrive, ShieldAlert, LifeBuoy } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -530,7 +530,7 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
-        <TabsList className="grid grid-cols-6 w-full">
+        <TabsList className="grid grid-cols-7 w-full">
           <TabsTrigger value="overview" className="flex items-center">
             <Laptop className="h-4 w-4 mr-2" />
             Overview
@@ -542,6 +542,10 @@ export default function AdminDashboard() {
           <TabsTrigger value="servers" className="flex items-center">
             <Server className="h-4 w-4 mr-2" />
             Servers
+          </TabsTrigger>
+          <TabsTrigger value="volumes" className="flex items-center">
+            <HardDrive className="h-4 w-4 mr-2" />
+            Volumes
           </TabsTrigger>
           <TabsTrigger value="billing" className="flex items-center">
             <CircleDollarSign className="h-4 w-4 mr-2" />
