@@ -15,6 +15,7 @@ import TerminalPage from "@/pages/terminal-page";
 import AccountPage from "@/pages/account-page";
 import ApiKeyPage from "@/pages/api-key-page";
 import DocsPage from "@/pages/docs-page";
+import ApiDocsPage from "@/pages/api-docs-page";
 import AdminDashboard from "@/pages/admin/dashboard";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -98,6 +99,7 @@ function Router() {
         <Route path="/" component={HomePage} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/docs" component={DocsPage} />
+        <ProtectedRoute path="/api-docs" component={ApiDocsPage} />
         <ProtectedRoute path="/dashboard" component={Dashboard} />
         <ProtectedRoute path="/billing" component={BillingPage} />
         <ProtectedRoute path="/support" component={SupportPage} />

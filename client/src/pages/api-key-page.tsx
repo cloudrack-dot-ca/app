@@ -54,7 +54,8 @@ export default function ApiKeyPage() {
   // Create a mutation for regenerating the API key
   const regenerateKeyMutation = useMutation<RegenerateKeyResponse, Error, ApiKeyFormValues>({
     mutationFn: async (values: ApiKeyFormValues) => {
-      return await apiRequest('POST', '/api/account/api-key', values);
+      const response = await apiRequest('POST', '/api/account/api-key', values);
+      return response as unknown as RegenerateKeyResponse;
     },
     onSuccess: () => {
       toast({
@@ -230,8 +231,8 @@ export default function ApiKeyPage() {
               </pre>
               
               <p>
-                For more detailed API documentation, please visit the 
-                <a href="/docs" className="ml-1 text-primary hover:underline">Documentation page</a>.
+                For more detailed API documentation, please visit our 
+                <a href="/api-docs" className="ml-1 text-primary hover:underline">API Documentation page</a>.
               </p>
             </div>
           </CardContent>
