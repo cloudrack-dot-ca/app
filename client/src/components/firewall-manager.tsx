@@ -186,23 +186,28 @@ export default function FirewallManager({ serverId }: FirewallManagerProps) {
   // Delete a rule mutation
   const deleteRuleMutation = useMutation({
     mutationFn: async (data: { rule_type: 'inbound' | 'outbound', rule: FirewallRule }) => {
+      console.log("Deleting rule:", data);
       return apiRequest(
         'DELETE',
         `/api/servers/${serverId}/firewall/rules`,
         data
       );
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Rule deletion successful, response:", data);
       toast({
         title: "Rule deleted",
         description: "Firewall rule deleted successfully",
       });
       // Refresh both this component and parent components
-      refetch();
-      // Invalidate all firewall-related queries to ensure UI updates everywhere
-      queryClient.invalidateQueries({ queryKey: ['/api/servers', serverId, 'firewall'] });
+      setTimeout(() => {
+        refetch();
+        // Invalidate all firewall-related queries to ensure UI updates everywhere
+        queryClient.invalidateQueries({ queryKey: ['/api/servers', serverId, 'firewall'] });
+      }, 500); // Add a small delay to ensure backend has processed the change
     },
     onError: (error: Error) => {
+      console.error("Rule deletion failed:", error);
       toast({
         title: "Failed to delete rule",
         description: error.message,
