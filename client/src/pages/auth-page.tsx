@@ -50,7 +50,7 @@ export default function AuthPage() {
           <Server className="h-16 w-16 mx-auto mb-6 text-primary" />
           <h2 className="text-3xl font-bold mb-4">Cloud VPS Hosting</h2>
           <p className="text-muted-foreground">
-            Deploy your applications on high-performance virtual servers powered by DigitalOcean.
+            Deploy your applications on high-performance virtual servers powered by CloudRack.
             Choose from multiple locations worldwide and scale your infrastructure with ease.
           </p>
         </div>

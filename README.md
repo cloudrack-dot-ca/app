@@ -1,181 +1,275 @@
 # CloudRack VPS Hosting Platform
 
-CloudRack is a comprehensive VPS hosting reseller platform with advanced SSH terminal connection management and intelligent authentication workflows.
+CloudRack is a comprehensive cloud VPS hosting provider platform with advanced server management, SSH terminal access, and intelligent billing systems. This platform allows users to quickly deploy virtual servers across multiple global regions with various configurations to suit different workloads and budgets.
 
-## Features
+## 🚀 Core Features
 
-- React.js frontend with dynamic server management interface
-- Enhanced SSH terminal connection handler with customizable display options
-- Multiple font size options (8px, 10px, 11px, 14px default)
-- Advanced authentication method detection and fallback mechanisms
-- Intelligent firewall management with configurable polling
-- Support for multiple authentication methods (password, SSH key)
-- Detailed logging and status reporting for connection attempts
-- Integrated admin dashboard with billing and server statistics
+### Server Management
+- **Instant Provisioning**: Deploy servers in seconds with pre-configured applications or clean OS distributions
+- **Global Regions**: Choose from multiple datacenter locations worldwide
+- **Multiple Server Plans**: Options ranging from 1GB RAM starter servers to 16GB high-performance instances
+- **Custom Firewall Rules**: Configure inbound and outbound traffic rules with an intuitive interface
+- **Block Storage Volumes**: Add expandable SSD storage volumes that can be attached/detached from servers
 
-## Setup Instructions
+### Terminal & Access Management
+- **Integrated SSH Terminal**: Direct server access through web-based terminal
+- **Multiple Authentication Methods**: Support for password and SSH key authentication
+- **SSH Key Management**: Create, store and manage SSH keys for secure access
+- **Terminal Customization**: Adjustable font sizes and display settings
+
+### Monitoring & Metrics
+- **Real-time Server Metrics**: CPU, memory, disk, and network usage monitoring
+- **Performance History**: View historical performance data with interactive charts
+- **Network Usage Tracking**: Monitor bandwidth consumption with visual indicators
+- **Automated Alerts**: Get notified when servers approach resource limits
+
+### Billing & Account Management
+- **Pay-as-you-Go Model**: Only pay for the resources you use
+- **Hourly Billing**: Precise billing based on actual server usage
+- **Transparent Pricing**: Clear breakdown of all costs
+- **PayPal Integration**: Secure payment processing
+- **Transaction History**: Comprehensive record of all account transactions
+- **Downloadable Invoices**: Export transaction data as needed
+
+### Network & Bandwidth
+- **1TB Included Bandwidth**: Every server includes 1TB of outbound data transfer per month
+- **Bandwidth Monitoring**: Track usage through an intuitive dashboard
+- **Bandwidth Overage**: Automatic billing for usage beyond included limits at 0.5% of monthly server cost per GB
+- **Network Traffic Visualization**: See inbound and outbound data transfer rates
+
+### Security
+- **Firewall Protection**: Custom firewall rules for each server
+- **SSH Key Authentication**: Secure server access
+- **IP Banning System**: Protection against abuse
+- **Admin Security Tools**: Comprehensive security management for administrators
+
+### Support System
+- **Ticket Management**: Create and track support requests
+- **Priority Levels**: Set urgency for faster resolution of critical issues
+- **Server-Specific Support**: Attach tickets to specific servers for context
+- **Message Threading**: Ongoing communication in a threaded format
+
+## 📊 Server Plans & Pricing
+
+### Standard VPS Plans
+| Plan Name | Specs | Price (Hourly) | Price (Monthly Est.) |
+|-----------|-------|----------------|---------------------|
+| Starter   | 1GB RAM, 1 vCPU, 25GB SSD | $0.00704/hr | ~$5/month |
+| Basic     | 2GB RAM, 1 vCPU, 50GB SSD | $0.01407/hr | ~$10/month |
+| Standard  | 4GB RAM, 2 vCPU, 80GB SSD | $0.02814/hr | ~$20/month |
+
+### High Performance VPS Plans
+| Plan Name   | Specs | Price (Hourly) | Price (Monthly Est.) |
+|-------------|-------|----------------|---------------------|
+| Professional| 8GB RAM, 4 vCPU, 160GB SSD | $0.05632/hr | ~$40/month |
+| Premium     | 16GB RAM, 8 vCPU, 320GB SSD | $0.11264/hr | ~$80/month |
+
+### Additional Resources
+- **Block Storage**: $0.000141/GB/hour (~$0.10/GB/month)
+- **Bandwidth Overage**: $0.01005/GB for usage beyond the included 1TB
+- **Bandwidth Billing Method**: Charged at 0.5% of monthly server cost per GB of overage
+
+## 🛠️ Technical Architecture
+
+### Frontend Technology Stack
+- **React & TypeScript**: Modern, type-safe frontend development
+- **TanStack Query**: Efficient data fetching and caching
+- **Shadcn/UI & Tailwind CSS**: Beautiful, responsive design system
+- **Socket.IO Client**: Real-time terminal communication
+- **Recharts**: Interactive data visualization
+- **React Hook Form**: Form management with validation
+- **PayPal React Components**: Secure payment integration
+
+### Backend Technology Stack
+- **Node.js & Express**: Fast, scalable server architecture
+- **Drizzle ORM**: Type-safe database operations
+- **PostgreSQL**: Robust relational database
+- **Socket.IO**: Websocket communication for terminal access
+- **SSH2**: Secure shell protocol implementation
+- **Passport.js**: Authentication framework
+- **PayPal SDK**: Payment processing
+
+### Database Schema
+- **Users**: Account information and authentication
+- **Servers**: VPS instance configurations and status
+- **Volumes**: Block storage management
+- **Billing Transactions**: Payment and charge records
+- **Server Metrics**: Performance and usage data
+- **Support System**: Tickets and messages
+- **SSH Keys**: Secure access credentials
+- **Security**: IP ban system and access controls
+
+## 💻 Administration Features
+
+### User Management
+- View and search all registered users
+- Adjust user account balances
+- Toggle admin privileges
+- Suspend problematic accounts
+- View detailed user activity
+
+### Server Administration
+- Monitor all active servers across the platform
+- Track resource usage and allocation
+- Identify performance issues
+- Force shutdown problematic instances
+
+### Billing Oversight
+- View all financial transactions
+- Track revenue and usage patterns
+- Generate financial reports
+- Process manual adjustments when needed
+
+### Support System
+- Respond to customer tickets
+- Prioritize urgent issues
+- Track resolution times
+- Internal notes and status tracking
+
+### Security Controls
+- IP banning for abuse prevention
+- Monitor suspicious activity
+- System credentials management
+- Access logs and security monitoring
+
+## 🔧 Setup & Installation
 
 ### Prerequisites
-
 - Node.js (v18+)
 - PostgreSQL database
-- Digital Ocean API key (for production use)
+- PayPal Developer Account (for payment processing)
+- DigitalOcean API Key (for production deployment)
 
-### Environment Variables and Secrets
-
-The application uses both environment variables and Replit Secrets for configuration.
-
-#### Replit Secrets (Recommended for sensitive data)
-
-Add the following as Replit Secrets for secure storage:
-
+### Environment Configuration
+Required environment variables:
 ```
+DATABASE_URL=postgresql://username:password@localhost:5432/cloudrack
+SESSION_SECRET=your_session_secret_here
 PAYPAL_CLIENT_ID=your_paypal_client_id
 PAYPAL_CLIENT_SECRET=your_paypal_client_secret
 PAYPAL_MODE=sandbox  # Use 'live' for production
 DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
-DATABASE_URL=postgresql://username:password@localhost:5432/cloudrack
-SESSION_SECRET=your_session_secret_here
-FORCE_MOCK_FIREWALLS=true  # Optional: Set to 'true' to use mock firewalls
 ```
 
-#### Environment Variables (Alternative)
-
-You can also use a `.env` file in the root directory for development, but secrets are preferred for production:
-
-```
-DATABASE_URL=postgresql://username:password@localhost:5432/cloudrack
-SESSION_SECRET=your_session_secret_here
-```
-
-### Required Configuration
-
-1. **PayPal API Credentials**: Needed for payment processing
-   - PAYPAL_CLIENT_ID
-   - PAYPAL_CLIENT_SECRET
-   - Set PAYPAL_MODE to 'sandbox' for testing or 'live' for production
-
-2. **Digital Ocean API Key**: Required to create and manage VPS instances
-   - DIGITAL_OCEAN_API_KEY
-   - Can be obtained from the Digital Ocean developer dashboard
-
-3. **Database Connection String**: PostgreSQL connection URL
-   - DATABASE_URL
-
-4. **Firewall Configuration**:
-   - FORCE_MOCK_FIREWALLS: When set to 'true', the system will use mock firewalls instead of creating real Digital Ocean firewalls
-   - This is useful for development environments or when testing firewall UI without making actual API calls
-
-### Installation Steps
-
-1. Clone the repository
-2. Install dependencies:
+### Development Setup
+1. Install dependencies:
    ```
    npm install
    ```
-3. Set up the database:
+2. Set up the database:
    ```
    npm run db:push
    ```
-4. Start the application:
+3. Start the development server:
    ```
    npm run dev
    ```
+4. Access the application at http://localhost:5000
 
-## Architecture Overview
+### Production Deployment
+1. Build the production bundle:
+   ```
+   npm run build
+   ```
+2. Start the production server:
+   ```
+   npm start
+   ```
 
-### Frontend (React + TypeScript)
-- Built with React and TypeScript
-- Uses wouter for routing
-- TanStack Query for data fetching
-- Shadcn/UI for component library
-- TailwindCSS for styling
+## 📚 API Documentation
 
-### Backend (Node.js + Express)
-- Express.js server
-- Drizzle ORM for database interactions
-- Passport.js for authentication
-- Socket.IO for real-time terminal connections
+CloudRack provides a comprehensive API for programmatic management of all platform resources.
 
-### Database (PostgreSQL)
-- Stores user accounts, servers, transactions, and system data
-- Managed through Drizzle ORM
+### Authentication
+- API key-based authentication
+- Endpoint: `/api/auth/token`
+- Each user can generate personal API keys in account settings
 
-## User Roles
+### Server Management Endpoints
+- GET `/api/servers` - List all servers
+- POST `/api/servers` - Create a new server
+- GET `/api/servers/:id` - Get server details
+- DELETE `/api/servers/:id` - Delete a server
+- GET `/api/servers/:id/metrics` - Get server metrics
 
-1. **Regular Users**
-   - Can create and manage their own VPS servers
-   - Access SSH terminals for their servers
-   - Manage billing and payments
-   - Submit support tickets
+### Billing Endpoints
+- GET `/api/billing/transactions` - List billing transactions
+- POST `/api/billing/deposit` - Add funds to account
+- GET `/api/billing/transactions/:id/invoice` - Download invoice
 
-2. **Administrators**
-   - All regular user capabilities
-   - Access to admin dashboard
-   - Can view and manage all users, servers, and transactions
-   - Ability to respond to support tickets
-   - IP ban management for security
+### Full documentation available at `/api-docs` when in development mode
 
-## Usage Guide
+## 🔄 Bandwidth Billing System
 
-### Server Management
-1. Users can create servers with different configurations (RAM, CPU, region)
-2. Each server has a built-in SSH terminal for direct access
-3. Firewall rules can be configured for each server
-4. Server metrics are displayed in real-time charts
+CloudRack includes a sophisticated bandwidth tracking and billing system:
 
-### Billing System
-1. Users can add funds to their account via PayPal
-2. Servers and volumes are charged hourly based on resources
-3. Transaction history is available for tracking spending
-4. Invoices can be downloaded as needed
+### Bandwidth Monitoring
+- **Real-time Tracking**: Monitor bandwidth usage as it happens
+- **Usage Bar**: Visual indicator of consumption relative to your limit
+- **Warning Thresholds**: Colored indicators when approaching limits
 
-### Support System
-1. Users can create support tickets for technical assistance
-2. Tickets can be categorized by priority and status
-3. Messaging system allows for ongoing communication
-4. Administrators can respond and update ticket status
+### Billing Logic
+- **Included Bandwidth**: Every server includes 1TB (1000GB) of outbound transfer per month
+- **Billing Period**: Bandwidth is calculated on a calendar month basis
+- **Overage Rate**: Usage beyond the included amount is billed at $0.01005/GB
+- **Calculation Method**: Charges are applied at 0.5% of the server's monthly cost per GB
+- **Automated Processing**: Overages are automatically calculated and billed at month-end
+- **Transparent Reporting**: All bandwidth charges clearly labeled in transaction history
 
-## Development Notes
+### Technical Implementation
+- Bandwidth data collected hourly via server metrics
+- Aggregated daily for efficient storage
+- Calculated monthly for billing purposes
+- Prorated for partial month server usage
 
-- The server uses mock Digital Ocean API responses when the API key is not available
-- SSH terminal connections are handled through a secure WebSocket bridge
-- Cloud firewall rules are synchronized with Digital Ocean's firewall service
-- The billing system automatically calculates and deducts costs every hour
+## ⚙️ System Administration
 
-### Mock Mode Configuration
+### Mock Mode for Development
+The system can run in mock mode without actual DigitalOcean API calls:
 
-The application supports a mock mode for development and testing without needing to make actual API calls to Digital Ocean.
+- **FORCE_MOCK_FIREWALLS=true**: Use simulated firewall data
+- **Missing API Key**: Automatically switches to full mock mode
 
-#### Mock Firewalls
+### Database Migrations
+- Schema changes managed through Drizzle migrations
+- Automatic migration execution on startup
+- Migration history tracked for rollback capability
 
-By setting `FORCE_MOCK_FIREWALLS=true` in your Replit Secrets:
+### Error Monitoring
+- Comprehensive error logging system
+- Admin notification for critical errors
+- Performance anomaly detection
 
-- All firewall operations will use in-memory mock data instead of making API calls
-- The UI will function normally, but no actual firewalls will be created/modified at Digital Ocean
-- This is useful for UI development or demo instances
+## 🔒 Security Considerations
 
-#### Mock Digital Ocean API
+### Data Protection
+- Passwords stored with bcrypt hashing
+- Session management with secure cookies
+- CSRF protection on all forms
+- SQL injection prevention through ORM
 
-If no `DIGITAL_OCEAN_API_KEY` is provided:
+### Server Access Security
+- SSH keys for secure server access
+- Firewall rules for traffic control
+- Brute force prevention
+- IP banning for security threats
 
-- The application automatically switches to mock mode for all Digital Ocean operations
-- Predefined mock data for regions, sizes, and applications will be used
-- Server creation will still work but will use simulated data
+### Payment Security
+- PayPal handles all payment processing
+- No credit card data stored on platform
+- Secure WebHook validation
 
-#### Pricing Markup Configuration
+## 🤝 Contributing to CloudRack
 
-By default, the system applies a 0.5% markup over Digital Ocean's base pricing. Administrators can adjust this markup percentage in the Admin Panel under the "Settings" tab.
+We welcome contributions to improve CloudRack! To contribute:
 
-#### Development vs. Production Mode
+1. Fork the repository
+2. Create a feature branch
+3. Implement your changes with appropriate tests
+4. Submit a pull request with a clear description
 
-It's important to use the correct mode based on your needs:
-- For development: Use mock mode with `FORCE_MOCK_FIREWALLS=true`
-- For production: Provide valid API keys and disable mock modes
+Please follow our coding standards and include tests for new features.
 
-## Troubleshooting
+## 📝 License
 
-- If terminal connections fail, check SSH keys and firewall rules
-- Database connection issues can often be resolved by verifying DATABASE_URL
-- PayPal integration requires valid API credentials
-- Use the admin dashboard to monitor system-wide issues
+CloudRack is licensed under the MIT License. See the LICENSE file for details.

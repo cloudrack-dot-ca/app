@@ -207,23 +207,67 @@ export default function BillingPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Server Pricing</CardTitle>
+            <CardTitle>VPS Server Plans</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
+            <h3 className="font-semibold mb-2 text-primary">Standard Plans</h3>
+            <ul className="space-y-2 mb-4">
               <li className="flex justify-between">
-                <span>1GB RAM, 1 vCPU</span>
-                <span>$0.00704 USD/hour</span>
+                <div>
+                  <span className="font-medium">Starter</span>
+                  <p className="text-xs text-muted-foreground">1GB RAM, 1 vCPU, 25GB SSD</p>
+                </div>
+                <div className="text-right">
+                  <span>$0.00704 USD/hour</span>
+                  <p className="text-xs text-muted-foreground">~$5/month</p>
+                </div>
               </li>
               <li className="flex justify-between">
-                <span>2GB RAM, 1 vCPU</span>
-                <span>$0.01407 USD/hour</span>
+                <div>
+                  <span className="font-medium">Basic</span>
+                  <p className="text-xs text-muted-foreground">2GB RAM, 1 vCPU, 50GB SSD</p>
+                </div>
+                <div className="text-right">
+                  <span>$0.01407 USD/hour</span>
+                  <p className="text-xs text-muted-foreground">~$10/month</p>
+                </div>
               </li>
               <li className="flex justify-between">
-                <span>4GB RAM, 2 vCPU</span>
-                <span>$0.02814 USD/hour</span>
+                <div>
+                  <span className="font-medium">Standard</span>
+                  <p className="text-xs text-muted-foreground">4GB RAM, 2 vCPU, 80GB SSD</p>
+                </div>
+                <div className="text-right">
+                  <span>$0.02814 USD/hour</span>
+                  <p className="text-xs text-muted-foreground">~$20/month</p>
+                </div>
               </li>
             </ul>
+            
+            <h3 className="font-semibold mb-2 text-primary">High Performance Plans</h3>
+            <ul className="space-y-2">
+              <li className="flex justify-between">
+                <div>
+                  <span className="font-medium">Professional</span>
+                  <p className="text-xs text-muted-foreground">8GB RAM, 4 vCPU, 160GB SSD</p>
+                </div>
+                <div className="text-right">
+                  <span>$0.05632 USD/hour</span>
+                  <p className="text-xs text-muted-foreground">~$40/month</p>
+                </div>
+              </li>
+              <li className="flex justify-between">
+                <div>
+                  <span className="font-medium">Premium</span>
+                  <p className="text-xs text-muted-foreground">16GB RAM, 8 vCPU, 320GB SSD</p>
+                </div>
+                <div className="text-right">
+                  <span>$0.11264 USD/hour</span>
+                  <p className="text-xs text-muted-foreground">~$80/month</p>
+                </div>
+              </li>
+            </ul>
+            <p className="text-xs text-muted-foreground mt-3">All servers include 1TB bandwidth/month</p>
           </CardContent>
         </Card>
 
@@ -233,12 +277,21 @@ export default function BillingPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <p className="text-lg font-bold mb-1">$0.000141 USD/GB/hour</p>
-              <p className="text-sm text-muted-foreground">For block storage volumes</p>
+              <p className="text-md font-bold mb-1">Block Storage</p>
+              <p className="text-sm mb-2">$0.000141 USD/GB/hour</p>
+              <p className="text-xs text-muted-foreground">~$0.10/GB/month for expandable SSD volumes</p>
+              <p className="text-xs text-muted-foreground">Can be attached/detached from servers</p>
+            </div>
+            <div className="mb-4">
+              <p className="text-md font-bold mb-1">Bandwidth</p>
+              <p className="text-sm mb-2">$0.01005 USD/GB</p>
+              <p className="text-xs text-muted-foreground">For overages beyond 1TB included limit</p>
+              <p className="text-xs text-muted-foreground">Charged only if you exceed your allocation</p>
             </div>
             <div>
-              <p className="text-lg font-bold mb-1">$0.01005 USD/GB</p>
-              <p className="text-sm text-muted-foreground">For bandwidth overages beyond included limit</p>
+              <p className="text-md font-bold mb-1">Bandwidth Overage Rate</p>
+              <p className="text-xs text-muted-foreground">Charged at 0.5% of monthly server cost per GB</p>
+              <p className="text-xs text-muted-foreground">Applied automatically at end of billing period</p>
             </div>
           </CardContent>
         </Card>
