@@ -7,6 +7,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Server as SchemaServer, Volume } from "@shared/schema";
 import ServerTerminal from "@/components/server-terminal-real";
 import { CloudRackTerminalNotice } from "@/components/cloudrack-terminal-notice";
+import NetworkUsage from "@/components/network-usage";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";

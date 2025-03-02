@@ -154,14 +154,13 @@ export default function NetworkUsage({ serverId, size }: NetworkUsageProps) {
           
           <Progress 
             value={Math.min(100, bandwidthInfo?.usagePercent || 0)} 
-            className="h-2"
-            indicatorClassName={
+            className={`h-2 ${
               bandwidthInfo?.isOverLimit 
-                ? "bg-destructive" 
+                ? "[&>div]:bg-destructive" 
                 : bandwidthInfo?.isCloseToLimit 
-                ? "bg-amber-500" 
-                : undefined
-            }
+                ? "[&>div]:bg-amber-500" 
+                : ""
+            }`}
           />
           
           <div className="text-sm text-muted-foreground">
