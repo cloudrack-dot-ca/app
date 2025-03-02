@@ -1545,6 +1545,185 @@ runcmd:
       throw new Error(`Failed to delete DigitalOcean firewall: ${error}`);
     }
   }
+
+  /**
+   * Create a snapshot of a droplet
+   * @param dropletId The ID of the droplet to snapshot
+   * @param name The name of the snapshot
+   * @returns The ID of the created snapshot
+   */
+  async createDropletSnapshot(dropletId: string, name: string): Promise<string> {
+    // For mock mode, generate a fake snapshot ID
+    if (this.useMock || dropletId.includes('droplet-')) {
+      console.log(`Creating mock snapshot for droplet ${dropletId}`);
+      // Mock snapshot ID generation
+      const snapshotId = `snapshot-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      return snapshotId;
+    }
+
+    // This is a real API call
+    try {
+      console.log(`Creating real snapshot for DigitalOcean droplet ${dropletId}`);
+      const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
+      const response = await this.apiRequest<{
+        action: {
+          id: number;
+          status: string;
+          type: string;
+          resource_id: number;
+        }
+      }>("POST", url, {
+        type: "snapshot",
+        name: name
+      });
+
+      // In a real implementation, we'd need to poll the action status until completion
+      // For now, we'll just return a generated snapshot ID
+      return `snapshot-${response.action.id}`;
+    } catch (error) {
+      console.error(`Error creating snapshot for droplet ${dropletId}:`, error);
+      throw new Error(`Failed to create snapshot: ${error}`);
+    }
+  }
+
+  /**
+   * Get a list of snapshots for a droplet
+   * @param dropletId The ID of the droplet
+   * @returns An array of snapshot objects
+   */
+  async getDropletSnapshots(dropletId: string): Promise<{
+    id: string;
+    name: string;
+    created_at: string;
+    size_gigabytes: number;
+  }[]> {
+    // For mock mode, return mock data
+    if (this.useMock || dropletId.includes('droplet-')) {
+      console.log(`Getting mock snapshots for droplet ${dropletId}`);
+      // Return mock snapshots data
+      return [
+        {
+          id: `snapshot-mock-1-${dropletId}`,
+          name: `Snapshot 1 for droplet ${dropletId}`,
+          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          size_gigabytes: 20
+        },
+        {
+          id: `snapshot-mock-2-${dropletId}`,
+          name: `Snapshot 2 for droplet ${dropletId}`,
+          created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          size_gigabytes: 25
+        }
+      ];
+    }
+
+    // This is a real API call
+    try {
+      console.log(`Getting real snapshots for DigitalOcean droplet ${dropletId}`);
+      const url = `${this.apiBaseUrl}/droplets/${dropletId}/snapshots`;
+      const response = await this.apiRequest<{ snapshots: any[] }>("GET", url);
+      
+      return response.snapshots.map(snapshot => ({
+        id: snapshot.id,
+        name: snapshot.name,
+        created_at: snapshot.created_at,
+        size_gigabytes: snapshot.size_gigabytes || 0
+      }));
+    } catch (error) {
+      console.error(`Error getting snapshots for droplet ${dropletId}:`, error);
+      throw new Error(`Failed to get snapshots: ${error}`);
+    }
+  }
+
+  /**
+   * Delete a snapshot
+   * @param snapshotId The ID of the snapshot to delete
+   */
+  async deleteSnapshot(snapshotId: string): Promise<void> {
+    // For mock mode, do nothing
+    if (this.useMock || snapshotId.includes('snapshot-')) {
+      console.log(`Deleting mock snapshot ${snapshotId}`);
+      return;
+    }
+
+    // This is a real API call
+    try {
+      console.log(`Deleting real DigitalOcean snapshot ${snapshotId}`);
+      const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
+      await this.apiRequest("DELETE", url);
+      console.log(`Successfully deleted snapshot ${snapshotId}`);
+    } catch (error) {
+      console.error(`Error deleting snapshot ${snapshotId}:`, error);
+      throw new Error(`Failed to delete snapshot: ${error}`);
+    }
+  }
+
+  /**
+   * Restore a droplet from a snapshot
+   * @param dropletId The ID of the target droplet
+   * @param snapshotId The ID of the snapshot to restore from
+   */
+  async restoreDropletFromSnapshot(dropletId: string, snapshotId: string): Promise<void> {
+    // For mock mode, do nothing
+    if (this.useMock || dropletId.includes('droplet-')) {
+      console.log(`Restoring mock droplet ${dropletId} from snapshot ${snapshotId}`);
+      return;
+    }
+
+    // This is a real API call
+    try {
+      console.log(`Restoring real DigitalOcean droplet ${dropletId} from snapshot ${snapshotId}`);
+      const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
+      await this.apiRequest("POST", url, {
+        type: "restore",
+        image: snapshotId
+      });
+      console.log(`Successfully initiated restore of droplet ${dropletId} from snapshot ${snapshotId}`);
+    } catch (error) {
+      console.error(`Error restoring droplet ${dropletId} from snapshot ${snapshotId}:`, error);
+      throw new Error(`Failed to restore from snapshot: ${error}`);
+    }
+  }
+
+  /**
+   * Get details about a specific snapshot
+   * @param snapshotId The ID of the snapshot
+   * @returns The snapshot details
+   */
+  async getSnapshotDetails(snapshotId: string): Promise<{
+    id: string;
+    name: string;
+    created_at: string;
+    size_gigabytes: number;
+  }> {
+    // For mock mode, return mock data
+    if (this.useMock || snapshotId.includes('snapshot-')) {
+      console.log(`Getting details for mock snapshot ${snapshotId}`);
+      return {
+        id: snapshotId,
+        name: `Snapshot ${snapshotId}`,
+        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        size_gigabytes: 25
+      };
+    }
+
+    // This is a real API call
+    try {
+      console.log(`Getting details for real DigitalOcean snapshot ${snapshotId}`);
+      const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
+      const response = await this.apiRequest<{ snapshot: any }>("GET", url);
+      
+      return {
+        id: response.snapshot.id,
+        name: response.snapshot.name,
+        created_at: response.snapshot.created_at,
+        size_gigabytes: response.snapshot.size_gigabytes || 0
+      };
+    } catch (error) {
+      console.error(`Error getting details for snapshot ${snapshotId}:`, error);
+      throw new Error(`Failed to get snapshot details: ${error}`);
+    }
+  }
 }
 
 export const digitalOcean = new DigitalOceanClient();
