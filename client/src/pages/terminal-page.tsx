@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Maximize2, Minimize2, X, RefreshCw } from 'lucide-react';
+import { io } from 'socket.io-client';
 import 'xterm/css/xterm.css';
 
 export default function TerminalPage() {
@@ -18,7 +19,7 @@ export default function TerminalPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const terminalRef = useRef<HTMLDivElement>(null);
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<any>(null);
   const terminalInstance = useRef<Terminal | null>(null);
   const fitAddon = useRef(new FitAddon());
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -143,7 +144,14 @@ export default function TerminalPage() {
       
       // Dispose of terminal instance and close socket
       if (socketRef.current) {
-        socketRef.current.close();
+        // For Socket.IO
+        if (typeof socketRef.current.disconnect === 'function') {
+          socketRef.current.disconnect();
+        }
+        // For regular WebSocket
+        else if (typeof socketRef.current.close === 'function') {
+          socketRef.current.close();
+        }
         socketRef.current = null;
       }
       
@@ -160,8 +168,6 @@ export default function TerminalPage() {
     term.write('\r\n\x1b[33mConnecting to server...\x1b[0m\r\n');
     
     // Set up Socket.IO connection - matches the server terminal handler
-    const { io } = require('socket.io-client');
-    
     // Debug logging
     console.log(`Connecting to Socket.IO for server ID: ${id}, userId: ${user?.id}`);
     
@@ -189,7 +195,7 @@ export default function TerminalPage() {
       term.write('\r\n\x1b[36mSocket connected, establishing SSH connection...\x1b[0m\r\n');
     });
     
-    socket.on('status', (status) => {
+    socket.on('status', (status: { status: string; message?: string }) => {
       console.log('Terminal status update:', status);
       
       if (status.status === 'connecting') {
@@ -219,14 +225,14 @@ export default function TerminalPage() {
       }, 200);
     });
     
-    socket.on('data', (data) => {
+    socket.on('data', (data: string) => {
       // Data from the server
       if (typeof data === 'string') {
         term.write(data);
       }
     });
     
-    socket.on('error', (errorMsg) => {
+    socket.on('error', (errorMsg: string) => {
       console.error('Terminal error:', errorMsg);
       term.write(`\r\n\x1b[31mError: ${errorMsg}\x1b[0m\r\n`);
       setIsConnected(false);
@@ -238,7 +244,7 @@ export default function TerminalPage() {
       setIsConnected(false);
     });
     
-    socket.on('connect_error', (error) => {
+    socket.on('connect_error', (error: Error) => {
       console.error('Socket.IO connection error:', error);
       term.write(`\r\n\x1b[31mConnection error: ${error.message}\x1b[0m\r\n`);
       setIsConnected(false);
