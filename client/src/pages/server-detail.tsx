@@ -48,7 +48,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { 
   HardDrive, 
@@ -1611,6 +1611,46 @@ export default function ServerDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Snapshot deletion confirmation dialog */}
+      <AlertDialog open={confirmDeleteSnapshot} onOpenChange={setConfirmDeleteSnapshot}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Snapshot</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this snapshot? This action cannot be undone.
+              {snapshotToDelete && (
+                <div className="mt-2 p-3 bg-muted rounded-md">
+                  <p className="font-medium">{snapshotToDelete.name}</p>
+                  <p className="text-sm text-muted-foreground">Size: {snapshotToDelete.sizeGb} GB</p>
+                  <p className="text-sm text-muted-foreground">Created: {new Date(snapshotToDelete.createdAt).toLocaleString()}</p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSnapshotToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (snapshotToDelete) {
+                  deleteSnapshotMutation.mutate(snapshotToDelete.id);
+                }
+              }}
+              disabled={deleteSnapshotMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteSnapshotMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Snapshot"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

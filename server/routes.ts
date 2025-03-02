@@ -2125,8 +2125,11 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Create the snapshot in DigitalOcean
       const snapshotId = await digitalOcean.createDropletSnapshot(server.dropletId, name);
       
-      // Get server specs to calculate size
-      const serverSize = server.specs?.disk || 25; // Default to 25GB if not specified
+      // Initially set the size to the server disk size, but we'll update this 
+      // when we get the actual size from DigitalOcean
+      const initialSizeGb = server.specs?.disk || 25; // Default to 25GB if not specified
+      
+      console.log(`Creating snapshot for server ${serverId} with name ${name} and initial size ${initialSizeGb}GB`);
       
       // Create the snapshot record in our database
       const newSnapshot = await storage.createSnapshot({
@@ -2134,12 +2137,32 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         serverId: serverId,
         name: name,
         snapshotId: snapshotId,
-        sizeGb: serverSize,
+        sizeGb: initialSizeGb,
         createdAt: new Date(),
         status: 'creating',
         description: `Snapshot for server ${server.name}`,
         expiresAt: null
       });
+      
+      // Schedule a delayed task to update the actual snapshot size from DigitalOcean
+      // We'll do this after 3 seconds to give time for the snapshot to be created
+      setTimeout(async () => {
+        try {
+          console.log(`Fetching actual size for snapshot ${snapshotId}`);
+          const snapshotDetails = await digitalOcean.getSnapshotDetails(snapshotId);
+          
+          if (snapshotDetails && snapshotDetails.size_gigabytes) {
+            console.log(`Updating snapshot ${newSnapshot.id} with actual size: ${snapshotDetails.size_gigabytes}GB`);
+            await storage.updateSnapshot(newSnapshot.id, {
+              sizeGb: snapshotDetails.size_gigabytes,
+              status: 'completed'
+            });
+          }
+        } catch (error) {
+          console.error(`Error updating snapshot size:`, error);
+          // We'll still keep the snapshot in the database with the initial size
+        }
+      }, 3000); // 3 second delay
       
       // Create a billing transaction for the snapshot
       // Snapshots are billed at $0.06 per GB per month + 0.5% markup
