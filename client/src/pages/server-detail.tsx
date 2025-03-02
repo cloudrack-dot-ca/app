@@ -344,6 +344,7 @@ export default function ServerDetailPage() {
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [ipv6Enabled, setIpv6Enabled] = useState(false);
+  const [confirmIpv6Enable, setConfirmIpv6Enable] = useState(false);
   
   // Parse URL to check for tab query parameter
   const searchParams = new URLSearchParams(window.location.search);
@@ -915,24 +916,47 @@ export default function ServerDetailPage() {
                           <Globe className="h-4 w-4 mr-2" />
                           IPv6 Configuration
                         </div>
-                        <Button 
-                          variant={ipv6Enabled ? "default" : "outline"}
-                          size="sm" 
-                          onClick={() => toggleIPv6Mutation.mutate(!ipv6Enabled)}
-                          disabled={toggleIPv6Mutation.isPending}
-                        >
-                          {ipv6Enabled ? (
-                            <>
-                              <Wifi className="h-4 w-4 mr-2" />
-                              Disable IPv6
-                            </>
-                          ) : (
-                            <>
-                              <Wifi className="h-4 w-4 mr-2" />
-                              Enable IPv6
-                            </>
-                          )}
-                        </Button>
+                        {ipv6Enabled ? (
+                          <div className="text-xs text-green-600 font-medium flex items-center">
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            IPv6 Enabled
+                          </div>
+                        ) : (
+                          <Button 
+                            variant="outline"
+                            size="sm" 
+                            onClick={() => setConfirmIpv6Enable(true)}
+                            disabled={toggleIPv6Mutation.isPending}
+                          >
+                            <Wifi className="h-4 w-4 mr-2" />
+                            Enable IPv6
+                          </Button>
+                        )}
+                        
+                        <Dialog open={confirmIpv6Enable} onOpenChange={setConfirmIpv6Enable}>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Enable IPv6</DialogTitle>
+                            </DialogHeader>
+                            <div className="py-4 text-sm">
+                              <p className="mb-2"><strong>Warning:</strong> Enabling IPv6 cannot be reversed.</p>
+                              <p>Once you enable IPv6 for this server, it cannot be disabled. IPv6 will remain enabled for the life of this server.</p>
+                              <p className="mt-2">Are you sure you want to enable IPv6?</p>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setConfirmIpv6Enable(false)}>Cancel</Button>
+                              <Button 
+                                variant="default" 
+                                onClick={() => {
+                                  toggleIPv6Mutation.mutate(true);
+                                  setConfirmIpv6Enable(false);
+                                }}
+                              >
+                                Enable IPv6
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 pt-0 space-y-3">
