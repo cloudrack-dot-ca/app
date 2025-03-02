@@ -149,6 +149,15 @@ interface AdminVolume {
   region: string;
 }
 
+interface VolumeStats {
+  totalStorage: number;
+  attachedStorage: number;
+  unattachedStorage: number;
+  volumeCount: number;
+  attachedVolumeCount: number;
+  unattachedVolumeCount: number;
+}
+
 interface AdminStats {
   users: {
     total: number;
@@ -310,12 +319,12 @@ export default function AdminDashboard() {
   });
   
   // Fetch volume stats
-  const { data: volumeStats, isLoading: volumeStatsLoading } = useQuery({
+  const { data: volumeStats, isLoading: volumeStatsLoading } = useQuery<VolumeStats>({
     queryKey: ['/api/admin/volume-stats'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/volume-stats');
       const data = await response.json();
-      return data;
+      return data as VolumeStats;
     }
   });
 
@@ -1470,7 +1479,7 @@ export default function AdminDashboard() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    volumes.map((volume: any) => (
+                    volumes.map((volume: AdminVolume) => (
                       <TableRow key={volume.id}>
                         <TableCell className="font-medium">{volume.id}</TableCell>
                         <TableCell>{volume.name}</TableCell>
