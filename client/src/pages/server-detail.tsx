@@ -533,6 +533,74 @@ export default function ServerDetailPage() {
       });
     },
   });
+  
+  // Snapshot mutations
+  const createSnapshotMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return await apiRequest("POST", `/api/servers/${serverId}/snapshots`, { name });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Snapshot Created",
+        description: "Your server snapshot has been created successfully.",
+      });
+      setIsCreatingSnapshot(false);
+      setSnapshotName("");
+      // Refresh snapshots list
+      refetchSnapshots();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create snapshot",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const restoreSnapshotMutation = useMutation({
+    mutationFn: async (snapshotId: number) => {
+      return await apiRequest("POST", `/api/servers/${serverId}/snapshots/${snapshotId}/restore`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Restore Started",
+        description: "Your server is being restored from the snapshot. This may take a few minutes.",
+      });
+      // Refresh server status to show it's in a restoration state
+      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}`] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to restore from snapshot",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const deleteSnapshotMutation = useMutation({
+    mutationFn: async (snapshotId: number) => {
+      return await apiRequest("DELETE", `/api/servers/${serverId}/snapshots/${snapshotId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Snapshot Deleted",
+        description: "The snapshot has been deleted successfully.",
+      });
+      setConfirmDeleteSnapshot(false);
+      setSnapshotToDelete(null);
+      // Refresh snapshots list
+      refetchSnapshots();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete snapshot",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Set IPv6 status when server data is loaded
   useEffect(() => {
