@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight, KeyRound, AlertTriangle, ExternalLink, RefreshCw, Download, HardDrive, ShieldAlert, LifeBuoy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, KeyRound, AlertTriangle, ExternalLink, Download, HardDrive, ShieldAlert, LifeBuoy } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -70,10 +70,13 @@ import {
   BadgeX, 
   Ban, 
   CircleDollarSign, 
+  Copy,
   Home,
+  Key,
   Laptop, 
   Lock,
   Pencil,
+  RefreshCw,
   Server, 
   Settings, 
   ShieldCheck, 
@@ -383,6 +386,49 @@ export default function AdminDashboard() {
         description: 'IP ban removed successfully',
       });
       refetchIpBans();
+    }
+  });
+  
+  // Regenerate API key mutation
+  const regenerateApiKeyMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await apiRequest('POST', `/api/admin/users/${userId}/api-key`);
+      const data = await response.json();
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Success',
+        description: 'API key regenerated successfully',
+      });
+      
+      // Show the new API key in a toast
+      toast({
+        title: 'New API Key',
+        description: (
+          <div className="mt-2 p-2 bg-slate-900 text-slate-100 rounded font-mono text-xs break-all">
+            {data.apiKey}
+          </div>
+        ),
+        duration: 10000, // Longer duration so user can copy it
+      });
+      
+      // Update user in state with new API key
+      if (editingUser) {
+        setEditingUser({
+          ...editingUser,
+          apiKey: data.apiKey
+        });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to regenerate API key: ${error.message}`,
+        variant: 'destructive',
+      });
     }
   });
   
@@ -755,7 +801,32 @@ export default function AdminDashboard() {
                               </div>
                             )}
                           </TableCell>
-                          <TableCell>{user.apiKey ? 'Set' : 'Not Set'}</TableCell>
+                          <TableCell>
+                            {user.apiKey ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono truncate max-w-[140px]">
+                                  {user.apiKey.substring(0, 12)}...
+                                </span>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(user.apiKey!);
+                                    toast({
+                                      title: "Copied",
+                                      description: "API key copied to clipboard",
+                                    });
+                                  }}
+                                  title="Copy API key"
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Not Set</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <Button 
@@ -990,7 +1061,67 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       
-                      <div className="pt-2">
+                      <div className="flex items-center gap-4 pt-2">
+                        <label className="text-right min-w-24">
+                          API Key:
+                        </label>
+                        <div className="flex flex-col space-y-2 w-full">
+                          {editingUser.apiKey ? (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs font-mono truncate max-w-[200px] border rounded px-2 py-1">
+                                {editingUser.apiKey.substring(0, 16)}...
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(editingUser.apiKey!);
+                                  toast({
+                                    title: "Copied",
+                                    description: "API key copied to clipboard",
+                                  });
+                                }}
+                              >
+                                <Copy className="h-3.5 w-3.5 mr-2" />
+                                Copy
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center text-amber-600"
+                                onClick={() => {
+                                  if (window.confirm(`Are you sure you want to regenerate the API key for ${editingUser.username}? This will invalidate the existing key.`)) {
+                                    regenerateApiKeyMutation.mutate(editingUser.id);
+                                  }
+                                }}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                                Regenerate
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-muted-foreground">No API key set</span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center"
+                                onClick={() => {
+                                  if (window.confirm(`Generate a new API key for ${editingUser.username}?`)) {
+                                    regenerateApiKeyMutation.mutate(editingUser.id);
+                                  }
+                                }}
+                              >
+                                <Key className="h-3.5 w-3.5 mr-2" />
+                                Generate Key
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="pt-4">
                         <Button 
                           onClick={() => {
                             updateUserDetailsMutation.mutate({
