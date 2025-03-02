@@ -1201,19 +1201,33 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
 
   // Server Action Routes
   app.post("/api/servers/:id/actions/reboot", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
+    if (!req.user) {
+      console.log("[AUTH ERROR] User not authenticated for server reboot action");
+      return res.sendStatus(401);
+    }
 
-    const server = await storage.getServer(parseInt(req.params.id));
-    if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
-      return res.sendStatus(404);
+    const serverId = parseInt(req.params.id);
+    const server = await storage.getServer(serverId);
+    
+    if (!server) {
+      console.log(`[SERVER ERROR] Server ${serverId} not found`);
+      return res.status(404).json({ message: "Server not found" });
+    }
+    
+    if (server.userId !== req.user.id && !req.user.isAdmin) {
+      console.log(`[AUTH ERROR] User ${req.user.id} not authorized for server ${serverId}`);
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     try {
       // Call the DigitalOcean client to reboot the droplet
       await digitalOcean.performDropletAction(server.dropletId, "reboot");
       
-      // Update server status
-      const updatedServer = await storage.updateServer(server.id, { status: "rebooting" });
+      // Update server status with timestamp for better tracking
+      const updatedServer = await storage.updateServer(server.id, { 
+        status: "rebooting",
+        lastMonitored: new Date()
+      });
       
       // After a short delay, set the status back to active
       setTimeout(async () => {
@@ -1231,11 +1245,22 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   });
 
   app.post("/api/servers/:id/actions/:action", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
+    if (!req.user) {
+      console.log("[AUTH ERROR] User not authenticated for server action");
+      return res.sendStatus(401);
+    }
 
-    const server = await storage.getServer(parseInt(req.params.id));
-    if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
-      return res.sendStatus(404);
+    const serverId = parseInt(req.params.id);
+    const server = await storage.getServer(serverId);
+    
+    if (!server) {
+      console.log(`[SERVER ERROR] Server ${serverId} not found`);
+      return res.status(404).json({ message: "Server not found" });
+    }
+    
+    if (server.userId !== req.user.id && !req.user.isAdmin) {
+      console.log(`[AUTH ERROR] User ${req.user.id} not authorized for server ${serverId}`);
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     const action = req.params.action;
