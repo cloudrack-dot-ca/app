@@ -578,16 +578,38 @@ export class DigitalOceanClient {
   async apiRequest<T>(
     endpoint: string, 
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET', 
-    data?: any
+    data?: any,
+    options?: {
+      params?: Record<string, any>; // Query parameters for GET requests
+      method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; // Allow method to be specified in options for convenience
+    }
   ): Promise<T> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}${endpoint}`, {
-        method,
+      // Apply method from options if provided, otherwise use the method parameter
+      const requestMethod = options?.method || method;
+      
+      // Handle query parameters for GET requests
+      let url = `${this.apiBaseUrl}${endpoint}`;
+      if (options?.params && Object.keys(options.params).length > 0) {
+        const queryParams = new URLSearchParams();
+        Object.entries(options.params).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            // Handle array parameters like 'metrics[]='
+            value.forEach(v => queryParams.append(`${key}[]`, v.toString()));
+          } else if (value !== undefined && value !== null) {
+            queryParams.append(key, value.toString());
+          }
+        });
+        url += `?${queryParams.toString()}`;
+      }
+      
+      const response = await fetch(url, {
+        method: requestMethod,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`
         },
-        body: data ? JSON.stringify(data) : undefined
+        body: requestMethod !== 'GET' && data ? JSON.stringify(data) : undefined
       });
 
       if (!response.ok) {
@@ -970,9 +992,61 @@ runcmd:
   }
 
   async getServerMetrics(dropletId: string): Promise<any> {
-    // Always generate mock metrics for consistency and to avoid DigitalOcean API errors 
-    // since we're in development and the API may not be fully integrated
-    return this.generateMockMetrics();
+    if (this.useMock || process.env.FORCE_MOCK_METRICS === 'true') {
+      // Use mock data if no API key or explicitly forced
+      return this.generateMockMetrics();
+    }
+    
+    try {
+      // Fetch real metrics from DigitalOcean API
+      const response = await this.apiRequest<any>(`/monitoring/metrics`, {
+        method: 'GET',
+        params: {
+          host_id: dropletId,
+          start: new Date(Date.now() - 1800000).toISOString(), // 30 minutes ago
+          end: new Date().toISOString(),
+          metrics: ['cpu', 'memory', 'disk', 'network', 'load_1', 'load_5', 'load_15']
+        }
+      });
+      
+      // Process and format the response
+      if (response && response.data) {
+        // Extract latest values from timeseries data
+        const metrics = {
+          cpu: this.getLatestMetricValue(response.data.cpu) || 0,
+          memory: this.getLatestMetricValue(response.data.memory) || 0,
+          disk: this.getLatestMetricValue(response.data.disk) || 0,
+          network_in: this.getLatestMetricValue(response.data.network_in) || 0,
+          network_out: this.getLatestMetricValue(response.data.network_out) || 0,
+          load_average: [
+            this.getLatestMetricValue(response.data.load_1) || 0,
+            this.getLatestMetricValue(response.data.load_5) || 0,
+            this.getLatestMetricValue(response.data.load_15) || 0
+          ],
+          uptime_seconds: response.data.uptime || 3600 // Default to 1 hour if not available
+        };
+        return metrics;
+      }
+      
+      // Fallback to mock data if API response format isn't as expected
+      console.warn('Unexpected DigitalOcean metrics format, using mock data');
+      return this.generateMockMetrics();
+    } catch (error) {
+      console.error('Error fetching metrics from DigitalOcean:', error);
+      // Fallback to mock data on error
+      return this.generateMockMetrics();
+    }
+  }
+  
+  // Helper to extract the latest metric value from a timeseries
+  private getLatestMetricValue(timeseries: Array<{time: string, value: number}> | undefined): number | null {
+    if (!timeseries || !Array.isArray(timeseries) || timeseries.length === 0) {
+      return null;
+    }
+    
+    // Sort by timestamp descending and take the first (latest) value
+    return timeseries
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0].value;
   }
   
   // Helper to generate consistent mock metrics
