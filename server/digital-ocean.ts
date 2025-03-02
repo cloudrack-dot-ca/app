@@ -1639,7 +1639,7 @@ runcmd:
   async deleteSnapshot(snapshotId: string): Promise<void> {
     // For mock mode, do nothing
     if (this.useMock || snapshotId.includes('snapshot-')) {
-      console.log(`Deleting mock snapshot ${snapshotId}`);
+      console.log(`[MOCK] Deleting mock snapshot ${snapshotId} - mock mode: ${this.useMock}`);
       return;
     }
 
