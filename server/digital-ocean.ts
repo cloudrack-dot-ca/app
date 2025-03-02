@@ -1650,7 +1650,7 @@ runcmd:
     try {
       console.log(`Deleting real DigitalOcean snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
-      await this.apiRequest("DELETE", url);
+      await this.apiRequest("DELETE" as any, url);
       console.log(`Successfully deleted snapshot ${snapshotId}`);
     } catch (error) {
       console.error(`Error deleting snapshot ${snapshotId}:`, error);
@@ -1674,7 +1674,7 @@ runcmd:
     try {
       console.log(`Restoring real DigitalOcean droplet ${dropletId} from snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
-      await this.apiRequest("POST", url, {
+      await this.apiRequest("POST" as any, url, {
         type: "restore",
         image: snapshotId
       });
@@ -1711,7 +1711,7 @@ runcmd:
     try {
       console.log(`Getting details for real DigitalOcean snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
-      const response = await this.apiRequest<{ snapshot: any }>("GET", url);
+      const response = await this.apiRequest<{ snapshot: any }>("GET" as any, url);
       
       return {
         id: response.snapshot.id,

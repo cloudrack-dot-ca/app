@@ -2136,7 +2136,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         snapshotId: snapshotId,
         sizeGb: serverSize,
         createdAt: new Date(),
-        status: 'creating'
+        status: 'creating',
+        description: `Snapshot for server ${server.name}`,
+        expiresAt: null
       });
       
       // Create a billing transaction for the snapshot
@@ -2150,7 +2152,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         type: 'charge',
         status: 'completed',
         description: `Snapshot creation: ${name} (${serverSize}GB)`,
-        createdAt: new Date()
+        createdAt: new Date(),
+        currency: 'USD',
+        paypalTransactionId: null
       });
       
       // Deduct the cost from user balance

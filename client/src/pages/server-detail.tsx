@@ -609,6 +609,10 @@ export default function ServerDetailPage() {
             <HardDrive className="h-4 w-4 mr-2" />
             Volumes
           </TabsTrigger>
+          <TabsTrigger value="snapshots">
+            <Camera className="h-4 w-4 mr-2" />
+            Snapshots
+          </TabsTrigger>
           <TabsTrigger value="networking">
             <Globe className="h-4 w-4 mr-2" />
             Networking
