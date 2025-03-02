@@ -12,7 +12,7 @@ import { insertServerSchema } from "@shared/schema";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Search, LockKeyhole, Server as ServerIcon } from "lucide-react";
+import { Loader2, Plus, Search, LockKeyhole, Server as ServerIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -69,6 +69,8 @@ export default function Dashboard() {
   const [processorFilter, setProcessorFilter] = useState<string>("all");
   const [applicationTypeFilter, setApplicationTypeFilter] = useState<string>("all");
   const [installMode, setInstallMode] = useState<"application" | "distribution">("application");
+  const [currentPage, setCurrentPage] = useState(1);
+  const SERVERS_PER_PAGE = 9;
   
   const { data: servers = [], isLoading } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
@@ -125,6 +127,16 @@ export default function Dashboard() {
       (server.ipAddress && server.ipAddress.includes(searchQuery))
     );
   });
+  
+  // Calculate pagination
+  const totalServers = filteredServers.length;
+  const totalPages = Math.max(1, Math.ceil(totalServers / SERVERS_PER_PAGE));
+  
+  // Get current page servers
+  const paginatedServers = filteredServers.slice(
+    (currentPage - 1) * SERVERS_PER_PAGE,
+    currentPage * SERVERS_PER_PAGE
+  );
 
   const password = form.watch("auth");
   const passwordStrength = calculatePasswordStrength(password);
@@ -594,11 +606,48 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredServers.map((server) => (
-              <ServerCard key={server.id} server={server} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {paginatedServers.map((server) => (
+                <ServerCard key={server.id} server={server} />
+              ))}
+            </div>
+            
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-6">
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  {Array.from({ length: totalPages }).map((_, index) => (
+                    <Button
+                      key={index}
+                      variant={currentPage === index + 1 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(index + 1)}
+                    >
+                      {index + 1}
+                    </Button>
+                  ))}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
