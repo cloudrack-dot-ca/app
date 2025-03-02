@@ -552,7 +552,7 @@ export class DigitalOceanClient {
         return {} as T;
       }
     } catch (error) {
-      console.error(`Error in DigitalOcean API request to ${endpoint}:`, error);
+      console.error(`Error in DigitalOcean API request to ${method} ${url}:`, error);
       throw error;
     }
   }
@@ -564,7 +564,7 @@ export class DigitalOceanClient {
     }
     
     try {
-      const response = await this.apiRequest<{ regions: Region[] }>('/regions');
+      const response = await this.apiRequest<{ regions: Region[] }>("GET", `${this.apiBaseUrl}/regions`);
       return response.regions.filter(region => region.available);
     } catch (error) {
       console.error('Error fetching regions, falling back to mock data:', error);
@@ -578,7 +578,7 @@ export class DigitalOceanClient {
     }
     
     try {
-      const response = await this.apiRequest<{ sizes: Size[] }>('/sizes');
+      const response = await this.apiRequest<{ sizes: Size[] }>("GET", `${this.apiBaseUrl}/sizes`);
       
       // Filter and add processor_type property to each size object
       const filteredSizes = response.sizes
