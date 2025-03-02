@@ -1067,9 +1067,16 @@ export default function ServerDetailPage() {
                               <div className="flex items-center space-x-2">
                                 <Camera className="h-5 w-5 text-muted-foreground" />
                                 <h4 className="font-medium">{snapshot.name}</h4>
-                                <Badge variant="outline" className="ml-2">
-                                  {snapshot.status}
-                                </Badge>
+                                {snapshot.status === 'creating' ? (
+                                  <Badge variant="secondary" className="animate-pulse bg-yellow-50 text-yellow-700 ml-2">
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    Creating Snapshot...
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="ml-2">
+                                    {snapshot.status || 'completed'}
+                                  </Badge>
+                                )}
                               </div>
                               <div className="mt-1 flex text-sm text-muted-foreground space-x-4">
                                 <div className="flex items-center">
@@ -1080,18 +1087,28 @@ export default function ServerDetailPage() {
                                   <Clock className="h-3 w-3 mr-1" />
                                   <span>Created: {new Date(snapshot.createdAt).toLocaleString()}</span>
                                 </div>
-                                {snapshot.status === 'creating' && (
-                                  <Badge variant="outline" className="animate-pulse bg-yellow-50 text-yellow-700">
-                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    Processing...
-                                  </Badge>
-                                )}
                                 {snapshot.snapshotId && (
                                   <div className="flex items-center">
                                     <HashIcon className="h-3 w-3 mr-1" />
-                                    <span className="truncate max-w-[100px]" title={snapshot.snapshotId}>
-                                      ID: {snapshot.snapshotId.substring(0, 8)}...
-                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-mono" title={snapshot.snapshotId}>
+                                        {snapshot.snapshotId}
+                                      </span>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-5 w-5 p-0"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(snapshot.snapshotId || "");
+                                          toast({
+                                            title: "Copied",
+                                            description: "Snapshot ID copied to clipboard",
+                                          });
+                                        }}
+                                      >
+                                        <CopyPlus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
                                   </div>
                                 )}
                               </div>

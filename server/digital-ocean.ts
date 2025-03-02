@@ -1647,12 +1647,7 @@ runcmd:
     try {
       console.log(`Deleting real DigitalOcean snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
-      await fetch(url, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`
-        }
-      });
+      await this.apiRequest('DELETE', url);
       console.log(`Successfully deleted snapshot ${snapshotId}`);
     } catch (error) {
       console.error(`Error deleting snapshot ${snapshotId}:`, error);
@@ -1676,16 +1671,9 @@ runcmd:
     try {
       console.log(`Restoring real DigitalOcean droplet ${dropletId} from snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
-      await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          type: "restore",
-          image: snapshotId
-        })
+      await this.apiRequest('POST', url, {
+        type: "restore",
+        image: snapshotId
       });
       console.log(`Successfully initiated restore of droplet ${dropletId} from snapshot ${snapshotId}`);
     } catch (error) {
@@ -1720,24 +1708,17 @@ runcmd:
     try {
       console.log(`Getting details for real DigitalOcean snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`
-        }
-      });
+      const response = await this.apiRequest<{ snapshot: any }>('GET', url);
       
-      if (!response.ok) {
-        throw new Error(`DigitalOcean API Error: ${response.status} ${response.statusText}`);
+      if (!response || !response.snapshot) {
+        throw new Error(`No snapshot data received from DigitalOcean API`);
       }
       
-      const data = await response.json();
-      
       return {
-        id: data.snapshot.id,
-        name: data.snapshot.name,
-        created_at: data.snapshot.created_at,
-        size_gigabytes: data.snapshot.size_gigabytes || 0
+        id: response.snapshot.id,
+        name: response.snapshot.name,
+        created_at: response.snapshot.created_at,
+        size_gigabytes: response.snapshot.size_gigabytes || 0
       };
     } catch (error) {
       console.error(`Error getting details for snapshot ${snapshotId}:`, error);
