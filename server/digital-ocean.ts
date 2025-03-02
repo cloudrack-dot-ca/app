@@ -578,38 +578,19 @@ export class DigitalOceanClient {
   async apiRequest<T>(
     endpoint: string, 
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET', 
-    data?: any,
-    options?: {
-      params?: Record<string, any>; // Query parameters for GET requests
-      method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; // Allow method to be specified in options for convenience
-    }
+    data?: any
   ): Promise<T> {
     try {
-      // Apply method from options if provided, otherwise use the method parameter
-      const requestMethod = options?.method || method;
-      
-      // Handle query parameters for GET requests
+      // Handle URL construction - endpoint may already contain query parameters
       let url = `${this.apiBaseUrl}${endpoint}`;
-      if (options?.params && Object.keys(options.params).length > 0) {
-        const queryParams = new URLSearchParams();
-        Object.entries(options.params).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
-            // Handle array parameters like 'metrics[]='
-            value.forEach(v => queryParams.append(`${key}[]`, v.toString()));
-          } else if (value !== undefined && value !== null) {
-            queryParams.append(key, value.toString());
-          }
-        });
-        url += `?${queryParams.toString()}`;
-      }
       
       const response = await fetch(url, {
-        method: requestMethod,
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`
         },
-        body: requestMethod !== 'GET' && data ? JSON.stringify(data) : undefined
+        body: method !== 'GET' && data ? JSON.stringify(data) : undefined
       });
 
       if (!response.ok) {
@@ -998,16 +979,17 @@ runcmd:
     }
     
     try {
-      // Fetch real metrics from DigitalOcean API
-      const response = await this.apiRequest<any>(`/monitoring/metrics`, {
-        method: 'GET',
-        params: {
-          host_id: dropletId,
-          start: new Date(Date.now() - 1800000).toISOString(), // 30 minutes ago
-          end: new Date().toISOString(),
-          metrics: ['cpu', 'memory', 'disk', 'network', 'load_1', 'load_5', 'load_15']
-        }
+      // Prepare the query parameters
+      let url = `/monitoring/metrics?host_id=${dropletId}`;
+      url += `&start=${encodeURIComponent(new Date(Date.now() - 1800000).toISOString())}`; // 30 minutes ago
+      url += `&end=${encodeURIComponent(new Date().toISOString())}`;
+      // Add metrics parameters
+      ['cpu', 'memory', 'disk', 'network', 'load_1', 'load_5', 'load_15'].forEach(metric => {
+        url += `&metrics[]=${metric}`;
       });
+      
+      // Fetch real metrics from DigitalOcean API with manually constructed URL
+      const response = await this.apiRequest<any>(url);
       
       // Process and format the response
       if (response && response.data) {
