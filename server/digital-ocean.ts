@@ -1699,63 +1699,228 @@ runcmd:
   }
 
   /**
-   * Restore a droplet from a snapshot
-   * @param dropletId The ID of the target droplet
-   * @param snapshotId The ID of the snapshot to restore from
+   * Create a backup of a droplet
+   * @param dropletId The ID of the droplet to backup
+   * @returns The ID of the action that creates the backup
    */
-  async restoreDropletFromSnapshot(dropletId: string, snapshotId: string): Promise<void> {
-    // For mock mode or mock droplet IDs, just simulate success
+  async createDropletBackup(dropletId: string): Promise<string> {
+    // For mock mode or mock droplet IDs, return a mock backup ID
     if (this.useMock || dropletId.includes('droplet-')) {
-      console.log(`[MOCK] Restoring mock droplet ${dropletId} from snapshot ${snapshotId}`);
-      return;
-    }
-
-    // For development/testing, we can help fix bad data
-    if (!snapshotId.startsWith('snapshot-')) {
-      console.warn(`Warning: Snapshot ID ${snapshotId} doesn't have the expected 'snapshot-' prefix`);
-      if (process.env.NODE_ENV !== 'production') {
-        // In development, attempt to fix by adding prefix
-        snapshotId = `snapshot-${snapshotId}`;
-        console.log(`[DEV] Corrected snapshot ID to: ${snapshotId}`);
-      } else {
-        // In production, enforce proper format
-        console.error(`Invalid snapshot ID format: ${snapshotId}. Should start with 'snapshot-'`);
-        throw new Error(`Invalid snapshot ID format. Should start with 'snapshot-'`);
-      }
+      const mockBackupId = `backup-${Math.floor(Math.random() * 10000000000)}`;
+      console.log(`[MOCK] Creating mock backup ${mockBackupId} for droplet ${dropletId}`);
+      return mockBackupId;
     }
 
     // This is a real API call to Digital Ocean
     try {
-      console.log(`Restoring real DigitalOcean droplet ${dropletId} from snapshot ${snapshotId}`);
+      console.log(`Creating real backup for DigitalOcean droplet ${dropletId}`);
+      const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
+      
+      const response = await this.apiRequest<{ action: { id: number } }>('POST', url, {
+        type: "backup"
+      });
+      
+      // Generate a backup ID based on the action ID
+      const backupId = `backup-${response.action.id}`;
+      console.log(`Creating real backup ${backupId} for droplet ${dropletId}`);
+      return backupId;
+    } catch (error) {
+      console.error(`Error creating backup for droplet ${dropletId}:`, error);
+      throw new Error(`Failed to create backup: ${error}`);
+    }
+  }
+
+  /**
+   * Get a list of backups for a droplet
+   * @param dropletId The ID of the droplet
+   * @returns An array of backup objects
+   */
+  async getDropletBackups(dropletId: string): Promise<{
+    id: string;
+    name: string;
+    created_at: string;
+    size_gigabytes: number;
+    status: string;
+  }[]> {
+    // For mock mode or mock droplet IDs, return mock backups
+    if (this.useMock || dropletId.includes('droplet-')) {
+      console.log(`[MOCK] Getting backups for mock droplet ${dropletId}`);
+      return Array(2).fill(0).map((_, i) => ({
+        id: `backup-${Math.floor(Math.random() * 10000000000)}`,
+        name: `Auto Backup ${i + 1}`,
+        created_at: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
+        size_gigabytes: 25,
+        status: 'completed'
+      }));
+    }
+
+    // This is a real API call to Digital Ocean
+    try {
+      console.log(`Getting backups for real DigitalOcean droplet ${dropletId}`);
+      const url = `${this.apiBaseUrl}/droplets/${dropletId}/backups`;
+      
+      const response = await this.apiRequest<{ backups: any[] }>('GET', url);
+      
+      if (!response || !response.backups) {
+        return [];
+      }
+      
+      return response.backups.map(backup => ({
+        id: backup.id,
+        name: backup.name || `Backup ${backup.id}`,
+        created_at: backup.created_at,
+        size_gigabytes: backup.size_gigabytes || 0,
+        status: backup.status || 'completed'
+      }));
+    } catch (error) {
+      console.error(`Error getting backups for droplet ${dropletId}:`, error);
+      // Return an empty array instead of throwing to be more resilient
+      return [];
+    }
+  }
+
+  /**
+   * Delete a backup
+   * @param backupId The ID of the backup to delete
+   */
+  async deleteBackup(backupId: string): Promise<void> {
+    // For mock mode or mock backup IDs, just simulate success
+    if (this.useMock || backupId.includes('backup-')) {
+      console.log(`[MOCK] Deleting mock backup ${backupId} - mock mode: ${this.useMock}`);
+      return;
+    }
+
+    // Extract the backup ID if it has our prefix
+    const cleanBackupId = backupId.startsWith('backup-') 
+      ? backupId.substring(7) 
+      : backupId;
+
+    // This is a real API call to Digital Ocean
+    try {
+      console.log(`Deleting real DigitalOcean backup ${cleanBackupId}`);
+      const url = `${this.apiBaseUrl}/images/${cleanBackupId}`;
+      
+      await this.apiRequest<void>('DELETE', url);
+      
+      console.log(`Successfully deleted DigitalOcean backup ${cleanBackupId}`);
+    } catch (error) {
+      console.error(`Error deleting backup ${cleanBackupId}:`, error);
+      throw new Error(`Failed to delete backup: ${error}`);
+    }
+  }
+
+  /**
+   * Restore a droplet from a backup
+   * @param dropletId The ID of the target droplet
+   * @param backupId The ID of the backup to restore from
+   */
+  async restoreDropletFromBackup(dropletId: string, backupId: string): Promise<void> {
+    // For mock mode or mock droplet IDs, just simulate success
+    if (this.useMock || dropletId.includes('droplet-')) {
+      console.log(`[MOCK] Restoring mock droplet ${dropletId} from backup ${backupId}`);
+      return;
+    }
+
+    // Extract the backup ID if it has our prefix
+    const cleanBackupId = backupId.startsWith('backup-') 
+      ? backupId.substring(7) 
+      : backupId;
+
+    // This is a real API call to Digital Ocean
+    try {
+      console.log(`Restoring real DigitalOcean droplet ${dropletId} from backup ${cleanBackupId}`);
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
       
       // Properly handle the restore action
       await this.apiRequest('POST', url, {
         type: "restore", 
-        image: snapshotId // This is the expected format for DO API
+        image: cleanBackupId // Use the ID directly for DigitalOcean API
       });
       
-      console.log(`Successfully initiated restore of droplet ${dropletId} from snapshot ${snapshotId}`);
+      console.log(`Successfully initiated restore of droplet ${dropletId} from backup ${cleanBackupId}`);
     } catch (error) {
       // Improved error handling with specific error messages
       const errorMessage = error?.toString() || '';
       
       if (errorMessage.includes('422') || errorMessage.includes('Unprocessable Entity')) {
-        console.error(`DigitalOcean rejected the restore request: ${snapshotId} may not be a valid snapshot ID or the droplet architecture is incompatible`);
+        console.error(`DigitalOcean rejected the restore request: ${cleanBackupId} may not be a valid backup ID or the droplet architecture is incompatible`);
         
         // Provide more specific error for client handling
-        throw new Error(`Snapshot restore rejected by DigitalOcean. The snapshot may be incompatible with this server.`);
+        throw new Error(`Backup restore rejected by DigitalOcean. The backup may be incompatible with this server.`);
       }
       
       // In development mode, log the error but allow the operation to "succeed" for UI testing
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`[DEV] Allowing snapshot restore to proceed despite API error: ${error}`);
+        console.log(`[DEV] Allowing backup restore to proceed despite API error: ${error}`);
         return; // Simulate success in development
       }
       
-      console.error(`Error restoring droplet ${dropletId} from snapshot ${snapshotId}:`, error);
-      throw new Error(`Failed to restore from snapshot: ${error}`);
+      console.error(`Error restoring droplet ${dropletId} from backup ${cleanBackupId}:`, error);
+      throw new Error(`Failed to restore from backup: ${error}`);
     }
+  }
+
+  /**
+   * Get details about a specific backup
+   * @param backupId The ID of the backup
+   * @returns The backup details
+   */
+  async getBackupDetails(backupId: string): Promise<{
+    id: string;
+    name: string;
+    created_at: string;
+    size_gigabytes: number;
+    status: string;
+  }> {
+    // For mock mode, return mock data
+    if (this.useMock || backupId.includes('backup-')) {
+      console.log(`Getting details for mock backup ${backupId}`);
+      return {
+        id: backupId,
+        name: `Backup ${backupId.replace('backup-', '')}`,
+        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        size_gigabytes: 25,
+        status: 'completed'
+      };
+    }
+
+    // Extract the backup ID if it has our prefix
+    const cleanBackupId = backupId.startsWith('backup-') 
+      ? backupId.substring(7) 
+      : backupId;
+
+    // This is a real API call
+    try {
+      console.log(`Getting details for real DigitalOcean backup ${cleanBackupId}`);
+      const url = `${this.apiBaseUrl}/images/${cleanBackupId}`;
+      const response = await this.apiRequest<{ image: any }>('GET', url);
+      
+      if (!response || !response.image) {
+        throw new Error(`No backup data received from DigitalOcean API`);
+      }
+      
+      return {
+        id: `backup-${response.image.id}`,
+        name: response.image.name || `Backup ${response.image.id}`,
+        created_at: response.image.created_at,
+        size_gigabytes: response.image.size_gigabytes || 0,
+        status: response.image.status || 'completed'
+      };
+    } catch (error) {
+      console.error(`Error getting details for backup ${cleanBackupId}:`, error);
+      throw new Error(`Failed to get backup details: ${error}`);
+    }
+  }
+  
+  /**
+   * Restore a droplet from a snapshot
+   * @param dropletId The ID of the target droplet
+   * @param snapshotId The ID of the snapshot to restore from
+   * @deprecated Use restoreDropletFromBackup instead
+   */
+  async restoreDropletFromSnapshot(dropletId: string, snapshotId: string): Promise<void> {
+    console.log(`[DEPRECATED] Using backup restore instead of snapshot for droplet ${dropletId}`);
+    return this.restoreDropletFromBackup(dropletId, snapshotId);
   }
 
   /**
