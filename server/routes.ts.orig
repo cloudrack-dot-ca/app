@@ -1697,14 +1697,12 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       if (!rule_type || !rule || !['inbound', 'outbound'].includes(rule_type)) {
         return res.status(400).json({ message: "Invalid rule format. Specify 'rule_type' as 'inbound' or 'outbound' and provide a valid rule object." });
       }
-      console.log(`Attempting to delete ${rule_type} rule:`, JSON.stringify(rule));
       
       // Get the current firewall
       const firewall = await digitalOcean.getFirewallByDropletId(server.dropletId);
       
       if (!firewall) {
         // If no firewall exists, we don't need to delete anything
-        console.log(`No firewall found for server ${server.id} when trying to delete rule`);
         return res.json({
           id: `mock-${Math.random().toString(36).substring(7)}`,
           name: `firewall-${server.name}`,
@@ -1714,7 +1712,6 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           outbound_rules: []
         });
       }
-      console.log(`Found firewall ${firewall.id} with ${firewall.inbound_rules.length} inbound and ${firewall.outbound_rules.length} outbound rules`);
       
       // For now, we'll work around the Digital Ocean API limitation by replacing the entire rule set
       // This is more reliable than trying to delete individual rules which can be problematic
