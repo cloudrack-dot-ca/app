@@ -119,6 +119,19 @@ async function createTestData() {
     await pool.query('SELECT 1');
     console.log("Database connection successful");
     
+    // Run necessary migrations
+    try {
+      const { runMigration } = await import('../migrations/add-snapshots-table.js');
+      const result = await runMigration();
+      if (result) {
+        console.log("Snapshots table migration completed successfully");
+      } else {
+        console.warn("Snapshots table migration failed or was already applied");
+      }
+    } catch (migrationError) {
+      console.error("Error running snapshots migration:", migrationError);
+    }
+    
     // Create test data including admin user
     await createTestData();
     
