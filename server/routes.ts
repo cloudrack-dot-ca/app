@@ -1232,7 +1232,10 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // After a short delay, set the status back to active
       setTimeout(async () => {
         try {
-          await storage.updateServer(server.id, { status: "active" });
+          await storage.updateServer(server.id, { 
+            status: "active",
+            lastMonitored: new Date() 
+          });
         } catch (error) {
           console.error("Failed to update server status after reboot:", error);
         }
@@ -1277,13 +1280,19 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Call DigitalOcean API
       await digitalOcean.performDropletAction(server.dropletId, doAction as any);
       
-      // Update server status to transition state first
-      let updatedServer = await storage.updateServer(server.id, { status: transitionStatus });
+      // Update server status to transition state first with timestamp
+      let updatedServer = await storage.updateServer(server.id, { 
+        status: transitionStatus,
+        lastMonitored: new Date()
+      });
       
       // After a short delay, update to final state
       setTimeout(async () => {
         try {
-          await storage.updateServer(server.id, { status: newStatus });
+          await storage.updateServer(server.id, { 
+            status: newStatus,
+            lastMonitored: new Date()
+          });
         } catch (error) {
           console.error(`Failed to update server status after ${action}:`, error);
         }
