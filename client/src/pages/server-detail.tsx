@@ -413,7 +413,7 @@ export default function ServerDetailPage() {
     enabled: !isNaN(serverId) && !!user && !!server,
   });
   
-  // Fetch snapshots for this server
+  // Fetch snapshots for this server with auto-refresh to keep status up-to-date
   const { data: snapshots = [], isLoading: snapshotsLoading, refetch: refetchSnapshots } = useQuery({
     queryKey: [`/api/servers/${serverId}/snapshots`],
     queryFn: async () => {
@@ -424,6 +424,8 @@ export default function ServerDetailPage() {
       return response.json();
     },
     enabled: !isNaN(serverId) && !!user && !!server,
+    // Auto-refresh every 5 seconds to keep server/snapshot status current
+    refetchInterval: 5000,
   });
 
   // Server action mutations
@@ -687,28 +689,24 @@ export default function ServerDetailPage() {
           Back to Dashboard
         </Button>
         <h1 className="text-3xl font-bold">{server.name}</h1>
-        {/* Server status badge - handle different states with proper labels */}
-        {createSnapshotMutation.isPending ? (
-          <Badge variant="outline" className="animate-pulse bg-yellow-50 text-yellow-700">
-            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            Creating Snapshot...
-          </Badge>
-        ) : restoreSnapshotMutation.isPending ? (
-          <Badge variant="outline" className="animate-pulse bg-yellow-50 text-yellow-700">
-            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            Restoring Snapshot...
-          </Badge>
-        ) : (
-          <Badge variant={
-            server.status === "active" 
-              ? "default" 
-              : (server.status === "starting" || server.status === "rebooting" || server.status === "stopping")
-                ? "outline"
-                : "secondary"
-          }>
-            {server.status === "restoring" ? "Restoring" : server.status}
-          </Badge>
-        )}
+        {/* Server status badge directly from DigitalOcean API */}
+        <Badge variant={
+          server.status === "active" 
+            ? "default" 
+            : (server.status === "starting" || server.status === "rebooting" || server.status === "stopping" || server.status === "restoring")
+              ? "outline"
+              : "secondary"
+        }>
+          {server.status === "restoring" 
+            ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                Restoring
+              </>
+            ) 
+            : server.status
+          }
+        </Badge>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1083,7 +1081,12 @@ export default function ServerDetailPage() {
                                 {snapshot.status === 'creating' ? (
                                   <Badge variant="secondary" className="animate-pulse bg-yellow-50 text-yellow-700 ml-2">
                                     <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    Creating Snapshot...
+                                    Creating...
+                                  </Badge>
+                                ) : server.status === 'restoring' && snapshot.id === Number(server.pendingOperation?.split('_')[1]) ? (
+                                  <Badge variant="secondary" className="animate-pulse bg-blue-50 text-blue-700 ml-2">
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    Restoring...
                                   </Badge>
                                 ) : (
                                   <Badge variant="outline" className="ml-2">
