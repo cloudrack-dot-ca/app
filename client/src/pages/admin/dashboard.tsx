@@ -139,6 +139,16 @@ interface IPBan {
   expiresAt: string | null;
 }
 
+interface AdminVolume {
+  id: number;
+  userId: number;
+  serverId: number | null;
+  name: string;
+  volumeId: string;
+  sizeGb: number;
+  region: string;
+}
+
 interface AdminStats {
   users: {
     total: number;
@@ -290,12 +300,12 @@ export default function AdminDashboard() {
   });
   
   // Fetch volumes
-  const { data: volumes, isLoading: volumesLoading } = useQuery({
+  const { data: volumes, isLoading: volumesLoading } = useQuery<AdminVolume[]>({
     queryKey: ['/api/admin/volumes'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/volumes');
       const data = await response.json();
-      return data;
+      return data as AdminVolume[];
     }
   });
   
@@ -1460,7 +1470,7 @@ export default function AdminDashboard() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    volumes.map((volume) => (
+                    volumes.map((volume: any) => (
                       <TableRow key={volume.id}>
                         <TableCell className="font-medium">{volume.id}</TableCell>
                         <TableCell>{volume.name}</TableCell>

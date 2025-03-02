@@ -531,6 +531,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         application: parsed.data.application || null,
         lastMonitored: new Date(), // Set lastMonitored to current time
         rootPassword: "", // Include empty string to satisfy type, will update properly next
+        isSuspended: false, // Server is not suspended by default
+        createdAt: new Date(), // Set creation time to current time
       });
       
       // Then update the root password directly
