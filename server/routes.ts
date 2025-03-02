@@ -386,6 +386,36 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
         return res.sendStatus(404);
       }
       
+      // Verify status for servers showing as "restoring"
+      if (server.status === 'restoring') {
+        try {
+          console.log(`[STATUS CHECK] Verifying status of server ${serverId} (DO ID: ${server.dropletId})`);
+          
+          // Check actual status from DigitalOcean
+          const dropletDetails = await digitalOcean.apiRequest<{
+            droplet: {
+              id: number;
+              status: string;
+            }
+          }>("GET", `/droplets/${server.dropletId}`);
+          
+          if (dropletDetails?.droplet?.status === 'active') {
+            console.log(`[STATUS FIX] Server ${serverId} showing as 'restoring' but DigitalOcean reports 'active' - fixing`);
+            await storage.updateServer(serverId, { 
+              status: 'active',
+              lastMonitored: new Date() 
+            });
+            
+            // Update the server object to be returned
+            server.status = 'active';
+            server.lastMonitored = new Date();
+          }
+        } catch (statusErr) {
+          console.log(`[STATUS CHECK] Error checking DigitalOcean status: ${statusErr}`);
+          // Continue and return current status if check fails
+        }
+      }
+      
       res.json(server);
     
     } catch (error) {

@@ -511,15 +511,26 @@ export class DigitalOceanClient {
   // Helper method for API requests
   // Public method to allow direct API requests when needed
   async apiRequest<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-    url: string,
+    endpoint: string,
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
     data?: any
   ): Promise<T> {
     try {
-      // Make sure we have a valid method
-      if (!method) {
-        method = 'GET';
+      // Fix common error: endpoint was passed as method
+      // This handles incorrect calls like apiRequest('/endpoint') by treating first arg as endpoint
+      if (endpoint.startsWith('/') && !method.startsWith('/')) {
+        // Valid call with endpoint and method, continue
+      } else if (method.startsWith('/')) {
+        // Incorrect call: method contains endpoint path, data contains method
+        console.log(`[API FIX] Fixing incorrect apiRequest call: endpoint=${endpoint}, method=${method}`);
+        data = method === 'GET' ? undefined : data;
+        method = endpoint as any;
+        endpoint = method;
       }
+      
+      // Make sure URL is properly formed with base API URL
+      const url = `${this.apiBaseUrl}${endpoint}`;
+      console.log(`[API REQUEST] ${method} ${url}`);
       
       const response = await fetch(url, {
         method,
