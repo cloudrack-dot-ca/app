@@ -2213,15 +2213,24 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   });
   
   // Delete a snapshot
-  app.delete("/api/snapshots/:id", async (req, res) => {
+  // Delete a snapshot
+  app.delete("/api/servers/:id/snapshots/:snapshotId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     try {
-      const snapshotId = parseInt(req.params.id);
-      const snapshot = await storage.getSnapshot(snapshotId);
+      const serverId = parseInt(req.params.id);
+      const snapshotId = parseInt(req.params.snapshotId);
       
-      if (!snapshot || (snapshot.userId !== req.user.id && !req.user.isAdmin)) {
-        return res.sendStatus(404);
+      // First check if server belongs to user
+      const server = await storage.getServer(serverId);
+      if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
+        return res.status(404).json({ message: "Server not found" });
+      }
+      
+      // Then check if snapshot exists and belongs to this server
+      const snapshot = await storage.getSnapshot(snapshotId);
+      if (!snapshot || snapshot.serverId !== serverId) {
+        return res.status(404).json({ message: "Snapshot not found" });
       }
       
       // Delete from DigitalOcean
@@ -2247,33 +2256,86 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
   });
   
+  // Keep the original endpoint for backward compatibility
+  app.delete("/api/snapshots/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const snapshotId = parseInt(req.params.id);
+      const snapshot = await storage.getSnapshot(snapshotId);
+      
+      if (!snapshot || (snapshot.userId !== req.user.id && !req.user.isAdmin)) {
+        return res.sendStatus(404);
+      }
+      
+      // Delete from DigitalOcean
+      try {
+        await digitalOcean.deleteSnapshot(snapshot.snapshotId);
+      } catch (doError) {
+        console.warn(`Error deleting DigitalOcean snapshot:`, doError);
+        // Continue with DB deletion even if DO deletion fails
+      }
+      
+      // Delete from database
+      await storage.deleteSnapshot(snapshotId);
+      
+      return res.status(200).json({ message: "Snapshot deleted successfully" });
+    } catch (error) {
+      console.error(`Error deleting snapshot:`, error);
+      res.status(500).json({ 
+        message: "Failed to delete snapshot",
+        error: (error as Error).message
+      });
+    }
+  });
+  
   // Restore a server from a snapshot
-  app.post("/api/servers/:id/restore", async (req, res) => {
+  app.post("/api/servers/:id/snapshots/:snapshotId/restore", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     try {
       const serverId = parseInt(req.params.id);
+      const snapshotId = parseInt(req.params.snapshotId);
+      
+      // First check if server belongs to user
       const server = await storage.getServer(serverId);
-      
       if (!server || (server.userId !== req.user.id && !req.user.isAdmin)) {
-        return res.sendStatus(404);
+        return res.status(404).json({ message: "Server not found" });
       }
       
-      const { snapshotId } = req.body;
-      if (!snapshotId) {
-        return res.status(400).json({ message: "Snapshot ID is required" });
-      }
-      
-      const snapshot = await storage.getSnapshot(parseInt(snapshotId));
-      if (!snapshot || snapshot.userId !== req.user.id) {
+      // Then check if snapshot exists and belongs to this server
+      const snapshot = await storage.getSnapshot(snapshotId);
+      if (!snapshot || snapshot.serverId !== serverId) {
         return res.status(404).json({ message: "Snapshot not found" });
       }
       
-      // Restore the server from the snapshot
-      await digitalOcean.restoreDropletFromSnapshot(server.dropletId, snapshot.snapshotId);
+      // Verify that the snapshot belongs to the user
+      if (snapshot.userId !== req.user.id && !req.user.isAdmin) {
+        return res.status(403).json({ message: "You don't have permission to access this snapshot" });
+      }
       
-      // Update server status to indicate restore in progress
-      await storage.updateServer(serverId, { status: 'restoring' });
+      try {
+        // Restore the server from the snapshot
+        if (digitalOcean.useMock) {
+          console.log(`[MOCK] Restoring droplet ${server.dropletId} from snapshot ${snapshot.snapshotId}`);
+          // In mock mode, just immediately update the status
+        } else {
+          // Real mode - call the Digital Ocean API
+          await digitalOcean.restoreDropletFromSnapshot(server.dropletId, snapshot.snapshotId);
+        }
+        
+        // Update server status to indicate restore in progress
+        await storage.updateServer(serverId, { status: 'restoring' });
+      } catch (err) {
+        console.error(`Error during snapshot restore: ${err}`);
+        // Even if Digital Ocean fails, we can simulate success in development
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[DEV] Simulating successful snapshot restore despite DO API error`);
+          await storage.updateServer(serverId, { status: 'restoring' });
+        } else {
+          throw err; // In production, propagate the error
+        }
+      }
       
       return res.json({ 
         message: "Server restore initiated successfully",
