@@ -715,6 +715,7 @@ export default function AdminDashboard() {
                         <TableHead>Username</TableHead>
                         <TableHead>Balance</TableHead>
                         <TableHead>Admin</TableHead>
+                        <TableHead>Suspended</TableHead>
                         <TableHead>API Key</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -735,6 +736,13 @@ export default function AdminDashboard() {
                               <BadgeCheck className="h-5 w-5 text-green-500" />
                             ) : (
                               <BadgeX className="h-5 w-5 text-gray-400" />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {user.isSuspended ? (
+                              <Lock className="h-5 w-5 text-red-500" title="Account Suspended" />
+                            ) : (
+                              <BadgeCheck className="h-5 w-5 text-green-500" title="Account Active" />
                             )}
                           </TableCell>
                           <TableCell>{user.apiKey ? 'Set' : 'Not Set'}</TableCell>
