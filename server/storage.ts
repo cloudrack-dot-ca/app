@@ -1,6 +1,6 @@
 import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, serverMetrics, ipBans, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey, type ServerMetric, type IPBan, type InsertIPBan } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, isNull } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -25,6 +25,7 @@ export interface IStorage {
 
   getVolume(id: number): Promise<Volume | undefined>;
   getVolumesByServer(serverId: number): Promise<Volume[]>;
+  getUnattachedVolumes(): Promise<Volume[]>;
   createVolume(volume: Omit<Volume, "id">): Promise<Volume>;
   deleteVolume(id: number): Promise<void>;
   updateVolume(volume: Volume): Promise<Volume>;
@@ -227,6 +228,10 @@ export class DatabaseStorage implements IStorage {
 
   async getVolumesByServer(serverId: number): Promise<Volume[]> {
     return await db.select().from(volumes).where(eq(volumes.serverId, serverId));
+  }
+
+  async getUnattachedVolumes(): Promise<Volume[]> {
+    return await db.select().from(volumes).where(isNull(volumes.serverId));
   }
 
   async createVolume(volume: Omit<Volume, "id">): Promise<Volume> {

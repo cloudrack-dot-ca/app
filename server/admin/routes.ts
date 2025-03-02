@@ -332,6 +332,85 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // Get all volumes across the platform
+  app.get('/api/admin/volumes', async (req: Request, res: Response) => {
+    try {
+      // Get all volumes from the database
+      const servers = await storage.getAllServers();
+      const volumes = [];
+      
+      // For each server, get its volumes
+      for (const server of servers) {
+        const serverVolumes = await storage.getVolumesByServer(server.id);
+        // Add volumes to the list with server information
+        volumes.push(...serverVolumes.map(volume => ({
+          ...volume,
+          serverName: server.name,
+          serverRegion: server.region
+        })));
+      }
+
+      // Get unattached volumes (those not associated with any server)
+      const unattachedVolumes = await storage.getUnattachedVolumes();
+      volumes.push(...unattachedVolumes.map(volume => ({
+        ...volume,
+        serverName: null,
+        serverRegion: null
+      })));
+      
+      // Return volumes list
+      res.status(200).json(volumes);
+    } catch (error) {
+      console.error('Error getting volumes:', error);
+      res.status(500).json({ message: 'Failed to retrieve volumes' });
+    }
+  });
+
+  // Get volume stats for admin dashboard
+  app.get('/api/admin/volume-stats', async (req: Request, res: Response) => {
+    try {
+      // Get all volumes from the database
+      const servers = await storage.getAllServers();
+      const volumes = [];
+      
+      // For each server, get its volumes
+      for (const server of servers) {
+        const serverVolumes = await storage.getVolumesByServer(server.id);
+        volumes.push(...serverVolumes);
+      }
+      
+      // Get unattached volumes
+      const unattachedVolumes = await storage.getUnattachedVolumes();
+      volumes.push(...unattachedVolumes);
+
+      // Calculate total storage
+      const totalStorage = volumes.reduce((total, volume) => total + volume.sizeGb, 0);
+      
+      // Calculate attached storage
+      const attachedStorage = volumes
+        .filter(volume => volume.serverId !== null)
+        .reduce((total, volume) => total + volume.sizeGb, 0);
+      
+      // Calculate unattached storage
+      const unattachedStorage = volumes
+        .filter(volume => volume.serverId === null)
+        .reduce((total, volume) => total + volume.sizeGb, 0);
+      
+      // Return stats
+      res.status(200).json({
+        totalStorage,
+        attachedStorage,
+        unattachedStorage,
+        volumeCount: volumes.length,
+        attachedVolumeCount: volumes.filter(volume => volume.serverId !== null).length,
+        unattachedVolumeCount: volumes.filter(volume => volume.serverId === null).length
+      });
+    } catch (error) {
+      console.error('Error getting volume stats:', error);
+      res.status(500).json({ message: 'Failed to retrieve volume statistics' });
+    }
+  });
+  
   // API Key Management for Admin
   app.get('/api/admin/users/:id/api-key', async (req: Request, res: Response) => {
     try {
