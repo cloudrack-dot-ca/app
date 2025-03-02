@@ -403,7 +403,11 @@ export default function Dashboard() {
                                     .map((app) => (
                                       <SelectItem key={app.slug} value={app.slug}>
                                         {app.name}
-                                        {app.distribution && <span className="text-xs ml-1 text-muted-foreground"> ({app.distribution})</span>}
+                                        {app.distribution && (
+                                          <span className="text-xs ml-1 text-muted-foreground">
+                                            {" "}({distributions.find(d => d.slug === app.distribution)?.name || app.distribution})
+                                          </span>
+                                        )}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>
