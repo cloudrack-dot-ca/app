@@ -72,14 +72,19 @@ import {
   CircleDollarSign, 
   Home,
   Laptop, 
+  Lock,
+  Pencil,
   Server, 
   Settings, 
   ShieldCheck, 
   Ticket, 
   Trash2, 
-  User, 
+  Unlock,
+  User,
+  UserCog,
   Users 
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface AdminUser {
   id: number;
@@ -87,6 +92,7 @@ interface AdminUser {
   balance: number;
   isAdmin: boolean;
   apiKey: string | null;
+  isSuspended?: boolean;
 }
 
 interface AdminServer {
@@ -293,6 +299,56 @@ export default function AdminDashboard() {
         description: 'User balance updated successfully',
       });
       setEditingUser(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to update user balance: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Update user details mutation
+  const updateUserDetailsMutation = useMutation({
+    mutationFn: async ({ 
+      userId, 
+      username, 
+      password, 
+      isAdmin,
+      isSuspended
+    }: { 
+      userId: number, 
+      username: string, 
+      password?: string, 
+      isAdmin: boolean,
+      isSuspended: boolean
+    }) => {
+      const response = await apiRequest('PATCH', `/api/admin/users/${userId}`, { 
+        username, 
+        password, 
+        isAdmin,
+        isSuspended
+      });
+      const data = await response.json();
+      return data as AdminUser;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'User details updated successfully',
+      });
+      setEditingUser(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to update user details: ${error.message}`,
+        variant: 'destructive',
+      });
     }
   });
 
@@ -683,16 +739,55 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>{user.apiKey ? 'Set' : 'Not Set'}</TableCell>
                           <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => {
-                                setEditingUser(user);
-                                setEditUserBalance((user.balance / 100).toString());
-                              }}
-                            >
-                              Edit Balance
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setEditingUser(user);
+                                  setEditUserBalance((user.balance / 100).toString());
+                                  setEditUserMode('balance');
+                                  // Initialize user data for the details form
+                                  setEditUserData({
+                                    username: user.username,
+                                    password: '',
+                                    isAdmin: user.isAdmin,
+                                    isSuspended: user.isSuspended || false
+                                  });
+                                }}
+                              >
+                                <Pencil className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              
+                              {!user.isAdmin && (
+                                <Button 
+                                  variant={user.isSuspended ? "default" : "destructive"} 
+                                  size="sm"
+                                  onClick={() => {
+                                    // Quick suspend/unsuspend without opening dialog
+                                    updateUserDetailsMutation.mutate({
+                                      userId: user.id,
+                                      username: user.username,
+                                      isAdmin: user.isAdmin,
+                                      isSuspended: !user.isSuspended
+                                    });
+                                  }}
+                                >
+                                  {user.isSuspended ? (
+                                    <>
+                                      <Unlock className="h-4 w-4 mr-1" />
+                                      Unsuspend
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Lock className="h-4 w-4 mr-1" />
+                                      Suspend
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -740,49 +835,172 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Edit User Balance Dialog */}
+          {/* Edit User Dialog */}
           {editingUser && (
             <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-              <DialogContent>
+              <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Edit User Balance</DialogTitle>
+                  <DialogTitle>
+                    Edit User: {editingUser.username}
+                  </DialogTitle>
                   <DialogDescription>
-                    Update balance for user {editingUser.username}
+                    Update user account settings and permissions
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="flex items-center gap-4">
-                    <label htmlFor="balance" className="text-right">
-                      Balance ($):
-                    </label>
-                    <Input
-                      id="balance"
-                      type="number"
-                      step="0.01"
-                      value={editUserBalance}
-                      onChange={(e) => setEditUserBalance(e.target.value)}
-                      className="col-span-3"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
+                
+                <Tabs value={editUserMode} onValueChange={(v) => setEditUserMode(v as 'balance' | 'details')}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="balance" className="flex items-center">
+                      <CircleDollarSign className="h-4 w-4 mr-2" />
+                      Balance
+                    </TabsTrigger>
+                    <TabsTrigger value="details" className="flex items-center">
+                      <UserCog className="h-4 w-4 mr-2" />
+                      Account
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  {/* Balance Tab */}
+                  <TabsContent value="balance" className="space-y-4 pt-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <label htmlFor="balance" className="text-right min-w-24">
+                          Balance ($):
+                        </label>
+                        <Input
+                          id="balance"
+                          type="number"
+                          step="0.01"
+                          value={editUserBalance}
+                          onChange={(e) => setEditUserBalance(e.target.value)}
+                          className="flex-1"
+                        />
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground">
+                        Current balance: <CurrencyDisplay amount={editingUser.balance} showPrefix={true} />
+                      </p>
+                      
+                      <div className="pt-2">
+                        <Button 
+                          onClick={() => {
+                            const balanceInCents = Math.round(parseFloat(editUserBalance) * 100);
+                            updateUserBalanceMutation.mutate({
+                              userId: editingUser.id,
+                              amount: balanceInCents
+                            });
+                          }}
+                          disabled={updateUserBalanceMutation.isPending}
+                          className="w-full"
+                        >
+                          {updateUserBalanceMutation.isPending ? 'Updating...' : 'Update Balance'}
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  {/* User Details Tab */}
+                  <TabsContent value="details" className="space-y-4 pt-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <label htmlFor="username" className="text-right min-w-24">
+                          Username:
+                        </label>
+                        <Input
+                          id="username"
+                          value={editUserData.username}
+                          onChange={(e) => setEditUserData({...editUserData, username: e.target.value})}
+                          className="flex-1"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <label htmlFor="password" className="text-right min-w-24">
+                          New Password:
+                        </label>
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="Leave blank to keep current"
+                          value={editUserData.password}
+                          onChange={(e) => setEditUserData({...editUserData, password: e.target.value})}
+                          className="flex-1"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-4 pt-2">
+                        <label className="text-right min-w-24">
+                          Account Type:
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            id="isAdmin" 
+                            checked={editUserData.isAdmin}
+                            onCheckedChange={(checked) => 
+                              setEditUserData({...editUserData, isAdmin: checked as boolean})
+                            }
+                            disabled={user?.id === editingUser.id} // Can't change own admin status
+                          />
+                          <label htmlFor="isAdmin" className="text-sm">
+                            Administrator
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <label className="text-right min-w-24">
+                          Account Status:
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            id="isSuspended" 
+                            checked={editUserData.isSuspended}
+                            onCheckedChange={(checked) => 
+                              setEditUserData({...editUserData, isSuspended: checked as boolean})
+                            }
+                            disabled={user?.id === editingUser.id || editingUser.isAdmin} // Can't suspend own account or other admins
+                          />
+                          <label htmlFor="isSuspended" className="text-sm">
+                            Suspended
+                          </label>
+                          {user?.id === editingUser.id && (
+                            <span className="text-xs text-red-500 ml-2">Cannot suspend own account</span>
+                          )}
+                          {editingUser.isAdmin && user?.id !== editingUser.id && (
+                            <span className="text-xs text-amber-500 ml-2">Admin accounts cannot be suspended</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="pt-2">
+                        <Button 
+                          onClick={() => {
+                            updateUserDetailsMutation.mutate({
+                              userId: editingUser.id,
+                              username: editUserData.username,
+                              password: editUserData.password || undefined,
+                              isAdmin: editUserData.isAdmin,
+                              isSuspended: editUserData.isSuspended
+                            });
+                          }}
+                          disabled={updateUserDetailsMutation.isPending || 
+                                    (user?.id === editingUser.id && !editUserData.isAdmin) || // Can't remove own admin privileges
+                                    (user?.id === editingUser.id && editUserData.isSuspended)} // Can't suspend self
+                          className="w-full"
+                        >
+                          {updateUserDetailsMutation.isPending ? 'Saving Changes...' : 'Save Changes'}
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+                
+                <DialogFooter className="gap-2 sm:gap-0">
                   <Button 
                     variant="outline" 
                     onClick={() => setEditingUser(null)}
                   >
                     Cancel
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      const balanceInCents = Math.round(parseFloat(editUserBalance) * 100);
-                      updateUserBalanceMutation.mutate({
-                        userId: editingUser.id,
-                        amount: balanceInCents
-                      });
-                    }}
-                    disabled={updateUserBalanceMutation.isPending}
-                  >
-                    {updateUserBalanceMutation.isPending ? 'Updating...' : 'Update Balance'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
