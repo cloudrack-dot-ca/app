@@ -2167,14 +2167,14 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       // Create a billing transaction for the snapshot
       // Snapshots are billed at $0.06 per GB per month + 0.5% markup
       const pricePerGbPerMonth = 0.06 * 1.005; // With 0.5% markup
-      const costInDollars = pricePerGbPerMonth * serverSize;
+      const costInDollars = pricePerGbPerMonth * initialSizeGb;
       
       await storage.createTransaction({
         userId: server.userId,
         amount: toCents(costInDollars),
         type: 'charge',
         status: 'completed',
-        description: `Snapshot creation: ${name} (${serverSize}GB)`,
+        description: `Snapshot creation: ${name} (${initialSizeGb}GB)`,
         createdAt: new Date(),
         currency: 'USD',
         paypalTransactionId: null

@@ -80,7 +80,9 @@ import {
   Plus,
   Loader2,
   RotateCcw,
-  AlertTriangle
+  AlertTriangle,
+  Clock,
+  Hash as HashIcon
 } from "lucide-react";
 import VolumeManager from "@/components/volume-manager";
 import ServerMonitoring from "@/components/server-monitoring";
@@ -1066,8 +1068,28 @@ export default function ServerDetailPage() {
                                 </Badge>
                               </div>
                               <div className="mt-1 flex text-sm text-muted-foreground space-x-4">
-                                <div>Size: {snapshot.sizeGb}GB</div>
-                                <div>Created: {new Date(snapshot.createdAt).toLocaleString()}</div>
+                                <div className="flex items-center">
+                                  <Database className="h-3 w-3 mr-1" />
+                                  <span>Size: {snapshot.sizeGb.toFixed(1)}GB</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  <span>Created: {new Date(snapshot.createdAt).toLocaleString()}</span>
+                                </div>
+                                {snapshot.status === 'creating' && (
+                                  <Badge variant="outline" className="animate-pulse bg-yellow-50 text-yellow-700">
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    Processing...
+                                  </Badge>
+                                )}
+                                {snapshot.snapshotId && (
+                                  <div className="flex items-center">
+                                    <HashIcon className="h-3 w-3 mr-1" />
+                                    <span className="truncate max-w-[100px]" title={snapshot.snapshotId}>
+                                      ID: {snapshot.snapshotId.substring(0, 8)}...
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
