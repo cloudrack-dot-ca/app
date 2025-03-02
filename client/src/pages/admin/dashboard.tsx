@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { ChevronLeft, ChevronRight, KeyRound, AlertTriangle, ExternalLink, Download, HardDrive, ShieldAlert, LifeBuoy } from 'lucide-react';
+import VolumeManagement from '@/components/admin/volume-management';
 import { 
   Card, 
   CardContent, 
@@ -1416,6 +1417,12 @@ export default function AdminDashboard() {
         
         {/* Volumes Tab */}
         <TabsContent value="volumes" className="space-y-4">
+          <VolumeManagement 
+            volumes={volumes}
+            volumesLoading={volumesLoading}
+            volumeStats={volumeStats}
+            volumeStatsLoading={volumeStatsLoading}
+          />
           <Card className="mb-4">
             <CardHeader>
               <CardTitle>Volume Management</CardTitle>
