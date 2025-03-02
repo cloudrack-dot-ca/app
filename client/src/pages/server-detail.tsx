@@ -65,6 +65,7 @@ import {
   Wifi,
   Shield,
   BarChart,
+  BarChart3,
   Check,
   ExternalLink,
   Key,

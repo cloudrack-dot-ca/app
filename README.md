@@ -207,20 +207,24 @@ CloudRack includes a sophisticated bandwidth tracking and billing system:
 - **Real-time Tracking**: Monitor bandwidth usage as it happens
 - **Usage Bar**: Visual indicator of consumption relative to your limit
 - **Warning Thresholds**: Colored indicators when approaching limits
+- **Adaptive Display Units**: Values automatically display in MB, GB, or TB based on size
+- **Detailed Graphs**: View daily and hourly bandwidth patterns
 
 ### Billing Logic
 - **Included Bandwidth**: Every server includes 1TB (1000GB) of outbound transfer per month
-- **Billing Period**: Bandwidth is calculated on a calendar month basis
-- **Overage Rate**: Usage beyond the included amount is billed at $0.01005/GB
-- **Calculation Method**: Charges are applied at 0.5% of the server's monthly cost per GB
-- **Automated Processing**: Overages are automatically calculated and billed at month-end
+- **Server-specific Billing Periods**: Bandwidth is calculated from each server's creation date
+- **Prorated Limits**: Bandwidth allocations are prorated for partial first months
+- **Overage Rate**: Usage beyond the included amount is billed at 0.5% of monthly server cost per GB
+- **Automated Processing**: Overages are automatically calculated and charged at the end of each billing period
 - **Transparent Reporting**: All bandwidth charges clearly labeled in transaction history
+- **One-click Access**: View detailed bandwidth statistics directly from server control panel
 
 ### Technical Implementation
 - Bandwidth data collected hourly via server metrics
-- Aggregated daily for efficient storage
-- Calculated monthly for billing purposes
-- Prorated for partial month server usage
+- Aggregated daily for efficient storage and reporting
+- Intelligent calculation based on server-specific periods
+- Automatic unit conversion for clear data presentation (MB/GB/TB)
+- Enhanced error handling for more reliable monitoring
 
 ## ⚙️ System Administration
 

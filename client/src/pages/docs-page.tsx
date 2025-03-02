@@ -70,11 +70,13 @@ const mockSections: DocSection[] = [
   <li class="ml-4 mb-1 text-foreground">Attach additional storage volumes for scalability</li>
   <li class="ml-4 mb-1 text-foreground">Monitor server performance metrics in real-time</li>
   <li class="ml-4 mb-1 text-foreground">Access servers via SSH and web console</li>
+  <li class="ml-4 mb-1 text-foreground">Track bandwidth usage with intuitive visualization tools</li>
+  <li class="ml-4 mb-1 text-foreground">Manage servers with server-specific billing periods</li>
 </ul>
 
 <p class="mb-3 text-foreground">Let's get you started on your cloud hosting journey!</p>`,
         order: 1,
-        lastUpdated: "2023-07-15"
+        lastUpdated: "2025-03-02"
       },
       {
         id: "quick-start",
@@ -325,9 +327,157 @@ You can add or remove SSH keys from existing servers:
     ]
   },
   {
+    id: "billing",
+    title: "Billing & Bandwidth",
+    order: 4,
+    children: [
+      {
+        id: "bandwidth-monitoring",
+        sectionId: "billing",
+        title: "Bandwidth Monitoring & Billing",
+        content: `<h1 class="text-2xl font-bold mt-6 mb-4 text-foreground">Bandwidth Monitoring & Billing</h1>
+
+<p class="mb-3 text-foreground">CloudRack provides comprehensive bandwidth monitoring and a transparent billing system to help you manage your server's network usage effectively.</p>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Understanding Bandwidth Allocation</h2>
+
+<p class="mb-3 text-foreground">Each server comes with a generous bandwidth allocation:</p>
+
+<ul>
+  <li class="ml-4 mb-1 text-foreground">Every server includes 1TB (1000GB) of outbound transfer per month</li>
+  <li class="ml-4 mb-1 text-foreground">Bandwidth is calculated from each server's creation date, not calendar month</li>
+  <li class="ml-4 mb-1 text-foreground">For new servers, bandwidth allocation is prorated for the first partial month</li>
+  <li class="ml-4 mb-1 text-foreground">Both inbound and outbound traffic are monitored, but only outbound counts toward your limit</li>
+</ul>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Accessing Bandwidth Information</h2>
+
+<p class="mb-3 text-foreground">To view your bandwidth usage:</p>
+
+<ol>
+  <li class="ml-4 mb-1 text-foreground">Navigate to your server's detail page</li>
+  <li class="ml-4 mb-1 text-foreground">Click the "View Bandwidth" button in the Server Controls section</li>
+  <li class="ml-4 mb-1 text-foreground">Alternatively, go to the Networking tab and find the bandwidth monitoring section</li>
+</ol>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Bandwidth Dashboard Features</h2>
+
+<ul>
+  <li class="ml-4 mb-1 text-foreground"><strong>Usage Bar</strong>: Visual indicator of your current usage relative to your limit</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Detailed Charts</strong>: Daily and hourly breakdowns of your bandwidth consumption</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Inbound/Outbound Tracking</strong>: Separate tracking for incoming and outgoing traffic</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Adaptive Units</strong>: Values automatically display in MB for small amounts, scaling to GB or TB as needed</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Billing Period Indicators</strong>: Clear display of your current billing period dates</li>
+</ul>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Bandwidth Overage Billing</h2>
+
+<p class="mb-3 text-foreground">If you exceed your included bandwidth allocation:</p>
+
+<ul>
+  <li class="ml-4 mb-1 text-foreground">Overage is calculated at 0.5% of your monthly server cost per GB</li>
+  <li class="ml-4 mb-1 text-foreground">Charges are automatically applied at the end of your server's billing period</li>
+  <li class="ml-4 mb-1 text-foreground">All bandwidth charges appear in your transaction history with detailed descriptions</li>
+</ul>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Bandwidth Management Tips</h2>
+
+<ul>
+  <li class="ml-4 mb-1 text-foreground">Set up monitoring alerts to notify you when approaching your bandwidth limit</li>
+  <li class="ml-4 mb-1 text-foreground">Use a CDN for static content to reduce outbound traffic from your server</li>
+  <li class="ml-4 mb-1 text-foreground">Implement caching strategies to minimize redundant data transfers</li>
+  <li class="ml-4 mb-1 text-foreground">Consider compressing API responses and web content</li>
+  <li class="ml-4 mb-1 text-foreground">For high-traffic applications, consider distributing load across multiple servers</li>
+</ul>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Understanding Bandwidth Metrics</h2>
+
+<p class="mb-3 text-foreground">CloudRack provides several bandwidth metrics:</p>
+
+<ul>
+  <li class="ml-4 mb-1 text-foreground"><strong>Current Usage</strong>: Total bandwidth consumed in the current billing period</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Daily Usage</strong>: Breakdown of bandwidth consumption by day</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Projected Usage</strong>: Estimated total usage based on current trends</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Peak Traffic</strong>: Highest bandwidth consumption periods</li>
+</ul>
+
+<p class="mb-3 text-foreground">Regular monitoring of these metrics can help you optimize your application and control costs.</p>`,
+        order: 1,
+        lastUpdated: "2025-03-02"
+      },
+      {
+        id: "billing-system",
+        sectionId: "billing",
+        title: "Account Billing & Payments",
+        content: `<h1 class="text-2xl font-bold mt-6 mb-4 text-foreground">Account Billing & Payments</h1>
+
+<p class="mb-3 text-foreground">CloudRack uses a transparent pay-as-you-go billing model that charges only for the resources you use.</p>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Billing Model</h2>
+
+<ul>
+  <li class="ml-4 mb-1 text-foreground"><strong>Hourly Billing</strong>: Servers are billed by the hour, allowing precise control over costs</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Pro-rated Charges</strong>: You only pay for the hours your resources are active</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Server-specific Billing Periods</strong>: Each server has its own billing cycle based on creation date</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Volume Storage</strong>: Block storage is billed at a fixed rate per GB per month</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Bandwidth Overages</strong>: Only charged if you exceed your included allocation</li>
+</ul>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Adding Account Credit</h2>
+
+<p class="mb-3 text-foreground">To add funds to your account:</p>
+
+<ol>
+  <li class="ml-4 mb-1 text-foreground">Navigate to the Billing page</li>
+  <li class="ml-4 mb-1 text-foreground">Click "Add Credit"</li>
+  <li class="ml-4 mb-1 text-foreground">Enter the amount you wish to add</li>
+  <li class="ml-4 mb-1 text-foreground">Complete the payment process via PayPal</li>
+</ol>
+
+<p class="mb-3 text-foreground">We recommend maintaining sufficient account balance to cover at least one month of usage.</p>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Transaction History</h2>
+
+<p class="mb-3 text-foreground">Your transaction history provides detailed records of all charges and payments:</p>
+
+<ul>
+  <li class="ml-4 mb-1 text-foreground"><strong>Deposits</strong>: All funds added to your account</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Server Charges</strong>: Hourly server usage fees</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Volume Charges</strong>: Block storage fees</li>
+  <li class="ml-4 mb-1 text-foreground"><strong>Bandwidth Charges</strong>: Any bandwidth overage fees</li>
+</ul>
+
+<p class="mb-3 text-foreground">Each entry includes a timestamp, description, amount, and status.</p>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Billing Alerts</h2>
+
+<p class="mb-3 text-foreground">CloudRack monitors your account balance and provides alerts:</p>
+
+<ul>
+  <li class="ml-4 mb-1 text-foreground">Low balance warnings when your account balance falls below estimated monthly usage</li>
+  <li class="ml-4 mb-1 text-foreground">Automatic reminder emails when balance is critically low</li>
+  <li class="ml-4 mb-1 text-foreground">Notifications of upcoming bandwidth overages</li>
+</ul>
+
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">Payment Methods</h2>
+
+<p class="mb-3 text-foreground">CloudRack currently supports the following payment methods:</p>
+
+<ul>
+  <li class="ml-4 mb-1 text-foreground">PayPal</li>
+  <li class="ml-4 mb-1 text-foreground">Credit/Debit cards (via PayPal)</li>
+</ul>
+
+<p class="mb-3 text-foreground">All payment processing is handled securely through PayPal's infrastructure. CloudRack does not store your payment details.</p>`,
+        order: 2,
+        lastUpdated: "2025-03-02"
+      }
+    ]
+  },
+  {
     id: "storage",
     title: "Storage & Volumes",
-    order: 4,
+    order: 5,
     children: [
       {
         id: "volumes",
