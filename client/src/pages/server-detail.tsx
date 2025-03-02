@@ -795,6 +795,16 @@ export default function ServerDetailPage() {
                     Fullscreen Terminal
                   </Button>
                 </Link>
+                
+                <Link href={`/servers/${serverId}/bandwidth`}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-2"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    View Bandwidth
+                  </Button>
+                </Link>
 
                 <Separator />
 
