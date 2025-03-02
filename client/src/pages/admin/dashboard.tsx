@@ -430,6 +430,28 @@ export default function AdminDashboard() {
     }
   });
   
+  // Reboot server mutation
+  const rebootServerMutation = useMutation({
+    mutationFn: async (serverId: number) => {
+      await apiRequest('POST', `/api/servers/${serverId}/reboot`);
+      return serverId;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Server reboot initiated',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/servers'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to reboot server: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+  
   // Update ticket status mutation
   const updateTicketStatusMutation = useMutation({
     mutationFn: async ({ ticketId, status }: { ticketId: number; status: string }) => {
@@ -740,9 +762,13 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             {user.isSuspended ? (
-                              <Lock className="h-5 w-5 text-red-500" title="Account Suspended" />
+                              <div title="Account Suspended">
+                                <Lock className="h-5 w-5 text-red-500" />
+                              </div>
                             ) : (
-                              <BadgeCheck className="h-5 w-5 text-green-500" title="Account Active" />
+                              <div title="Account Active">
+                                <BadgeCheck className="h-5 w-5 text-green-500" />
+                              </div>
                             )}
                           </TableCell>
                           <TableCell>{user.apiKey ? 'Set' : 'Not Set'}</TableCell>
