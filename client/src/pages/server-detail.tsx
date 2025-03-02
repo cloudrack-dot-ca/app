@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,7 +75,12 @@ import {
   CheckCircle,
   Database,
   FileCode,
-  LifeBuoy
+  LifeBuoy,
+  Camera,
+  Plus,
+  Loader2,
+  RotateCcw,
+  AlertTriangle
 } from "lucide-react";
 import VolumeManager from "@/components/volume-manager";
 import ServerMonitoring from "@/components/server-monitoring";
@@ -351,6 +357,12 @@ export default function ServerDetailPage() {
   const [ipv6Enabled, setIpv6Enabled] = useState(false);
   const [confirmIpv6Enable, setConfirmIpv6Enable] = useState(false);
   
+  // Snapshot states
+  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+  const [snapshotName, setSnapshotName] = useState("");
+  const [snapshotToDelete, setSnapshotToDelete] = useState<any>(null);
+  const [confirmDeleteSnapshot, setConfirmDeleteSnapshot] = useState(false);
+  
   // Parse URL to check for tab query parameter
   const searchParams = new URLSearchParams(window.location.search);
   const tabParam = searchParams.get('tab');
@@ -393,6 +405,19 @@ export default function ServerDetailPage() {
       const response = await fetch(`/api/servers/${serverId}/volumes`);
       if (!response.ok) {
         throw new Error(`Error fetching volumes: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    enabled: !isNaN(serverId) && !!user && !!server,
+  });
+  
+  // Fetch snapshots for this server
+  const { data: snapshots = [], isLoading: snapshotsLoading, refetch: refetchSnapshots } = useQuery({
+    queryKey: [`/api/servers/${serverId}/snapshots`],
+    queryFn: async () => {
+      const response = await fetch(`/api/servers/${serverId}/snapshots`);
+      if (!response.ok) {
+        throw new Error(`Error fetching snapshots: ${response.statusText}`);
       }
       return response.json();
     },
@@ -859,6 +884,166 @@ export default function ServerDetailPage() {
           </Card>
         </TabsContent>
 
+        {/* Snapshots Tab */}
+        <TabsContent value="snapshots">
+          <Card>
+            <CardHeader>
+              <CardTitle>Snapshot Management</CardTitle>
+              <CardDescription>
+                Create and manage server snapshots
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Top info section */}
+                <div className="bg-muted p-4 rounded-lg">
+                  <h3 className="text-sm font-semibold mb-2">About Snapshots</h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Snapshots are point-in-time copies of your server that can be used to:
+                  </p>
+                  <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 mb-3">
+                    <li>Create backups of your server's data and configuration</li>
+                    <li>Restore your server to a previous state</li>
+                    <li>Transfer your server to a different size or region (coming soon)</li>
+                  </ul>
+                  <div className="flex items-center text-amber-600 text-sm font-medium">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    <span>Snapshots are billed at $0.06 per GB per month until deleted</span>
+                  </div>
+                </div>
+
+                {/* Snapshot list */}
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Server Snapshots</h3>
+                    <Button
+                      onClick={() => setIsCreatingSnapshot(true)}
+                      disabled={isCreatingSnapshot || createSnapshotMutation.isPending}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Snapshot
+                    </Button>
+                  </div>
+
+                  {/* Create snapshot form */}
+                  {isCreatingSnapshot && (
+                    <Card className="mb-6">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Create New Snapshot</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          if (snapshotName.trim()) {
+                            createSnapshotMutation.mutate(snapshotName);
+                          }
+                        }} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="snapshotName">Snapshot Name</Label>
+                            <Input
+                              id="snapshotName"
+                              value={snapshotName}
+                              onChange={(e) => setSnapshotName(e.target.value)}
+                              placeholder="Enter a name for this snapshot"
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setIsCreatingSnapshot(false);
+                                setSnapshotName('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={!snapshotName.trim() || createSnapshotMutation.isPending}
+                            >
+                              {createSnapshotMutation.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Creating...
+                                </>
+                              ) : (
+                                <>Create Snapshot</>
+                              )}
+                            </Button>
+                          </div>
+                        </form>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Snapshots list */}
+                  {snapshotsLoading ? (
+                    <div className="flex justify-center items-center p-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : snapshots.length === 0 ? (
+                    <div className="bg-muted p-8 rounded-lg text-center">
+                      <Camera className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="text-lg font-medium mb-2">No snapshots yet</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Create a snapshot to backup your server's data and configuration.
+                      </p>
+                      <Button onClick={() => setIsCreatingSnapshot(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Your First Snapshot
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {snapshots.map((snapshot) => (
+                        <Card key={snapshot.id} className="overflow-hidden">
+                          <div className="flex items-center p-4">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <Camera className="h-5 w-5 text-muted-foreground" />
+                                <h4 className="font-medium">{snapshot.name}</h4>
+                                <Badge variant="outline" className="ml-2">
+                                  {snapshot.status}
+                                </Badge>
+                              </div>
+                              <div className="mt-1 flex text-sm text-muted-foreground space-x-4">
+                                <div>Size: {snapshot.sizeGb}GB</div>
+                                <div>Created: {new Date(snapshot.createdAt).toLocaleString()}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => restoreSnapshotMutation.mutate(snapshot.id)}
+                                disabled={restoreSnapshotMutation.isPending}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Restore
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  setSnapshotToDelete(snapshot);
+                                  setConfirmDeleteSnapshot(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+            
         {/* Networking Tab */}
         <TabsContent value="networking">
           <Card>
