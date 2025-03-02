@@ -450,6 +450,52 @@ export default function Dashboard() {
                       />
                     )}
                     
+                    {/* Processor Type Filter */}
+                    <div className="col-span-2 mb-2">
+                      <Label className="text-sm">Processor Type</Label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "all" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("all")}
+                          className="text-xs h-8"
+                        >
+                          All Processors
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "regular" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("regular")}
+                          className="text-xs h-8"
+                        >
+                          Regular SSD
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "intel" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("intel")}
+                          className="text-xs h-8 bg-gradient-to-r from-blue-600 to-sky-600 text-white hover:from-blue-700 hover:to-sky-700 hover:text-white"
+                        >
+                          🔷 Intel
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "amd" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("amd")}
+                          className="text-xs h-8 bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover:text-white"
+                        >
+                          🔶 AMD
+                        </Button>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Select a processor type to filter available server sizes
+                      </div>
+                    </div>
+
                     <FormField
                       control={form.control}
                       name="size"
