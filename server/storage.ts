@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
           lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
           rootPassword: row.root_password ? String(row.root_password) : null,
           isSuspended: Boolean(row.is_suspended),
-          createdAt: null // Add null createdAt field
+          createdAt: row.created_at ? new Date(row.created_at) : new Date() // Add null createdAt field
         }));
       }
       // Re-throw other errors
@@ -199,7 +199,7 @@ export class DatabaseStorage implements IStorage {
           lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
           rootPassword: row.root_password ? String(row.root_password) : null,
           isSuspended: Boolean(row.is_suspended),
-          createdAt: null // Add null createdAt field
+          createdAt: row.created_at ? new Date(row.created_at) : new Date() // Add null createdAt field
         }));
       }
       // Re-throw other errors
