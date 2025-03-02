@@ -646,14 +646,15 @@ export default function ServerDetailPage() {
                         <span>Application</span>
                         <span className="font-medium">{server.application || "No Application"}</span>
                       </div>
-                      {server.createdAt && (
-                        <div className="flex justify-between">
-                          <span>Created</span>
-                          <span className="font-medium">
-                            {new Date(server.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                      )}
+                      {/* Display creation date if available */}
+                      <div className="flex justify-between">
+                        <span>Created</span>
+                        <span className="font-medium">
+                          {server.createdAt 
+                            ? new Date(server.createdAt).toLocaleString() 
+                            : new Date().toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
