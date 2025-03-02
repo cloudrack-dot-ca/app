@@ -58,20 +58,21 @@ const mockSections: DocSection[] = [
         id: "welcome",
         sectionId: "getting-started",
         title: "Welcome to CloudRack",
-        content: `# Welcome to CloudRack VPS Platform
-        
-This guide will help you get started with our VPS hosting platform. CloudRack provides high-performance virtual private servers with easy deployment options and full control.
+        content: `<h1 class="text-2xl font-bold mt-6 mb-4 text-foreground">Welcome to CloudRack VPS Platform</h1>
+<p class="mb-3 text-foreground">This guide will help you get started with our VPS hosting platform. CloudRack provides high-performance virtual private servers with easy deployment options and full control.</p>
 
-## What You Can Do with CloudRack
+<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">What You Can Do with CloudRack</h2>
 
-- Deploy virtual servers across multiple global regions
-- Choose from various Linux distributions and application templates
-- Configure firewall rules for enhanced security
-- Attach additional storage volumes for scalability
-- Monitor server performance metrics in real-time
-- Access servers via SSH and web console
+<ul>
+  <li class="ml-4 mb-1 text-foreground">Deploy virtual servers across multiple global regions</li>
+  <li class="ml-4 mb-1 text-foreground">Choose from various Linux distributions and application templates</li>
+  <li class="ml-4 mb-1 text-foreground">Configure firewall rules for enhanced security</li>
+  <li class="ml-4 mb-1 text-foreground">Attach additional storage volumes for scalability</li>
+  <li class="ml-4 mb-1 text-foreground">Monitor server performance metrics in real-time</li>
+  <li class="ml-4 mb-1 text-foreground">Access servers via SSH and web console</li>
+</ul>
 
-Let's get you started on your cloud hosting journey!`,
+<p class="mb-3 text-foreground">Let's get you started on your cloud hosting journey!</p>`,
         order: 1,
         lastUpdated: "2023-07-15"
       },
@@ -1034,8 +1035,9 @@ export default function DocsPage() {
                     <div className="border rounded-md">
                       <Editor
                         id="article-content"
+                        apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
                         value={articleContent}
-                        onEditorChange={(content) => setArticleContent(content)}
+                        onEditorChange={(content: string) => setArticleContent(content)}
                         init={{
                           height: 400,
                           menubar: true,
