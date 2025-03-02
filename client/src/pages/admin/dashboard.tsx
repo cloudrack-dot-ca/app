@@ -352,27 +352,7 @@ export default function AdminDashboard() {
     }
   });
 
-  // CloudRack Terminal Key Cleanup mutation
-  const cleanupCloudRackKeysMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('DELETE', '/api/admin/cloudrack-terminal-keys');
-      const data = await response.json();
-      return data;
-    },
-    onSuccess: (data) => {
-      toast({
-        title: 'Success',
-        description: data.message || 'CloudRack Terminal Keys cleaned up successfully',
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to clean up CloudRack Terminal Keys: ${error.message}`,
-        variant: 'destructive',
-      });
-    }
-  });
+  // CloudRack Terminal Key Cleanup mutation has been removed
 
   // Create IP ban mutation
   const createIpBanMutation = useMutation({
@@ -1468,42 +1448,7 @@ export default function AdminDashboard() {
 
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <KeyRound className="h-5 w-5 mr-2" />
-                  SSH Key Management
-                </div>
-                <Button 
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => {
-                    if (window.confirm("This will permanently remove all legacy CloudRack Terminal Keys from users' accounts. Continue?")) {
-                      cleanupCloudRackKeysMutation.mutate();
-                    }
-                  }}
-                  disabled={cleanupCloudRackKeysMutation.isPending}
-                >
-                  {cleanupCloudRackKeysMutation.isPending ? 'Cleaning Up...' : 'Clean Up CloudRack Keys'}
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                Clean up legacy CloudRack Terminal Keys and manage SSH key system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Alert className="mb-4">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>SSH Key Transition Information</AlertTitle>
-                <AlertDescription>
-                  CloudRack is transitioning from the legacy CloudRack Terminal Key system to the new System SSH Key approach.
-                  The cleanup process will remove all legacy CloudRack Terminal Keys from user accounts while ensuring
-                  System Keys remain intact. All new servers will use the System Key (fingerprint: c0:62:80:ae:2a:05:66:22:cb:d1:64:6e:54:c2:2c:ca).
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
+          {/* SSH Key Management section removed */}
 
           <Card>
             <CardHeader>
