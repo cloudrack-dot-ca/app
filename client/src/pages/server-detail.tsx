@@ -687,15 +687,22 @@ export default function ServerDetailPage() {
           Back to Dashboard
         </Button>
         <h1 className="text-3xl font-bold">{server.name}</h1>
-        <Badge variant={
-          server.status === "active" 
-            ? "default" 
-            : (server.status === "starting" || server.status === "rebooting" || server.status === "stopping")
-              ? "outline"
-              : "secondary"
-        }>
-          {server.status}
-        </Badge>
+        {createSnapshotMutation.isPending || restoreSnapshotMutation.isPending ? (
+          <Badge variant="outline" className="animate-pulse bg-yellow-50 text-yellow-700">
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            {createSnapshotMutation.isPending ? "Creating Snapshot..." : "Restoring..."}
+          </Badge>
+        ) : (
+          <Badge variant={
+            server.status === "active" 
+              ? "default" 
+              : (server.status === "starting" || server.status === "rebooting" || server.status === "stopping")
+                ? "outline"
+                : "secondary"
+          }>
+            {server.status === "restoring" ? "Restoring from Snapshot" : server.status}
+          </Badge>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
