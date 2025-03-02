@@ -1405,15 +1405,35 @@ export default function AdminDashboard() {
                         variant="outline"
                         size="sm"
                         onClick={() => setServerPage(prev => 
-                          Math.min(prev + 1, Math.ceil(servers.filter(server => 
-                            server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
-                            server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                          ).length / ITEMS_PER_PAGE))
+                          Math.min(prev + 1, Math.ceil(servers.filter(server => {
+                            // Apply text search filter
+                            const textMatch = server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                              server.region.toLowerCase().includes(serverSearch.toLowerCase());
+                            
+                            // Apply status filter if not "all"
+                            if (serverStatusFilter === "active") {
+                              return textMatch && server.status === "active";
+                            } else if (serverStatusFilter === "inactive") {
+                              return textMatch && server.status !== "active";
+                            }
+                            
+                            return textMatch;
+                          }).length / ITEMS_PER_PAGE))
                         )}
-                        disabled={serverPage >= Math.ceil(servers.filter(server => 
-                          server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
-                          server.region.toLowerCase().includes(serverSearch.toLowerCase())
-                        ).length / ITEMS_PER_PAGE)}
+                        disabled={serverPage >= Math.ceil(servers.filter(server => {
+                          // Apply text search filter
+                          const textMatch = server.name.toLowerCase().includes(serverSearch.toLowerCase()) || 
+                            server.region.toLowerCase().includes(serverSearch.toLowerCase());
+                          
+                          // Apply status filter if not "all"
+                          if (serverStatusFilter === "active") {
+                            return textMatch && server.status === "active";
+                          } else if (serverStatusFilter === "inactive") {
+                            return textMatch && server.status !== "active";
+                          }
+                          
+                          return textMatch;
+                        }).length / ITEMS_PER_PAGE)}
                       >
                         Next
                         <ChevronRight className="h-4 w-4" />
