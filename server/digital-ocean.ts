@@ -511,14 +511,11 @@ export class DigitalOceanClient {
   // Helper method for API requests
   // Public method to allow direct API requests when needed
   async apiRequest<T>(
-    endpoint: string, 
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET', 
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+    url: string,
     data?: any
   ): Promise<T> {
     try {
-      // Handle URL construction - endpoint may already contain query parameters
-      let url = `${this.apiBaseUrl}${endpoint}`;
-      
       const response = await fetch(url, {
         method,
         headers: {
@@ -1572,7 +1569,7 @@ runcmd:
           type: string;
           resource_id: number;
         }
-      }>("POST" as any, url, {
+      }>("POST", url, {
         type: "snapshot",
         name: name
       });
@@ -1621,7 +1618,7 @@ runcmd:
     try {
       console.log(`Getting real snapshots for DigitalOcean droplet ${dropletId}`);
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/snapshots`;
-      const response = await this.apiRequest<{ snapshots: any[] }>("GET" as any, url);
+      const response = await this.apiRequest<{ snapshots: any[] }>("GET", url);
       
       return response.snapshots.map(snapshot => ({
         id: snapshot.id,
@@ -1650,7 +1647,7 @@ runcmd:
     try {
       console.log(`Deleting real DigitalOcean snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
-      await this.apiRequest("DELETE" as any, url);
+      await this.apiRequest("DELETE", url);
       console.log(`Successfully deleted snapshot ${snapshotId}`);
     } catch (error) {
       console.error(`Error deleting snapshot ${snapshotId}:`, error);
@@ -1674,7 +1671,7 @@ runcmd:
     try {
       console.log(`Restoring real DigitalOcean droplet ${dropletId} from snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
-      await this.apiRequest("POST" as any, url, {
+      await this.apiRequest("POST", url, {
         type: "restore",
         image: snapshotId
       });
