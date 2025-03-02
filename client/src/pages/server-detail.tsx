@@ -1098,13 +1098,20 @@ export default function ServerDetailPage() {
                                   <div className="flex items-center">
                                     <HashIcon className="h-3 w-3 mr-1" />
                                     <div className="flex items-center gap-1">
-                                      <span className="font-mono" title={snapshot.snapshotId}>
-                                        {snapshot.snapshotId}
+                                      <span 
+                                        className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs" 
+                                        title={snapshot.snapshotId}
+                                      >
+                                        {snapshot.snapshotId.length > 20 
+                                          ? `${snapshot.snapshotId.substring(0, 17)}...` 
+                                          : snapshot.snapshotId
+                                        }
                                       </span>
                                       <Button 
-                                        variant="ghost" 
+                                        variant="outline" 
                                         size="sm" 
-                                        className="h-5 w-5 p-0"
+                                        className="h-5 w-5 p-0 border-dashed"
+                                        title="Copy Snapshot ID"
                                         onClick={() => {
                                           navigator.clipboard.writeText(snapshot.snapshotId || "");
                                           toast({

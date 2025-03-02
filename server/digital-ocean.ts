@@ -1642,19 +1642,27 @@ runcmd:
    * @param snapshotId The ID of the snapshot to delete
    */
   async deleteSnapshot(snapshotId: string): Promise<void> {
-    // For mock mode, do nothing
+    // In mock mode or with mock snapshot IDs, we just simulate success
     if (this.useMock || snapshotId.includes('snapshot-')) {
       console.log(`[MOCK] Deleting mock snapshot ${snapshotId} - mock mode: ${this.useMock}`);
+      // No actual API call, just simulate success
       return;
     }
 
-    // This is a real API call
+    // This is a real API call to Digital Ocean
     try {
       console.log(`Deleting real DigitalOcean snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
       await this.apiRequest("DELETE", url);
       console.log(`Successfully deleted snapshot ${snapshotId}`);
     } catch (error) {
+      // Improve error handling - check if it's a 404 (already deleted)
+      const errorMessage = error?.toString() || '';
+      if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+        console.log(`Snapshot ${snapshotId} not found on DigitalOcean, may already be deleted`);
+        return; // Consider a 404 as success since the resource is gone
+      }
+      
       console.error(`Error deleting snapshot ${snapshotId}:`, error);
       throw new Error(`Failed to delete snapshot: ${error}`);
     }
@@ -1666,29 +1674,47 @@ runcmd:
    * @param snapshotId The ID of the snapshot to restore from
    */
   async restoreDropletFromSnapshot(dropletId: string, snapshotId: string): Promise<void> {
-    // For mock mode, do nothing
+    // For mock mode or mock droplet IDs, just simulate success
     if (this.useMock || dropletId.includes('droplet-')) {
-      console.log(`Restoring mock droplet ${dropletId} from snapshot ${snapshotId}`);
+      console.log(`[MOCK] Restoring mock droplet ${dropletId} from snapshot ${snapshotId}`);
       return;
     }
 
-    // Check if snapshotId is a valid format and has the right prefix
-    // This is crucial as DigitalOcean API expects a specific format
+    // For development/testing, we can help fix bad data
     if (!snapshotId.startsWith('snapshot-')) {
-      console.error(`Invalid snapshot ID format: ${snapshotId}. Should start with 'snapshot-'`);
-      throw new Error(`Invalid snapshot ID format. Should start with 'snapshot-'`);
+      console.warn(`Warning: Snapshot ID ${snapshotId} doesn't have the expected 'snapshot-' prefix`);
+      if (process.env.NODE_ENV !== 'production') {
+        // In development, attempt to fix by adding prefix
+        snapshotId = `snapshot-${snapshotId}`;
+        console.log(`[DEV] Corrected snapshot ID to: ${snapshotId}`);
+      } else {
+        // In production, enforce proper format
+        console.error(`Invalid snapshot ID format: ${snapshotId}. Should start with 'snapshot-'`);
+        throw new Error(`Invalid snapshot ID format. Should start with 'snapshot-'`);
+      }
     }
 
-    // This is a real API call
+    // This is a real API call to Digital Ocean
     try {
       console.log(`Restoring real DigitalOcean droplet ${dropletId} from snapshot ${snapshotId}`);
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
+      
+      // Properly handle the restore action
       await this.apiRequest<any>('POST', url, {
-        type: "restore",
-        image: snapshotId
+        type: "restore", 
+        image: snapshotId // This is the expected format for DO API
       });
+      
       console.log(`Successfully initiated restore of droplet ${dropletId} from snapshot ${snapshotId}`);
     } catch (error) {
+      // Improved error handling with specific error messages
+      const errorMessage = error?.toString() || '';
+      
+      if (errorMessage.includes('422') || errorMessage.includes('Unprocessable Entity')) {
+        console.error(`DigitalOcean rejected the restore request: ${snapshotId} may not be a valid snapshot ID or the droplet architecture is incompatible`);
+        throw new Error(`Snapshot restore rejected by DigitalOcean. The snapshot may be incompatible with this server.`);
+      }
+      
       console.error(`Error restoring droplet ${dropletId} from snapshot ${snapshotId}:`, error);
       throw new Error(`Failed to restore from snapshot: ${error}`);
     }
