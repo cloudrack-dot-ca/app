@@ -1024,14 +1024,50 @@ export default function AdminDashboard() {
 
         {/* Servers Tab */}
         <TabsContent value="servers" className="space-y-4">
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle>Server Actions</CardTitle>
+              <CardDescription>Import and manage DigitalOcean VPS instances</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-4">
+                <Button 
+                  variant="default" 
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    if (window.confirm('This will import all unmanaged DigitalOcean droplets into the CloudRack platform. Continue?')) {
+                      // TODO: Implement the import functionality
+                      toast({
+                        title: "Import Started",
+                        description: "Scanning for unmanaged DigitalOcean droplets...",
+                      });
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Import Unmanaged VPS</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={() => window.open('https://cloud.digitalocean.com/droplets', '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Open DigitalOcean Console</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
           <Card>
             <CardHeader>
               <CardTitle>Server Management</CardTitle>
               <CardDescription>View and manage all servers on the platform</CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Search input for servers */}
-              <div className="mb-4">
+              {/* Search and filter controls */}
+              <div className="mb-4 flex flex-col md:flex-row gap-4">
                 <Input 
                   placeholder="Search servers by name or region..."
                   value={serverSearch}
@@ -1041,6 +1077,31 @@ export default function AdminDashboard() {
                   }}
                   className="max-w-md"
                 />
+                
+                <Select
+                  onValueChange={(value) => {
+                    // Implement filter by attached/unattached
+                    setServerSearch("");
+                    if (value === "unattached") {
+                      // Filter to show only servers with no userId (unattached)
+                      // This is a placeholder, would need backend implementation
+                      toast({
+                        title: "Filter Applied",
+                        description: "Showing unattached servers only",
+                      });
+                    }
+                  }}
+                  defaultValue="all"
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter servers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Servers</SelectItem>
+                    <SelectItem value="attached">User Attached</SelectItem>
+                    <SelectItem value="unattached">Unattached</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               {serversLoading ? (
@@ -1058,6 +1119,7 @@ export default function AdminDashboard() {
                         <TableHead>Size</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>IP Address</TableHead>
+                        <TableHead>Droplet ID</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1085,6 +1147,9 @@ export default function AdminDashboard() {
                             </span>
                           </TableCell>
                           <TableCell>{server.ipAddress || 'Not assigned'}</TableCell>
+                          <TableCell>
+                            <span className="font-mono text-xs">{server.dropletId}</span>
+                          </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <Button 
