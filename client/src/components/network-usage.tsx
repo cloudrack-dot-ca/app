@@ -69,10 +69,19 @@ export default function NetworkUsage({ serverId, size }: NetworkUsageProps) {
   const bandwidthInfo = getBandwidthInfo();
   
   const formatBandwidth = (gb: number) => {
+    // For terabytes
     if (gb >= 1000) {
       return `${(gb / 1000).toFixed(1)} TB`;
     }
-    return `${gb.toFixed(1)} GB`;
+    
+    // For gigabytes (show values ≥ 0.1 GB in GB)
+    if (gb >= 0.1) {
+      return `${gb.toFixed(2)} GB`;
+    }
+    
+    // For small values, show in MB
+    const mbValue = gb * 1024; // Convert GB to MB
+    return `${mbValue.toFixed(1)} MB`;
   };
 
   if (isLoading) {

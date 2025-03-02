@@ -33,26 +33,51 @@ export async function getServerBandwidth(serverId: number): Promise<{
     throw new Error("Server not found");
   }
 
-  // Get current month's start and end dates
+  // Get billing period based on server creation date
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  // Use server creation date if available, otherwise fall back to current month
+  let periodStart: Date;
+  let periodEnd: Date;
+  
+  if (server.createdAt) {
+    // Get the day of month when server was created
+    const creationDate = new Date(server.createdAt);
+    const creationDay = creationDate.getDate();
+    
+    // Current billing cycle start date (same day as creation, current month)
+    periodStart = new Date(now.getFullYear(), now.getMonth(), creationDay);
+    
+    // If we're before the billing cycle start day, use previous month's cycle
+    if (now.getDate() < creationDay) {
+      periodStart = new Date(now.getFullYear(), now.getMonth() - 1, creationDay);
+    }
+    
+    // Billing cycle end date (day before start day, next month)
+    periodEnd = new Date(periodStart);
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
+    periodEnd.setDate(periodEnd.getDate() - 1);
+  } else {
+    // Fallback to monthly billing if creation date is not available
+    periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  }
 
-  // Get all metrics for the current month
+  // Get all metrics for the current billing period
   const metrics = await db.select()
     .from(serverMetrics)
     .where(
       and(
         eq(serverMetrics.serverId, serverId),
-        gte(serverMetrics.timestamp, startOfMonth),
-        lte(serverMetrics.timestamp, endOfMonth)
+        gte(serverMetrics.timestamp, periodStart),
+        lte(serverMetrics.timestamp, periodEnd)
       )
     );
 
   // Calculate total inbound and outbound transfer
   let totalNetworkIn = 0;
   let totalNetworkOut = 0;
-  let lastUpdated = startOfMonth.toISOString();
+  let lastUpdated = periodStart.toISOString();
 
   if (metrics.length > 0) {
     // Calculate cumulative network usage
@@ -93,8 +118,8 @@ export async function getServerBandwidth(serverId: number): Promise<{
   return {
     current: parseFloat(totalUsageGB.toFixed(2)),
     limit: bandwidthLimitGB,
-    periodStart: startOfMonth.toISOString(),
-    periodEnd: endOfMonth.toISOString(),
+    periodStart: periodStart.toISOString(),
+    periodEnd: periodEnd.toISOString(),
     lastUpdated,
     overageRate
   };
@@ -115,19 +140,27 @@ export async function calculateBandwidthOverages(): Promise<void> {
     return;
   }
 
-  // Get current month's end date - only process at end of month
   const now = new Date();
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   
-  // Only process at the end of the month (last day)
-  if (now.getDate() !== endOfMonth.getDate()) {
-    console.log('Not end of month, skipping bandwidth overage calculations');
-    return;
-  }
-
   // Process each server's bandwidth usage
   for (const server of activeServers) {
     try {
+      // Skip if server doesn't have a creation date
+      if (!server.createdAt) {
+        console.log(`Server ${server.id} has no creation date, skipping bandwidth calculation`);
+        continue;
+      }
+      
+      // Calculate billing cycle day from server creation date
+      const creationDate = new Date(server.createdAt);
+      const billingCycleDay = creationDate.getDate();
+      
+      // Only process if today is the last day of the server's billing cycle
+      if (now.getDate() !== billingCycleDay) {
+        console.log(`Not billing cycle end date for server ${server.id}, skipping bandwidth overage calculation`);
+        continue;
+      }
+      
       await processBandwidthOverage(server);
     } catch (error) {
       console.error(`Error processing bandwidth overage for server ${server.id}:`, error);

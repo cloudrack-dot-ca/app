@@ -69,10 +69,7 @@ export default function BandwidthDetailsPage() {
   const { data: bandwidthData, isLoading, isError } = useQuery<BandwidthData>({
     queryKey: serverId ? [`/api/servers/${serverId}/bandwidth/detailed`] : [],
     enabled: !!serverId,
-    // Fall back to basic bandwidth endpoint if detailed not available
-    onError: (error) => {
-      console.log("Detailed bandwidth API not available, falling back to basic endpoint", error);
-    }
+    // React Query v5 doesn't support onError directly in options - we'll handle this in the useEffect below
   });
 
   const { data: basicBandwidthData } = useQuery<BandwidthData>({
