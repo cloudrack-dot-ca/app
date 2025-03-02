@@ -420,25 +420,32 @@ const ArticleViewer = ({ article }: { article: DocArticle | null }) => {
     );
   }
 
-  // Simple markdown-like parsing for content display
+  // Process HTML content for display
   const formatContent = (content: string) => {
-    // Parse headers
-    let formattedContent = content
-      .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-6 mb-4 text-foreground">$1</h1>')
-      .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">$1</h2>')
-      .replace(/^### (.*$)/gm, '<h3 class="text-lg font-medium mt-4 mb-2 text-foreground">$1</h3>')
-      // Parse code blocks
-      .replace(/```([^`]+)```/g, '<pre class="bg-muted p-3 rounded-md my-4 overflow-x-auto text-sm font-mono text-foreground">$1</pre>')
-      .replace(/`([^`]+)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm font-mono text-foreground">$1</code>')
-      // Parse lists
-      .replace(/^\s*[\-\*]\s(.*)$/gm, '<li class="ml-4 mb-1 text-foreground">$1</li>')
-      // Parse paragraphs
-      .replace(/^(?!<[hl\d]|<pre|<li)(.*$)/gm, (match) => {
-        if (match.trim() === '') return '<br>';
-        return `<p class="mb-3 text-foreground">${match}</p>`;
-      });
-
-    return { __html: formattedContent };
+    // Check if content is already HTML (starts with HTML tags)
+    // If not, convert from markdown format for backward compatibility
+    if (!content.trim().startsWith('<')) {
+      // Convert legacy markdown to HTML
+      let formattedContent = content
+        .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-6 mb-4 text-foreground">$1</h1>')
+        .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mt-5 mb-3 text-foreground">$1</h2>')
+        .replace(/^### (.*$)/gm, '<h3 class="text-lg font-medium mt-4 mb-2 text-foreground">$1</h3>')
+        // Parse code blocks
+        .replace(/```([^`]+)```/g, '<pre class="bg-muted p-3 rounded-md my-4 overflow-x-auto text-sm font-mono text-foreground">$1</pre>')
+        .replace(/`([^`]+)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm font-mono text-foreground">$1</code>')
+        // Parse lists
+        .replace(/^\s*[\-\*]\s(.*)$/gm, '<li class="ml-4 mb-1 text-foreground">$1</li>')
+        // Parse paragraphs
+        .replace(/^(?!<[hl\d]|<pre|<li)(.*$)/gm, (match) => {
+          if (match.trim() === '') return '<br>';
+          return `<p class="mb-3 text-foreground">${match}</p>`;
+        });
+      
+      return { __html: formattedContent };
+    }
+    
+    // Content is already HTML, return as is
+    return { __html: content };
   };
 
   return (
@@ -1023,14 +1030,30 @@ export default function DocsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="article-content">Content (Markdown Supported)</Label>
-                    <Textarea 
-                      id="article-content" 
-                      value={articleContent} 
-                      onChange={(e) => setArticleContent(e.target.value)}
-                      placeholder="# Your Article Title&#10;&#10;Write your content here. Markdown is supported."
-                      className="min-h-[300px] font-mono"
-                    />
+                    <Label htmlFor="article-content">Content (HTML Editor)</Label>
+                    <div className="border rounded-md">
+                      <Editor
+                        id="article-content"
+                        value={articleContent}
+                        onEditorChange={(content) => setArticleContent(content)}
+                        init={{
+                          height: 400,
+                          menubar: true,
+                          plugins: [
+                            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                            'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                          ],
+                          toolbar: 'undo redo | blocks | ' +
+                            'bold italic forecolor | alignleft aligncenter ' +
+                            'alignright alignjustify | bullist numlist outdent indent | ' +
+                            'removeformat | help',
+                          content_style: 'body { font-family:Inter,ui-sans-serif,system-ui,sans-serif; font-size:14px }',
+                          skin: document.documentElement.classList.contains('dark') ? 'oxide-dark' : 'oxide',
+                          content_css: document.documentElement.classList.contains('dark') ? 'dark' : 'default'
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
