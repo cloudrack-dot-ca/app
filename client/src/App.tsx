@@ -65,6 +65,14 @@ function Nav() {
               Documentation
             </Button>
           </Link>
+          {user && (
+            <Link href="/my-api">
+              <Button variant="ghost" size="sm">
+                <Key className="h-4 w-4 mr-2" />
+                API Key
+              </Button>
+            </Link>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {user && user.isAdmin && (
@@ -95,6 +103,7 @@ function Router() {
         <ProtectedRoute path="/support" component={SupportPage} />
         <ProtectedRoute path="/support/:id" component={SupportPage} />
         <ProtectedRoute path="/account" component={AccountPage} />
+        <ProtectedRoute path="/my-api" component={ApiKeyPage} />
         <ProtectedRoute path="/admin" component={AdminDashboard} />
         {/* Server routes */}
         <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />

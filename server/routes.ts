@@ -10,6 +10,7 @@ import * as schema from "@shared/schema";
 // CloudRack key manager has been removed
 // System key manager has been removed
 import { eq, sql } from "drizzle-orm";
+import crypto from "crypto";
 import { db } from "./db";
 import { 
   insertServerSchema, 
@@ -1849,6 +1850,65 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     } catch (error) {
       console.error("Account update error:", error);
       res.status(500).json({ message: (error as Error).message || "An unexpected error occurred" });
+    }
+  });
+  
+  // API Key Management Routes
+  // Get current API key
+  app.get("/api/account/api-key", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ apiKey: user.apiKey });
+    } catch (error) {
+      console.error("Error fetching API key:", error);
+      res.status(500).json({ message: "Failed to fetch API key" });
+    }
+  });
+  
+  // Generate or regenerate API key
+  app.post("/api/account/api-key", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: "Password is required for verification" });
+    }
+    
+    try {
+      // Get the current user to verify the password
+      const currentUser = await storage.getUser(req.user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Verify password
+      const isPasswordValid = await comparePasswords(password, currentUser.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Password is incorrect" });
+      }
+      
+      // Generate a new API key (random string)
+      const apiKey = Array.from(
+        { length: 64 },
+        () => Math.floor(Math.random() * 16).toString(16)
+      ).join('');
+      
+      // Update user with new API key
+      const updatedUser = await storage.updateUser(req.user.id, { apiKey });
+      
+      res.json({ 
+        apiKey: updatedUser.apiKey,
+        message: "API key generated successfully" 
+      });
+    } catch (error) {
+      console.error("Error generating API key:", error);
+      res.status(500).json({ message: "Failed to generate API key" });
     }
   });
 
