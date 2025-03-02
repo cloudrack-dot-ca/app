@@ -390,7 +390,12 @@ export default function BandwidthDetailsPage() {
                     />
                     <YAxis tickFormatter={(value) => value >= 0.1 ? `${value.toFixed(2)} GB` : `${(value * 1024).toFixed(0)} MB`} />
                     <Tooltip 
-                      formatter={(value: number) => [`${value.toFixed(3)} GB`, '']}
+                      formatter={(value: number) => [
+                        value >= 0.1 
+                          ? `${value.toFixed(3)} GB` 
+                          : `${(value * 1024).toFixed(1)} MB`, 
+                        ''
+                      ]}
                       labelFormatter={(date) => new Date(date).toLocaleString()}
                     />
                     <Legend />
@@ -415,18 +420,18 @@ export default function BandwidthDetailsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Inbound (GB)</TableHead>
-                    <TableHead>Outbound (GB)</TableHead>
-                    <TableHead>Total (GB)</TableHead>
+                    <TableHead>Inbound</TableHead>
+                    <TableHead>Outbound</TableHead>
+                    <TableHead>Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {daily.map((day) => (
                     <TableRow key={day.date}>
                       <TableCell className="font-medium">{new Date(day.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{day.inbound.toFixed(2)}</TableCell>
-                      <TableCell>{day.outbound.toFixed(2)}</TableCell>
-                      <TableCell>{day.usage.toFixed(2)}</TableCell>
+                      <TableCell>{day.inbound >= 0.1 ? day.inbound.toFixed(2) : `${(day.inbound * 1024).toFixed(1)} MB`}</TableCell>
+                      <TableCell>{day.outbound >= 0.1 ? day.outbound.toFixed(2) : `${(day.outbound * 1024).toFixed(1)} MB`}</TableCell>
+                      <TableCell>{day.usage >= 0.1 ? day.usage.toFixed(2) : `${(day.usage * 1024).toFixed(1)} MB`}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
