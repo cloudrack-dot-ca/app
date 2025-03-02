@@ -13,12 +13,13 @@ import VolumesPage from "@/pages/volumes-page";
 import ServerDetailPage from "@/pages/server-detail";
 import TerminalPage from "@/pages/terminal-page";
 import AccountPage from "@/pages/account-page";
+import ApiKeyPage from "@/pages/api-key-page";
 import DocsPage from "@/pages/docs-page";
 import AdminDashboard from "@/pages/admin/dashboard";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
-import { Home, ShieldCheck, Settings, Book } from "lucide-react";
+import { Home, ShieldCheck, Settings, Book, Key } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useEffect } from "react";
 

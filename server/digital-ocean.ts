@@ -903,7 +903,22 @@ runcmd:
     action: 'power_on' | 'power_off' | 'reboot' | 'enable_ipv6'
   ): Promise<void> {
     if (this.useMock) {
-      return; // Mock action just returns
+      console.log(`[MOCK] Performing action ${action} on droplet ${dropletId}`);
+      
+      // In mock mode, we should still simulate the action for proper feedback
+      // This ensures the UI updates appropriately even in mock mode
+      if (action === 'reboot') {
+        // Simulate a reboot action with appropriate logging
+        console.log(`[MOCK] Rebooting droplet ${dropletId}`);
+      } else if (action === 'power_on') {
+        console.log(`[MOCK] Powering on droplet ${dropletId}`);
+      } else if (action === 'power_off') {
+        console.log(`[MOCK] Powering off droplet ${dropletId}`);
+      } else if (action === 'enable_ipv6') {
+        console.log(`[MOCK] Enabling IPv6 on droplet ${dropletId}`);
+      }
+      
+      return; // Return after logging the mock action
     }
     
     try {
@@ -912,6 +927,7 @@ runcmd:
         'POST', 
         { type: action }
       );
+      console.log(`Successfully performed ${action} on droplet ${dropletId}`);
     } catch (error) {
       console.error(`Error performing ${action} on droplet ${dropletId}:`, error);
       throw error;
