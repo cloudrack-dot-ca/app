@@ -12,6 +12,7 @@ import SupportPage from "@/pages/support-page";
 import VolumesPage from "@/pages/volumes-page";
 import ServerDetailPage from "@/pages/server-detail";
 import TerminalPage from "@/pages/terminal-page";
+import BandwidthDetailsPage from "@/pages/bandwidth-details";
 import AccountPage from "@/pages/account-page";
 import ApiKeyPage from "@/pages/api-key-page";
 import DocsPage from "@/pages/docs-page";
@@ -109,6 +110,7 @@ function Router() {
         <ProtectedRoute path="/admin" component={AdminDashboard} />
         {/* Server routes */}
         <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />
+        <ProtectedRoute path="/servers/:id/bandwidth-details" component={BandwidthDetailsPage} />
         <ProtectedRoute path="/terminal/:serverId" component={TerminalPage} />
         <Route component={NotFound} />
       </Switch>

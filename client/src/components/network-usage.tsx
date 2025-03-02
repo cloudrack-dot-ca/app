@@ -231,7 +231,15 @@ export default function NetworkUsage({ serverId, size }: NetworkUsageProps) {
           </div>
           
           <div className="flex justify-end pt-2">
-            <Button variant="outline" size="sm" className="flex items-center gap-1">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={() => {
+                // Create a modal with detailed bandwidth usage history
+                window.open(`/servers/${serverId}/bandwidth-details`, '_blank');
+              }}
+            >
               <span>View Bandwidth Details</span>
               <ExternalLink className="h-3 w-3" />
             </Button>
