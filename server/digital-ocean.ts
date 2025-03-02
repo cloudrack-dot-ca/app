@@ -510,55 +510,52 @@ export class DigitalOceanClient {
 
   // Helper method for API requests
   // Public method to allow direct API requests when needed
+  // Basic simplified API request function to fix the issues
   async apiRequest<T>(
-    methodOrEndpoint: 'GET' | 'POST' | 'PUT' | 'DELETE' | string,
-    endpointOrData?: string | any,
+    method: string, 
+    endpoint: string,
     data?: any
   ): Promise<T> {
     try {
-      // Fix parameter order issues
-      let method: string = 'GET';
-      let endpoint: string = '';
-      let requestData = data;
+      // Handle special case for legacy code where parameters may be in the wrong order
+      let actualMethod = method;
+      let actualEndpoint = endpoint;
+      let actualData = data;
       
-      // Handle different ways this function has been called throughout the codebase
-      if (typeof methodOrEndpoint === 'string') {
-        if (methodOrEndpoint.startsWith('/')) {
-          // Called like apiRequest('/endpoint') or apiRequest('/endpoint', 'POST', data)
-          endpoint = methodOrEndpoint;
-          
-          if (typeof endpointOrData === 'string' && 
-              ['GET', 'POST', 'PUT', 'DELETE'].includes(endpointOrData.toUpperCase())) {
-            method = endpointOrData.toUpperCase();
-          } else {
-            // This is the data parameter, not method
-            requestData = endpointOrData;
-          }
-        } else if (['GET', 'POST', 'PUT', 'DELETE'].includes(methodOrEndpoint.toUpperCase())) {
-          // Called correctly like apiRequest('GET', '/endpoint', data)
-          method = methodOrEndpoint.toUpperCase();
-          endpoint = typeof endpointOrData === 'string' ? endpointOrData : '';
-          requestData = data;
+      // If the method looks like a URL/endpoint, swap the parameters
+      if (method && method.startsWith('/')) {
+        actualEndpoint = method;
+        
+        if (['GET', 'POST', 'PUT', 'DELETE'].includes(String(endpoint).toUpperCase())) {
+          actualMethod = endpoint;
+        } else {
+          actualMethod = 'GET';
+          actualData = endpoint; // The second param was actually data
         }
       }
       
-      // Make sure URL is properly formed with base API URL
-      if (!endpoint.startsWith('/')) {
-        endpoint = '/' + endpoint;
+      // Strip the base URL if it was included by mistake
+      if (actualEndpoint.includes('api.digitalocean.com')) {
+        actualEndpoint = actualEndpoint.substring(actualEndpoint.indexOf('/v2') + 3);
       }
       
-      // Ensure no double slashes in URL
-      const fullUrl = `${this.apiBaseUrl}${endpoint}`;
+      // Ensure endpoint starts with /
+      if (!actualEndpoint.startsWith('/')) {
+        actualEndpoint = '/' + actualEndpoint;
+      }
       
-      console.log(`[API REQUEST] ${method} ${fullUrl}`);
+      // Construct the full URL
+      const fullUrl = `${this.apiBaseUrl}${actualEndpoint}`;
+      
+      console.log(`[API REQUEST] ${actualMethod} ${fullUrl}`);
       
       const response = await fetch(fullUrl, {
-        method: method,
+        method: actualMethod,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`
         },
-        body: method !== 'GET' && data ? JSON.stringify(data) : undefined
+        body: actualMethod !== 'GET' && actualData ? JSON.stringify(actualData) : undefined
       });
 
       if (!response.ok) {
@@ -573,7 +570,7 @@ export class DigitalOceanClient {
       }
 
       // For DELETE operations, the response might be empty
-      if (method === 'DELETE') {
+      if (actualMethod === 'DELETE') {
         if (response.status === 204 || response.headers.get('content-length') === '0') {
           return {} as T;
         }
@@ -588,7 +585,7 @@ export class DigitalOceanClient {
         return {} as T;
       }
     } catch (error) {
-      console.error(`Error in DigitalOcean API request to ${method} ${fullUrl}:`, error);
+      console.error(`Error in DigitalOcean API request:`, error);
       throw error;
     }
   }
