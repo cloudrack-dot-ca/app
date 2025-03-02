@@ -1682,32 +1682,9 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       } catch (error) {
         console.error(`Error adding rule to firewall: ${error}`);
         
-        // Attempt to create a mock fallback regardless of error
-        // This ensures the UI continues to function
-        if (!digitalOcean.mockFirewalls[firewall.id]) {
-          // Create a mock entry if one doesn't exist
-          digitalOcean.mockFirewalls[firewall.id] = {
-            id: firewall.id,
-            name: firewall.name || `firewall-${server.name}`,
-            status: 'active',
-            created_at: firewall.created_at || new Date().toISOString(),
-            droplet_ids: firewall.droplet_ids || [parseInt(server.dropletId)],
-            inbound_rules: firewall.inbound_rules || [],
-            outbound_rules: firewall.outbound_rules || []
-          };
-        }
-        
-        // Add the rule to our mock record
-        if (rule_type === 'inbound') {
-          digitalOcean.mockFirewalls[firewall.id].inbound_rules.push(rule);
-        } else {
-          digitalOcean.mockFirewalls[firewall.id].outbound_rules.push(rule);
-        }
-        
-        // If this is anything other than a mock ID issue, rethrow
-        if (!firewall.id.includes('fallback') && !firewall.id.includes('mock') && !digitalOcean.useMock) {
-          throw error;
-        }
+        // Instead of using mock data, return a clear error
+        console.error("Critical error when adding firewall rule:", error);
+        throw error;
       }
       
       // Get the updated firewall
@@ -1742,14 +1719,7 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       if (!firewall) {
         // If no firewall exists, we don't need to delete anything
         console.log(`No firewall found for server ${server.id} when trying to delete rule`);
-        return res.json({
-          id: `mock-${Math.random().toString(36).substring(7)}`,
-          name: `firewall-${server.name}`,
-          status: 'active',
-          droplet_ids: [parseInt(server.dropletId)],
-          inbound_rules: [],
-          outbound_rules: []
-        });
+        return res.status(404).json({ message: "No firewall found for this server" });
       }
       console.log(`Found firewall ${firewall.id} with ${firewall.inbound_rules.length} inbound and ${firewall.outbound_rules.length} outbound rules`);
       
@@ -1779,41 +1749,26 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
           firewall.id.length < 30  // Real DO firewall IDs are long UUIDs
         );
         
-        if (isMockFirewall) {
-          // For mock firewalls, update directly
-          console.log(`Updating mock firewall ${firewall.id} by removing ${rule_type} rule`);
+        // Always use the DigitalOcean API directly - no mock fallback
+        if (!firewall.id) {
+          throw new Error("Firewall ID is missing");
+        }
           
-          // Update the rule sets in the mock firewall
-          digitalOcean.mockFirewalls[firewall.id!] = {
-            ...firewall,
-            inbound_rules: updatedInboundRules,
-            outbound_rules: updatedOutboundRules
-          };
-          
-          // Return the updated mock firewall
-          res.json(digitalOcean.mockFirewalls[firewall.id!]);
-        } else {
-          // Use the Digital Ocean API for real firewalls
-          try {
-            const updatedFirewall = await digitalOcean.updateFirewall(
-              firewall.id!, 
-              {
-                inbound_rules: updatedInboundRules,
-                outbound_rules: updatedOutboundRules
-              }
-            );
-            
-            res.json(updatedFirewall);
-          } catch (apiError) {
-            console.error(`DigitalOcean API error removing rule: ${apiError}. Falling back to mock mode.`);
-            // If API call fails, treat it as a mock firewall
-            digitalOcean.mockFirewalls[firewall.id!] = {
-              ...firewall,
+        try {
+          // Make the API request to update the firewall
+          console.log(`Updating firewall ${firewall.id} with DigitalOcean API`);
+          const updatedFirewall = await digitalOcean.updateFirewall(
+            firewall.id, 
+            {
               inbound_rules: updatedInboundRules,
               outbound_rules: updatedOutboundRules
-            };
-            res.json(digitalOcean.mockFirewalls[firewall.id!]);
-          }
+            }
+          );
+          
+          res.json(updatedFirewall);
+        } catch (apiError) {
+          console.error(`DigitalOcean API error removing rule: ${apiError}`);
+          throw apiError; // Re-throw to be caught by the outer catch block
         }
       } catch (updateError) {
         console.error("Error updating firewall rules:", updateError);

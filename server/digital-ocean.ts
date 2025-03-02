@@ -68,9 +68,13 @@ export class DigitalOceanClient {
 
   constructor() {
     this.apiKey = process.env.DIGITAL_OCEAN_API_KEY || '';
-    this.useMock = !this.apiKey;
-    if (this.useMock) {
-      console.warn('DigitalOcean API key not found. Using mock data.');
+    
+    // Force useMock to false - NEVER use mock data
+    this.useMock = false;
+    
+    if (!this.apiKey) {
+      console.error('ERROR: DigitalOcean API key not found. API calls will fail.');
+      // Don't use mock data - we want real API interactions only
     }
   }
 
