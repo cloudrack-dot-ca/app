@@ -42,7 +42,7 @@ interface DocArticle {
   id: string;
   sectionId: string;
   title: string;
-  content: string;
+  content: string; // Now contains HTML content instead of Markdown
   order: number;
   lastUpdated: string;
 }
