@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight, KeyRound, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, KeyRound, AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -1081,6 +1081,27 @@ export default function AdminDashboard() {
                           <TableCell>{server.ipAddress || 'Not assigned'}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => window.open(`/servers/${server.id}`, '_blank')}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  if (window.confirm('Are you sure you want to reboot this server?')) {
+                                    // Implement reboot functionality
+                                    rebootServerMutation.mutate(server.id);
+                                  }
+                                }}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-1" />
+                                Reboot
+                              </Button>
                               <Button 
                                 variant="destructive" 
                                 size="sm"

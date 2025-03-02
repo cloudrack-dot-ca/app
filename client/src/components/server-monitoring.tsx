@@ -274,8 +274,8 @@ export default function ServerMonitoring({ serverId }: ServerMetricsProps) {
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {server?.lastMonitored ? 
-                    `Created: ${new Date(server?.createdAt || server.lastMonitored).toLocaleString()}` : 
-                    "Creation time unknown"
+                    `Server monitoring started: ${new Date(server.lastMonitored).toLocaleString()}` : 
+                    "Monitoring not started yet"
                   }
                 </div>
               </div>
