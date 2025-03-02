@@ -138,7 +138,7 @@ export class DatabaseStorage implements IStorage {
       if (error.message && error.message.includes("column \"created_at\" does not exist")) {
         // Fall back to retrieving without created_at
         const query = `SELECT id, user_id, name, droplet_id, region, size, status, ip_address, 
-          ipv6_address, specs, application, last_monitored, root_password, is_suspended 
+          ipv6_address, specs, application, last_monitored, root_password
           FROM servers WHERE user_id = $1`;
         const result = await pool.query(query, [userId]);
         
