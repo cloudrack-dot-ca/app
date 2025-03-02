@@ -31,6 +31,7 @@ export const servers = pgTable("servers", {
   lastMonitored: timestamp("last_monitored"),
   rootPassword: text("root_password"), // Store root password for SSH access
   createdAt: timestamp("created_at").notNull().defaultNow(), // Server creation timestamp
+  isSuspended: boolean("is_suspended").notNull().default(false), // Account suspension flag
 });
 
 // Server metrics table for monitoring
