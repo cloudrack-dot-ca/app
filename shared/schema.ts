@@ -30,6 +30,7 @@ export const servers = pgTable("servers", {
   application: text("application"), // Added application field
   lastMonitored: timestamp("last_monitored"),
   rootPassword: text("root_password"), // Store root password for SSH access
+  createdAt: timestamp("created_at").notNull().defaultNow(), // Server creation timestamp
 });
 
 // Server metrics table for monitoring
