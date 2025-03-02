@@ -511,29 +511,49 @@ export class DigitalOceanClient {
   // Helper method for API requests
   // Public method to allow direct API requests when needed
   async apiRequest<T>(
-    endpoint: string,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+    methodOrEndpoint: 'GET' | 'POST' | 'PUT' | 'DELETE' | string,
+    endpointOrData?: string | any,
     data?: any
   ): Promise<T> {
     try {
-      // Fix common error: endpoint was passed as method
-      // This handles incorrect calls like apiRequest('/endpoint') by treating first arg as endpoint
-      if (endpoint.startsWith('/') && !method.startsWith('/')) {
-        // Valid call with endpoint and method, continue
-      } else if (method.startsWith('/')) {
-        // Incorrect call: method contains endpoint path, data contains method
-        console.log(`[API FIX] Fixing incorrect apiRequest call: endpoint=${endpoint}, method=${method}`);
-        data = method === 'GET' ? undefined : data;
-        method = endpoint as any;
-        endpoint = method;
+      // Fix parameter order issues
+      let method: string = 'GET';
+      let endpoint: string = '';
+      let requestData = data;
+      
+      // Handle different ways this function has been called throughout the codebase
+      if (typeof methodOrEndpoint === 'string') {
+        if (methodOrEndpoint.startsWith('/')) {
+          // Called like apiRequest('/endpoint') or apiRequest('/endpoint', 'POST', data)
+          endpoint = methodOrEndpoint;
+          
+          if (typeof endpointOrData === 'string' && 
+              ['GET', 'POST', 'PUT', 'DELETE'].includes(endpointOrData.toUpperCase())) {
+            method = endpointOrData.toUpperCase();
+          } else {
+            // This is the data parameter, not method
+            requestData = endpointOrData;
+          }
+        } else if (['GET', 'POST', 'PUT', 'DELETE'].includes(methodOrEndpoint.toUpperCase())) {
+          // Called correctly like apiRequest('GET', '/endpoint', data)
+          method = methodOrEndpoint.toUpperCase();
+          endpoint = typeof endpointOrData === 'string' ? endpointOrData : '';
+          requestData = data;
+        }
       }
       
       // Make sure URL is properly formed with base API URL
-      const url = `${this.apiBaseUrl}${endpoint}`;
-      console.log(`[API REQUEST] ${method} ${url}`);
+      if (!endpoint.startsWith('/')) {
+        endpoint = '/' + endpoint;
+      }
       
-      const response = await fetch(url, {
-        method,
+      // Ensure no double slashes in URL
+      const fullUrl = `${this.apiBaseUrl}${endpoint}`;
+      
+      console.log(`[API REQUEST] ${method} ${fullUrl}`);
+      
+      const response = await fetch(fullUrl, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`
@@ -568,7 +588,7 @@ export class DigitalOceanClient {
         return {} as T;
       }
     } catch (error) {
-      console.error(`Error in DigitalOcean API request to ${method} ${url}:`, error);
+      console.error(`Error in DigitalOcean API request to ${method} ${fullUrl}:`, error);
       throw error;
     }
   }
