@@ -140,6 +140,61 @@ export function registerAdminRoutes(app: Express) {
       res.status(500).json({ message: 'Failed to update user balance' });
     }
   });
+
+  // Update user details
+  app.patch('/api/admin/users/:id', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { username, password, isAdmin, isSuspended } = req.body;
+      
+      // Validate userId
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Fetch target user to check permissions
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Prepare update object
+      const updates: Partial<User> = {};
+      
+      // Only include fields that are provided
+      if (username !== undefined) updates.username = username;
+      if (password !== undefined) updates.password = password;
+      if (isAdmin !== undefined) updates.isAdmin = isAdmin;
+      if (isSuspended !== undefined) updates.isSuspended = isSuspended;
+      
+      // Safety checks
+      
+      // Don't allow admins to remove their own admin status
+      if (isAdmin === false && req.user?.id === userId) {
+        return res.status(403).json({ message: "Cannot remove your own admin privileges" });
+      }
+      
+      // Don't allow suspending an admin
+      if (isSuspended === true && targetUser.isAdmin) {
+        return res.status(403).json({ message: "Cannot suspend admin accounts" });
+      }
+      
+      // Don't allow admins to suspend themselves
+      if (isSuspended === true && req.user?.id === userId) {
+        return res.status(403).json({ message: "Cannot suspend your own account" });
+      }
+      
+      // Update user details
+      const updatedUser = await storage.updateUser(userId, updates);
+      
+      log(`Admin updated user ${userId} (${username || targetUser.username})`, 'admin');
+      
+      res.json(updatedUser);
+    } catch (error) {
+      log(`Admin update user details error: ${error}`, 'admin');
+      res.status(500).json({ message: 'Failed to update user details' });
+    }
+  });
   
   // Get all servers
   app.get('/api/admin/servers', async (req: Request, res: Response) => {

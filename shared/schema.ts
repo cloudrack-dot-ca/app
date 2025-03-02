@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   apiKey: text("api_key"),
   balance: integer("balance").notNull().default(0), // Balance in cents
   isAdmin: boolean("is_admin").notNull().default(false), // Admin flag
+  isSuspended: boolean("is_suspended").notNull().default(false), // Account suspension flag
 });
 
 export const servers = pgTable("servers", {
@@ -115,6 +116,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   isAdmin: true,
+  isSuspended: true,
   balance: true,
   apiKey: true,
 });
