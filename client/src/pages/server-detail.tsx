@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 // Extended Server interface with additional properties for UI display
 // Don't extend SchemaServer since the rootPassword types don't match
@@ -68,13 +68,16 @@ import {
   ExternalLink,
   Key,
   Lock,
-  Maximize2
+  Maximize2,
+  CheckCircle,
+  Database,
+  FileCode,
+  LifeBuoy
 } from "lucide-react";
 import VolumeManager from "@/components/volume-manager";
 import ServerMonitoring from "@/components/server-monitoring";
 import FirewallManager from "@/components/firewall-manager-enhanced";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 
 // Firewall Rule interface (simplified from the full interface in firewall-manager.tsx)
 // Schema for firewall disable confirmation
