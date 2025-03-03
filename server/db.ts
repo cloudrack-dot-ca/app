@@ -3,7 +3,15 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
+// Configure WebSocket for local development
+if (process.env.NODE_ENV === 'development') {
+  // In development, use direct connection without WebSocket
+  neonConfig.useSecureWebSocket = false;
+  neonConfig.webSocketConstructor = undefined;
+} else {
+  // In production, use secure WebSocket
+  neonConfig.webSocketConstructor = ws;
+}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -23,6 +31,7 @@ export const pool = new Pool({
 // Handle pool errors
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
+  process.exit(-1); // Exit on critical database errors
 });
 
 export const db = drizzle({ client: pool, schema });
