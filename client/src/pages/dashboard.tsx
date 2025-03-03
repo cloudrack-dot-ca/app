@@ -39,7 +39,7 @@ interface Application {
   name: string;
   description: string;
   type: string;
-  distribution?: string; // References a distribution slug
+  distribution?: string;
 }
 
 interface Distribution {
@@ -312,7 +312,11 @@ export default function Dashboard() {
                           <FormItem className="col-span-2">
                             <FormLabel className="text-sm">Application</FormLabel>
                             <Select
-                              onValueChange={field.onChange}
+                              onValueChange={(value) => {
+                                // Ensure we pass the correct application slug to the API
+                                const app = applications.find(a => a.slug === value);
+                                field.onChange(app?.slug || value);
+                              }}
                               defaultValue={field.value}
                             >
                               <FormControl>
