@@ -228,7 +228,8 @@ export class DigitalOceanClient {
     },
     
     
-
+    
+    
   ];
 
   private mockDistributions: Distribution[] = [
@@ -280,214 +281,214 @@ export class DigitalOceanClient {
       slug: "nodejs",
       name: "Node.js",
       description: "Node.js with npm and nvm",
-      type: "application",
+      type: "Web Dev",
       distribution: "ubuntu-20-04",
     },
     {
       slug: "python",
       name: "Python",
       description: "Python 3 on Ubuntu 20.04",
-      type: "application",
+      type: "Web Dev",
     },
     {
       slug: "docker",
       name: "Docker",
       description: "Docker on Ubuntu 20.04",
-      type: "application",
+      type: "Web Dev",
     },
     {
       slug: "lamp",
       name: "LAMP",
       description: "LAMP on Ubuntu 20.04",
-      type: "application",
+      type: "Web Dev",
     },
     {
       slug: "lemp",
       name: "LEMP",
       description: "Nginx, MySQL, PHP on Ubuntu 20.04",
-      type: "application",
+      type: "Web Dev",
     },
     {
       slug: "mean",
       name: "MEAN",
       description: "MongoDB, Express, Angular, Node.js",
-      type: "application",
+      type: "Web Dev",
     },
     {
       slug: "mern",
       name: "MERN",
       description: "MongoDB, Express, React, Node.js",
-      type: "application",
+      type: "Web Dev",
     },
-    
+
     // CMS Systems
     {
       slug: "wordpress",
       name: "WordPress",
       description: "WordPress with LAMP stack",
-      type: "cms",
+      type: "CMS",
     },
     {
       slug: "ghost",
       name: "Ghost",
       description: "Ghost blogging platform",
-      type: "cms",
+      type: "CMS",
     },
     {
       slug: "drupal",
       name: "Drupal",
       description: "Drupal CMS on LAMP stack",
-      type: "cms",
+      type: "CMS",
     },
     {
       slug: "joomla",
       name: "Joomla",
       description: "Joomla CMS on LAMP stack",
-      type: "cms",
+      type: "CMS",
     },
-    
+
     // E-commerce
     {
       slug: "woocommerce",
       name: "WooCommerce",
       description: "WordPress with WooCommerce",
-      type: "ecommerce",
+      type: "E-commerce",
     },
     {
       slug: "magento",
       name: "Magento",
       description: "Magento e-commerce platform",
-      type: "ecommerce",
+      type: "E-commerce",
     },
     {
       slug: "prestashop",
       name: "PrestaShop",
       description: "PrestaShop e-commerce platform",
-      type: "ecommerce",
+      type: "E-commerce",
     },
-    
+
     // Data Science
     {
       slug: "jupyter",
       name: "Jupyter Notebook",
       description: "Python with Jupyter for data science",
-      type: "data-science",
+      type: "Data Science",
     },
     {
       slug: "rstudio",
       name: "R Studio Server",
       description: "R Studio for statistical computing",
-      type: "data-science",
+      type: "Data Science",
     },
     {
       slug: "tensorflow",
       name: "TensorFlow",
       description: "TensorFlow with Python for machine learning",
-      type: "data-science",
+      type: "Data Science",
     },
-    
+
     // Databases
     {
       slug: "mongodb",
       name: "MongoDB",
       description: "MongoDB NoSQL database",
-      type: "database",
+      type: "Database",
     },
     {
       slug: "postgres",
       name: "PostgreSQL",
       description: "PostgreSQL database server",
-      type: "database",
+      type: "Database",
     },
     {
       slug: "mysql",
       name: "MySQL",
       description: "MySQL database server",
-      type: "database",
+      type: "Database",
     },
     {
       slug: "redis",
       name: "Redis",
       description: "Redis in-memory data store",
-      type: "database",
+      type: "Database",
     },
     {
       slug: "couchdb",
       name: "CouchDB",
       description: "Apache CouchDB document database",
-      type: "database",
+      type: "Database",
     },
-    
+
     // CI/CD and DevOps
     {
       slug: "jenkins",
       name: "Jenkins",
       description: "Jenkins CI/CD server",
-      type: "devops",
+      type: "DevOps",
     },
     {
       slug: "gitlab",
       name: "GitLab CE",
       description: "GitLab Community Edition",
-      type: "devops",
+      type: "DevOps",
     },
     {
       slug: "prometheus",
       name: "Prometheus",
       description: "Prometheus monitoring system",
-      type: "devops",
+      type: "DevOps",
     },
     {
       slug: "grafana",
       name: "Grafana",
       description: "Grafana analytics & monitoring",
-      type: "devops",
+      type: "DevOps",
     },
-    
+
     // Game Servers
     {
       slug: "minecraft",
       name: "Minecraft Server",
       description: "Ready-to-play Minecraft Java Edition server",
-      type: "game-server",
+      type: "Game Servers",
     },
     {
       slug: "csgo",
       name: "CS:GO Server",
       description: "Counter-Strike: Global Offensive game server",
-      type: "game-server",
+      type: "Game Servers",
     },
     {
       slug: "valheim",
       name: "Valheim Server",
       description: "Valheim dedicated server for multiplayer",
-      type: "game-server",
+      type: "Game Servers",
     },
     {
       slug: "rust",
       name: "Rust Server",
       description: "Rust dedicated game server",
-      type: "game-server",
+      type: "Game Servers",
     },
     {
       slug: "ark",
       name: "ARK: Survival Evolved",
       description: "ARK: Survival Evolved dedicated server",
-      type: "game-server",
+      type: "Game Servers",
     },
-    
+
     // Discord Bots
     {
       slug: "discordjs",
       name: "Discord.js Bot",
       description: "Node.js environment optimized for Discord.js bots",
-      type: "bot",
+      type: "Discord Bots",
     },
     {
       slug: "discordpy",
       name: "Discord.py Bot",
       description: "Python environment for Discord.py bots",
-      type: "bot",
+      type: "Discord Bots",
     }
   ];
 
@@ -791,29 +792,60 @@ runcmd:
   private determineAppType(name: string): string {
     name = name.toLowerCase();
 
-    if (name.includes('wordpress') || name.includes('drupal') || 
-        name.includes('joomla') || name.includes('ghost')) {
-      return 'cms';
-    } else if (name.includes('woocommerce') || name.includes('magento') || 
-               name.includes('prestashop') || name.includes('commerce')) {
-      return 'ecommerce';
-    } else if (name.includes('discord') || name.includes('bot')) {
-      return 'bot';
-    } else if (name.includes('game') || name.includes('minecraft') || 
-               name.includes('valheim') || name.includes('rust')) {
-      return 'game-server';
-    } else if (name.includes('node') || name.includes('python') || 
-               name.includes('lamp') || name.includes('lemp')) {
-      return 'application';
-    } else if (name.includes('mongodb') || name.includes('mysql') || 
-               name.includes('postgresql') || name.includes('redis')) {
-      return 'database';
-    } else if (name.includes('jenkins') || name.includes('gitlab') || 
-               name.includes('prometheus') || name.includes('grafana')) {
-      return 'devops';
-    } else {
-      return 'application';
+    // Web Development
+    if (name.includes('node') || name.includes('python') || 
+        name.includes('lamp') || name.includes('lemp') ||
+        name.includes('mean') || name.includes('mern') ||
+        name.includes('docker')) {
+      return 'Web Dev';
     }
+
+    // CMS
+    else if (name.includes('wordpress') || name.includes('drupal') || 
+             name.includes('joomla') || name.includes('ghost')) {
+      return 'CMS';
+    }
+
+    // E-commerce
+    else if (name.includes('woocommerce') || name.includes('magento') || 
+             name.includes('prestashop') || name.includes('commerce')) {
+      return 'E-commerce';
+    }
+
+    // Discord Bots
+    else if (name.includes('discord') || name.includes('bot')) {
+      return 'Discord Bots';
+    }
+
+    // Game Servers
+    else if (name.includes('game') || name.includes('minecraft') || 
+             name.includes('valheim') || name.includes('rust') ||
+             name.includes('csgo') || name.includes('ark')) {
+      return 'Game Servers';
+    }
+
+    // Databases
+    else if (name.includes('mongodb') || name.includes('mysql') || 
+             name.includes('postgresql') || name.includes('redis') ||
+             name.includes('couchdb')) {
+      return 'Database';
+    }
+
+    // Data Science
+    else if (name.includes('jupyter') || name.includes('tensorflow') ||
+             name.includes('rstudio') || name.includes('data science')) {
+      return 'Data Science';
+    }
+
+    // DevOps
+    else if (name.includes('jenkins') || name.includes('gitlab') || 
+             name.includes('prometheus') || name.includes('grafana') ||
+             name.includes('kubernetes') || name.includes('ci/cd')) {
+      return 'DevOps';
+    }
+
+    // Default to Web Dev if no specific category is found
+    return 'Web Dev';
   }
 
   async createDroplet(options: {
@@ -947,7 +979,7 @@ runcmd:
         }
       );
       
-      return {
+            return {
         id: response.volume.id
       };
     } catch (error: any) {
@@ -1765,8 +1797,7 @@ runcmd:
   }
 
   /**
-   * Get a list of backups for a droplet
-   * @param dropletId The ID of the droplet
+   * Get a list of backups for a droplet* @param dropletId The ID of the droplet
    * @returns An array of backup objects
    */
   async getDropletBackups(dropletId: string): Promise<{
@@ -1776,40 +1807,34 @@ runcmd:
     size_gigabytes: number;
     status: string;
   }[]> {
-    // For mock mode or mock droplet IDs, return mock backups
-    if (this.useMock || dropletId.includes('droplet-')) {
+    if (this.useMock) {
       console.log(`[MOCK] Getting backups for mock droplet ${dropletId}`);
-      return Array(2).fill(0).map((_, i) => ({
-        id: `backup-${Math.floor(Math.random() * 10000000000)}`,
-        name: `Auto Backup ${i + 1}`,
-        created_at: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
-        size_gigabytes: 25,
-        status: 'completed'
-      }));
+      return [
+        {
+          id: `backup-${Math.random().toString(36).substring(7)}`,
+          name: `Mock Backup ${new Date().toISOString()}`,
+          created_at: new Date().toISOString(),
+          size_gigabytes: 25,
+          status: 'completed'
+        }
+      ];
     }
     
     // This is a real API call to Digital Ocean
     try {
       console.log(`Getting backups for real DigitalOcean droplet ${dropletId}`);
-      const url = `${this.apiBaseUrl}/droplets/${dropletId}/backups`;
-      
-      const response = await this.apiRequest<{ backups: any[] }>('GET', url);
-      
-      if (!response || !response.backups) {
-        return [];
-      }
+      const response = await this.apiRequest<{ backups: any[] }>(`/droplets/${dropletId}/backups`);
       
       return response.backups.map(backup => ({
-        id: backup.id,
-        name: backup.name || `Backup ${backup.id}`,
+        id: backup.id.toString(),
+        name: backup.name,
         created_at: backup.created_at,
-        size_gigabytes: backup.size_gigabytes || 0,
-        status: backup.status || 'completed'
+        size_gigabytes: backup.size_gigabytes,
+        status: backup.status
       }));
     } catch (error) {
-      console.error(`Error getting backups for droplet ${dropletId}:`, error);
-      // Return an empty array instead of throwing to be more resilient
-      return [];
+      console.error('Error getting droplet backups:', error);
+      throw error;
     }
   }
 
