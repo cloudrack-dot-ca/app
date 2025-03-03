@@ -31,7 +31,7 @@ export const pool = new Pool({
   connectionTimeoutMillis: 5000, // How long to wait for a connection
   maxUses: 7500, // Number of times a client can be used before being recycled
   ssl: {
-    rejectUnauthorized: false // This allows self-signed certificates
+    rejectUnauthorized: process.env.NODE_ENV !== 'development' // Only reject unauthorized in production
   }
 });
 

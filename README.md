@@ -143,21 +143,72 @@ CloudRack is a comprehensive cloud VPS hosting provider platform with advanced s
 - ts-node
 - TypeScript
 
-### Environment Configuration
-Required environment variables:
-```
-DATABASE_URL=postgresql://username:password@localhost:5432/cloudrack
-SESSION_SECRET=your_session_secret_here
-PAYPAL_CLIENT_ID=your_paypal_client_id
-PAYPAL_CLIENT_SECRET=your_paypal_client_secret
-PAYPAL_MODE=sandbox  # Use 'live' for production payments
-DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
-```
+### Database and Environment Setup
 
-Note: To switch between PayPal sandbox and live environments:
-- Use `PAYPAL_MODE=sandbox` for testing payments (default)
-- Use `PAYPAL_MODE=live` for processing real transactions
-- Ensure you use the appropriate PayPal API credentials for each mode
+1. **Install Required Packages**
+   ```bash
+   # Install global dependencies
+   npm install -g ts-node typescript pm2 dotenv
+
+   # Install project dependencies
+   npm install
+   ```
+
+2. **Configure Database**
+   ```bash
+   # Create database and user
+   sudo -u postgres psql -c "CREATE USER cloudrack WITH PASSWORD 'your_secure_password';"
+   sudo -u postgres psql -c "CREATE DATABASE cloudrack OWNER cloudrack;"
+   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cloudrack TO cloudrack;"
+   ```
+
+3. **Setup Environment Variables**
+   ```bash
+   # Create .env file
+   cat > .env << 'EOF'
+   # Database Configuration
+   DATABASE_URL=postgresql://cloudrack:your_secure_password@localhost:5432/cloudrack
+   NODE_ENV=production  # Use 'development' for local development
+
+   # Session Configuration
+   SESSION_SECRET=your_session_secret
+
+   # PayPal Configuration
+   PAYPAL_CLIENT_ID=your_paypal_client_id
+   PAYPAL_CLIENT_SECRET=your_paypal_client_secret
+   PAYPAL_MODE=sandbox  # Change to 'live' for production payments
+
+   # DigitalOcean Configuration
+   DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
+   EOF
+
+   # Load environment variables
+   set -a; source .env; set +a
+   ```
+
+4. **Initialize Database Schema**
+   ```bash
+   # For first-time setup only
+   export NODE_ENV=development
+   export NODE_TLS_REJECT_UNAUTHORIZED=0
+   npm run db:push
+
+   # After database is initialized, restore secure settings
+   unset NODE_TLS_REJECT_UNAUTHORIZED
+   export NODE_ENV=production
+   ```
+
+5. **Start the Application**
+   ```bash
+   # Run directly with Node.js
+   node index.js
+
+   # OR using PM2 (recommended for production)
+   pm2 start index.js --name "cloudrack"
+   ```
+
+Note: Make sure to replace placeholder values (your_secure_password, your_session_secret, etc.) with your actual secure values.
+
 
 ### Getting Started with CloudRack
 1. **Register an Account**: Create a new user account on the platform
@@ -194,245 +245,137 @@ Note: To switch between PayPal sandbox and live environments:
    ```
 5. Access the application at http://localhost:5000
 
-## 🚀 Detailed VPS Deployment Guide
+## 🚀 Quick Start on VPS
 
-### Running the Project in Different Environments
+### Prerequisites
+- Ubuntu 20.04 or later
+- Root access or sudo privileges
+- Git installed
 
-1. **Development Environment Setup**
-   ```bash
-   # Install required global packages
-   npm install -g ts-node typescript
-
-   # Install project dependencies
-   npm install
-
-   # Set development environment and disable SSL for local development
-   export NODE_ENV=development
-   export NODE_TLS_REJECT_UNAUTHORIZED=0  # Only for development/testing
-
-   # Start the development server (two options)
-   npm run dev
-   # OR
-   node index.js
-   ```
-
-2. **Production Environment Setup**
-   ```bash
-   # Install required global packages
-   npm install -g ts-node typescript pm2
-
-   # Install project dependencies
-   npm install
-
-   # Set production environment
-   export NODE_ENV=production
-
-   # Start the server using PM2
-   pm2 start index.js --name "cloudrack"
-   ```
-
-### System Requirements
-1. A VPS running Ubuntu 20.04 or later
-2. Minimum 1GB RAM
-3. 20GB SSD Storage
-4. Root access to the server
-
-### Step-by-Step VPS Deployment
-
-#### 1. Initial Server Setup
+### One-Command Setup
+1. Clone the repository and run the setup script:
 ```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
-
-# Install essential build tools
-sudo apt install -y build-essential git curl
-```
-
-#### 2. Install Node.js and Required Global Packages
-```bash
-# Add NodeSource repository and install Node.js 20.x
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# Verify installation
-node --version  # Should show v20.x.x
-npm --version   # Should show 9.x.x or higher
-
-# Install required global packages
-npm install -g ts-node typescript pm2
-```
-
-#### 3. Install and Configure PostgreSQL
-```bash
-# Install PostgreSQL
-sudo apt install -y postgresql postgresql-contrib
-
-# Start and enable PostgreSQL service
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# Create database and user
-sudo -u postgres psql -c "CREATE USER cloudrack WITH PASSWORD 'your_secure_password';"
-sudo -u postgres psql -c "CREATE DATABASE cloudrack OWNER cloudrack;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cloudrack TO cloudrack;"
-```
-
-#### 4. Configure Environment Variables
-```bash
-# Create environment file
-cat > ~/.env << EOL
-NODE_ENV=production
-DATABASE_URL=postgresql://cloudrack:your_secure_password@localhost:5432/cloudrack
-SESSION_SECRET=your_session_secret_here
-PAYPAL_CLIENT_ID=your_paypal_client_id
-PAYPAL_CLIENT_SECRET=your_paypal_client_secret
-VITE_PAYPAL_CLIENT_ID=your_paypal_client_id
-VITE_PAYPAL_CLIENT_SECRET=your_paypal_client_secret
-PAYPAL_MODE=sandbox  # Change to 'live' for production
-DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
-EOL
-
-# Load environment variables
-source ~/.env
-```
-
-#### 5. Clone and Setup Application
-```bash
-# Clone repository
 git clone <your-repo-url> cloudrack
 cd cloudrack
-
-# Install dependencies
-npm install
-
-# Initialize database schema (in development mode)
-export NODE_ENV=development
-export NODE_TLS_REJECT_UNAUTHORIZED=0
-npm run db:push
-
-# Switch back to production mode
-export NODE_ENV=production
-unset NODE_TLS_REJECT_UNAUTHORIZED
+chmod +x setup-vps.sh
+./setup-vps.sh
 ```
 
-#### 6. Running in Production
+2. Edit the `.env` file with your actual credentials:
 ```bash
-# Start the application with PM2
+nano .env
+```
+
+3. Start the application:
+```bash
+# Development mode
+node index.js
+
+# Production mode (recommended)
 pm2 start index.js --name "cloudrack"
-
-# Make PM2 start on boot
-pm2 startup
-sudo env PATH=$PATH:/usr/bin pm2 startup ubuntu -u $USER --hp /home/$USER
-pm2 save
 ```
 
-#### 7. Configure Nginx (Recommended for Production)
-```bash
-# Install Nginx
-sudo apt install -y nginx
+### Manual Setup Steps
+If you prefer to set up manually or the automatic script doesn't work for your environment, follow these steps:
 
-# Create Nginx configuration
-sudo tee /etc/nginx/sites-available/cloudrack << 'EOF'
-server {
-    listen 80;
-    server_name your_domain.com;
+1. **System Requirements**
+   - Ubuntu 20.04 or later
+   - Minimum 1GB RAM
+   - 20GB SSD Storage
+   - Root access or sudo privileges
 
-    location / {
-        proxy_pass http://localhost:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-EOF
+2. **Install Node.js and Required Packages**
+   ```bash
+   # Update system and install build tools
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install -y build-essential git curl
 
-# Enable the site and restart Nginx
-sudo ln -s /etc/nginx/sites-available/cloudrack /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
+   # Install Node.js 20.x
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt install -y nodejs
 
-### Security Setup
+   # Install global packages
+   npm install -g ts-node typescript pm2 dotenv
+   ```
 
-1. **Configure Firewall**
-```bash
-# Setup UFW firewall
-sudo ufw allow ssh
-sudo ufw allow http
-sudo ufw allow https
-sudo ufw enable
-```
+3. **Install and Configure PostgreSQL**
+   ```bash
+   # Install PostgreSQL
+   sudo apt install -y postgresql postgresql-contrib
 
-2. **SSL Configuration**
-```bash
-# Install Certbot and configure SSL
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your_domain.com
-```
+   # Create database and user
+   sudo -u postgres psql << EOF
+   CREATE USER cloudrack WITH PASSWORD 'your_secure_password';
+   CREATE DATABASE cloudrack OWNER cloudrack;
+   GRANT ALL PRIVILEGES ON DATABASE cloudrack TO cloudrack;
+   EOF
+   ```
 
-### Maintenance and Monitoring
+4. **Setup Environment**
+   ```bash
+   # Create and edit .env file
+   cat > .env << 'EOF'
+   NODE_ENV=production
+   DATABASE_URL=postgresql://cloudrack:your_secure_password@localhost:5432/cloudrack
+   SESSION_SECRET=your_session_secret_here
+   PAYPAL_CLIENT_ID=your_paypal_client_id
+   PAYPAL_CLIENT_SECRET=your_paypal_client_secret
+   PAYPAL_MODE=sandbox
+   DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
+   EOF
 
-1. **View Application Logs**
-```bash
-# Check PM2 logs
-pm2 logs cloudrack
+   # Load variables
+   set -a; source .env; set +a
+   ```
 
-# View Nginx access logs
-sudo tail -f /var/log/nginx/access.log
+5. **Initialize Application**
+   ```bash
+   # Install dependencies
+   npm install
 
-# View PostgreSQL logs
-sudo tail -f /var/log/postgresql/postgresql-*.log
-```
+   # Initialize database (development mode)
+   export NODE_ENV=development
+   export NODE_TLS_REJECT_UNAUTHORIZED=0
+   npm run db:push
 
-2. **Database Backup**
-```bash
-# Create a backup script
-cat > ~/backup-db.sh << 'EOF'
-#!/bin/bash
-BACKUP_DIR="/home/$USER/backups"
-mkdir -p $BACKUP_DIR
-pg_dump -U cloudrack cloudrack > $BACKUP_DIR/cloudrack_$(date +%Y%m%d).sql
-EOF
+   # Switch back to production
+   unset NODE_TLS_REJECT_UNAUTHORIZED
+   export NODE_ENV=production
+   ```
 
-# Make the script executable
-chmod +x ~/backup-db.sh
+6. **Start the Application**
+   ```bash
+   # Development mode
+   node index.js
 
-# Add to crontab (runs daily at 2 AM)
-(crontab -l 2>/dev/null; echo "0 2 * * * /home/$USER/backup-db.sh") | crontab -
-```
+   # Production mode (recommended)
+   pm2 start index.js --name "cloudrack"
+   pm2 startup  # Enable PM2 on system startup
+   pm2 save     # Save current process list
+   ```
 
-3. **Regular Updates**
-```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
+### Troubleshooting Common Issues
 
-# Update Node.js packages
-npm update
+1. **Database Connection Errors**
+   - Verify PostgreSQL is running: `sudo systemctl status postgresql`
+   - Check database exists: `sudo -u postgres psql -l`
+   - Ensure DATABASE_URL is correct in .env
+   - For initial setup, use development mode with SSL verification disabled
 
-# Restart application
-pm2 restart cloudrack
-```
-
-### Troubleshooting
-
-1. **Common Issues and Solutions**
-   - If the application fails to start, check logs: `pm2 logs cloudrack`
-   - For database connection issues: `sudo systemctl status postgresql`
-   - For permission issues: `sudo chown -R $USER:$USER /path/to/cloudrack`
-
-2. **Database Issues**
-   - Check PostgreSQL status: `sudo systemctl status postgresql`
-   - Verify connection: `psql -U cloudrack -d cloudrack -h localhost`
-   - Review logs: `sudo tail -f /var/log/postgresql/postgresql-*.log`
-
-3. **Node.js Issues**
-   - Verify installation: `node --version && npm --version`
-   - Check global packages: `npm list -g --depth=0`
+2. **Node.js Errors**
+   - Verify Node.js version: `node --version` (should be 20.x)
    - Clear npm cache: `npm cache clean --force`
+   - Reinstall dependencies: `rm -rf node_modules && npm install`
 
-Remember to replace placeholder values (your_domain.com, your_secure_password, etc.) with your actual values before using these commands.
+3. **Permission Issues**
+   - Ensure proper ownership: `sudo chown -R $USER:$USER .`
+   - Check PostgreSQL user permissions: `sudo -u postgres psql -c "\du"`
+
+### Security Notes
+1. Always change default passwords in production
+2. Use strong SESSION_SECRET values
+3. Keep your .env file secure and never commit it to version control
+4. Consider setting up a firewall (UFW) and SSL/TLS
 
 
 ## 📚 API Documentation
