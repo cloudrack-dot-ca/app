@@ -227,6 +227,7 @@ export class DigitalOceanClient {
       processor_type: 'amd'
     },
     
+    
 
   ];
 
@@ -508,29 +509,68 @@ export class DigitalOceanClient {
 
       // Common marketplace applications and their correct slugs
       const marketplaceMap: Record<string, string> = {
+        // CMS Applications
         'wordpress': 'wordpress-20-04',
+        'ghost': 'ghost-20-04',
+        'drupal': 'drupal-20-04',
+        'joomla': 'joomla-20-04',
+
+        // Web Stacks
         'lamp': 'lamp-20-04',
         'lemp': 'lemp-20-04',
         'mean': 'mean-20-04',
+        'mern': 'mern-20-04',
+
+        // Development Platforms
         'docker': 'docker-20-04',
+        'nodejs': 'nodejs-20-04',
+        'python': 'python-20-04',
+
+        // Databases
         'mongodb': 'mongodb-20-04',
         'mysql': 'mysql-20-04',
         'postgresql': 'postgresql-20-04',
-        'nodejs': 'nodejs-20-04',
-        'ghost': 'ghost-20-04',
-        'drupal': 'drupal-20-04',
-        'jenkins': 'jenkins-20-04',
-        'gitlab': 'gitlab-20-04',
+        'redis': 'redis-20-04',
+
+        // Discord Bot Platforms
         'discordjs': 'nodejs-20-04', // Use Node.js image for Discord.js bots
         'discordpy': 'python-20-04', // Use Python image for Discord.py bots
+
+        // Game Servers
         'minecraft': 'docker-20-04', // Use Docker for game servers
         'csgo': 'docker-20-04',
-        'valheim': 'docker-20-04'
+        'valheim': 'docker-20-04',
+        'rust': 'docker-20-04',
+
+        // DevOps Tools
+        'jenkins': 'jenkins-20-04',
+        'gitlab': 'gitlab-20-04',
+        'prometheus': 'prometheus-20-04',
+        'grafana': 'grafana-20-04'
       };
 
       // If we have a mapped slug, use it, otherwise try the original slug
       const imageSlug = marketplaceMap[marketplaceSlug] || marketplaceSlug;
       console.log(`Using image slug: ${imageSlug} for application: ${appSlug}`);
+
+      // Add user_data for specific applications that need additional setup
+      let userData = '';
+      if (appSlug === 'discordjs' || appSlug === 'nodejs') {
+        userData = `#cloud-config
+runcmd:
+  - curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  - apt-get install -y nodejs
+  - npm install -g pm2
+`;
+      } else if (appSlug === 'discordpy' || appSlug === 'python') {
+        userData = `#cloud-config
+runcmd:
+  - apt-get update
+  - apt-get install -y python3-pip python3-venv
+  - pip3 install discord.py
+`;
+      }
+
       return imageSlug;
     } catch (error) {
       console.error('Error mapping application to image:', error);
@@ -589,7 +629,6 @@ export class DigitalOceanClient {
         body: actualMethod !== 'GET' && actualData ? JSON.stringify(actualData) : undefined
       });
       
-
       if (!response.ok) {
         // Try to parse error response as JSON, but handle case where it might not be JSON
         try {
@@ -601,7 +640,6 @@ export class DigitalOceanClient {
         }
       }
       
-
       // For DELETE operations, the response might be empty
       if (actualMethod === 'DELETE') {
         if (response.status === 204 || response.headers.get('content-length') === '0') {
@@ -609,7 +647,6 @@ export class DigitalOceanClient {
         }
       }
       
-
       // Try to parse JSON response, but handle case where it might be empty
       try {
         const text = await response.text();
@@ -678,122 +715,74 @@ export class DigitalOceanClient {
 
   async getDistributions(): Promise<Distribution[]> {
     try {
-      // Connect to DigitalOcean API to get distributions
-      // The DigitalOcean API returns an array in the 'images' field, not 'distributions'
-      const response = await this.apiRequest<{ images: any[] }>("GET", `${this.apiBaseUrl}/images?type=distribution&per_page=100`);
-      
+      const response = await this.apiRequest<{ images: any[] }>("GET", "/images?type=distribution&per_page=100");
+
       if (!response.images || response.images.length === 0) {
         console.warn('No distributions returned from DigitalOcean API, using default distributions');
-        // Return sensible defaults instead of failing
-        return [
-          {
-            slug: 'ubuntu-20-04-x64',
-            name: 'Ubuntu 20.04 LTS',
-            description: 'Ubuntu 20.04 LTS distribution image'
-          },
-          {
-            slug: 'debian-11-x64',
-            name: 'Debian 11',
-            description: 'Debian 11 distribution image'
-          },
-          {
-            slug: 'centos-stream-9-x64',
-            name: 'CentOS Stream 9',
-            description: 'CentOS Stream 9 distribution image'
-          }
-        ];
+        return this.getDefaultDistributions();
       }
-      
-      // Map the response to our expected format
-      return response.images.map(image => ({
-        slug: image.slug,
-        name: image.name,
-        description: image.description || `${image.name} distribution image`
-      }));
+
+      // Filter out GPU-related distributions and map to our format
+      return response.images
+        .filter(image => !image.name.toLowerCase().includes('gpu'))
+        .map(image => ({
+          slug: image.slug,
+          name: image.name,
+          description: image.description || `${image.name} distribution image`
+        }));
     } catch (error) {
       console.error('Error fetching distributions from DigitalOcean API:', error);
-      // Return sensible defaults instead of crashing
-      return [
-        {
-          slug: 'ubuntu-20-04-x64',
-          name: 'Ubuntu 20.04 LTS',
-          description: 'Ubuntu 20.04 LTS distribution image'
-        },
-        {
-          slug: 'debian-11-x64',
-          name: 'Debian 11',
-          description: 'Debian 11 distribution image'
-        }
-      ];
+      return this.getDefaultDistributions();
     }
   }
 
-  async getApplications(): Promise<Application[]> {
-    try {
-      // Connect to DigitalOcean API to get applications (marketplace images)
-      const response = await this.apiRequest<{ images: any[] }>("GET", `${this.apiBaseUrl}/images?type=application&per_page=100`);
-      
-      if (!response.images || response.images.length === 0) {
-        console.warn('No application images returned from DigitalOcean API, using default applications');
-        // Return sensible defaults instead of failing
-        return [
-          {
-            slug: 'wordpress',
-            name: 'WordPress on Ubuntu 20.04',
-            description: 'WordPress is an open source content management system.',
-            type: 'cms'
-          },
-          {
-            slug: 'lamp',
-            name: 'LAMP on Ubuntu 20.04',
-            description: 'LAMP stack with Apache, MySQL, and PHP.',
-            type: 'application'
-          },
-          {
-            slug: 'docker',
-            name: 'Docker on Ubuntu 20.04',
-            description: 'Docker platform for container-based applications.',
-            type: 'application'
-          },
-          {
-            slug: 'nodejs',
-            name: 'Node.js on Ubuntu 20.04',
-            description: 'Node.js runtime for server-side JavaScript applications.',
-            type: 'application'
-          }
-        ];
+  // Helper method for default distributions
+  private getDefaultDistributions(): Distribution[] {
+    return [
+      {
+        slug: 'ubuntu-20-04-x64',
+        name: 'Ubuntu 20.04 LTS',
+        description: 'Ubuntu 20.04 LTS distribution image'
+      },
+      {
+        slug: 'debian-11-x64',
+        name: 'Debian 11',
+        description: 'Debian 11 distribution image'
+      },
+      {
+        slug: 'centos-stream-9-x64',
+        name: 'CentOS Stream 9',
+        description: 'CentOS Stream 9 distribution image'
       }
-      
-      // Map the marketplace images to our Application format
-      return response.images.map(image => ({
-        slug: image.slug,
-        name: image.name,
-        description: image.description || `${image.name} application`, 
-        type: this.determineAppType(image.name)
-      }));
+    ];
+  }
+
+  async getApplications(): Promise<Application[]> {
+    if (this.useMock) {
+      return this.mockApplications;
+    }
+
+    try {
+      const response = await this.apiRequest<{ images: any[] }>("GET", "/images?type=application&per_page=100");
+
+      if (!response.images || response.images.length === 0) {
+        console.warn('No application images returned from DigitalOcean API, using mock applications');
+        return this.mockApplications;
+      }
+
+      // Map and categorize the applications
+      return response.images.map(image => {
+        const type = this.determineAppType(image.name);
+        return {
+          slug: image.slug,
+          name: image.name,
+          description: image.description || `${image.name} application`,
+          type: type
+        };
+      });
     } catch (error) {
       console.error('Error fetching applications from DigitalOcean API:', error);
-      // Return sensible defaults to prevent crashing
-      return [
-        {
-          slug: 'wordpress',
-          name: 'WordPress on Ubuntu 20.04',
-          description: 'WordPress is an open source content management system.',
-          type: 'cms'
-        },
-        {
-          slug: 'lamp',
-          name: 'LAMP on Ubuntu 20.04',
-          description: 'LAMP stack with Apache, MySQL, and PHP.',
-          type: 'application'
-        },
-        {
-          slug: 'nodejs',
-          name: 'Node.js on Ubuntu 20.04',
-          description: 'Node.js runtime for server-side JavaScript applications.',
-          type: 'application'
-        }
-      ];
+      return this.mockApplications;
     }
   }
   
@@ -801,24 +790,29 @@ export class DigitalOceanClient {
   // Helper method to determine application type based on name
   private determineAppType(name: string): string {
     name = name.toLowerCase();
-    
-    if (name.includes('wordpress') || name.includes('drupal') || name.includes('joomla')) {
+
+    if (name.includes('wordpress') || name.includes('drupal') || 
+        name.includes('joomla') || name.includes('ghost')) {
       return 'cms';
-    } else if (name.includes('shop') || name.includes('commerce') || name.includes('store')) {
+    } else if (name.includes('woocommerce') || name.includes('magento') || 
+               name.includes('prestashop') || name.includes('commerce')) {
       return 'ecommerce';
-    } else if (name.includes('node') || name.includes('php') || name.includes('python') || 
-              name.includes('ruby') || name.includes('django') || name.includes('lamp')) {
-      return 'application'; 
+    } else if (name.includes('discord') || name.includes('bot')) {
+      return 'bot';
+    } else if (name.includes('game') || name.includes('minecraft') || 
+               name.includes('valheim') || name.includes('rust')) {
+      return 'game-server';
+    } else if (name.includes('node') || name.includes('python') || 
+               name.includes('lamp') || name.includes('lemp')) {
+      return 'application';
     } else if (name.includes('mongodb') || name.includes('mysql') || 
-              name.includes('postgresql') || name.includes('redis')) {
+               name.includes('postgresql') || name.includes('redis')) {
       return 'database';
     } else if (name.includes('jenkins') || name.includes('gitlab') || 
-              name.includes('prometheus') || name.includes('grafana')) {
+               name.includes('prometheus') || name.includes('grafana')) {
       return 'devops';
-    } else if (name.includes('game')) {
-      return 'game-server';
     } else {
-      return 'application'; // Default type
+      return 'application';
     }
   }
 
@@ -970,8 +964,7 @@ runcmd:
   }
 
   async deleteDroplet(id: string): Promise<void> {
-    if (this.useMock) {
-      console.log(`Mock deletion of droplet ${id} successful`);
+    if (this.useMock) {      console.log(`Mock deletion of droplet ${id} successful`);
       return; // Mock deletion just returns
     }
     
@@ -1351,7 +1344,6 @@ runcmd:
       }
     }
     
-
     // This is a real firewall ID, update it
     try {
       console.log(`Updating real DigitalOcean firewall ${firewallId}`);
@@ -1405,7 +1397,6 @@ runcmd:
       }
     }
     
-
     // This is a real firewall ID, make the real API call
     try {
       console.log(`Adding droplets ${dropletIds.join(', ')} to real firewall ${firewallId}`);
@@ -1456,7 +1447,6 @@ runcmd:
       }
     }
     
-
     // This is a real firewall ID, make the real API call
     try {
       console.log(`Removing droplets ${dropletIds.join(', ')} from real firewall ${firewallId}`);
@@ -1510,7 +1500,6 @@ runcmd:
       }
     }
     
-
     // This is a real firewall ID, make the real API call
     try {
       console.log(`Adding rules to real firewall ${firewallId}: `, {
@@ -1578,7 +1567,6 @@ runcmd:
       }
     }
     
-
     // This is a real firewall ID, make the real API call
     try {
       console.log(`Removing rules from real firewall ${firewallId}: `, {
@@ -1613,7 +1601,6 @@ runcmd:
       return;
     }
     
-
     // This is a real firewall ID, make the real API call
     try {
       console.log(`Deleting real DigitalOcean firewall: ${firewallId}`);
@@ -1640,7 +1627,6 @@ runcmd:
       return snapshotId;
     }
     
-
     // This is a real API call
     try {
       console.log(`Creating real snapshot for DigitalOcean droplet ${dropletId}`);
@@ -1657,7 +1643,6 @@ runcmd:
         name: name
       });
       
-
       // In a real implementation, we'd need to poll the action status until completion
       // For now, we'll just return a generated snapshot ID
       return `snapshot-${response.action.id}`;
@@ -1698,7 +1683,6 @@ runcmd:
       ];
     }
     
-
     // This is a real API call
     try {
       console.log(`Getting real snapshots for DigitalOcean droplet ${dropletId}`);
@@ -1729,7 +1713,6 @@ runcmd:
       return;
     }
     
-
     // This is a real API call to Digital Ocean
     try {
       console.log(`Deleting real DigitalOcean snapshot ${snapshotId}`);
@@ -1762,7 +1745,6 @@ runcmd:
       return mockBackupId;
     }
     
-
     // This is a real API call to Digital Ocean
     try {
       console.log(`Creating real backup for DigitalOcean droplet ${dropletId}`);
@@ -1806,7 +1788,6 @@ runcmd:
       }));
     }
     
-
     // This is a real API call to Digital Ocean
     try {
       console.log(`Getting backups for real DigitalOcean droplet ${dropletId}`);
@@ -1840,16 +1821,15 @@ runcmd:
     // For mock mode or mock backup IDs, just simulate success
     if (this.useMock || backupId.includes('backup-')) {
       console.log(`[MOCK] Deleting mock backup ${backupId} - mock mode: ${this.useMock}`);
+      // No actual API call, just simulate success
       return;
     }
     
-
     // Extract the backup ID if it has our prefix
     const cleanBackupId = backupId.startsWith('backup-') 
       ? backupId.substring(7) 
       : backupId;
     
-
     // This is a real API call to Digital Ocean
     try {
       console.log(`Deleting real DigitalOcean backup ${cleanBackupId}`);
@@ -1876,13 +1856,11 @@ runcmd:
       return;
     }
     
-
     // Extract the backup ID if it has our prefix
     const cleanBackupId = backupId.startsWith('backup-') 
       ? backupId.substring(7) 
       : backupId;
     
-
     // This is a real API call to Digital Ocean
     try {
       console.log(`Restoring real DigitalOcean droplet ${dropletId} from backup ${cleanBackupId}`);
@@ -1941,13 +1919,11 @@ runcmd:
       };
     }
     
-
     // Extract the backup ID if it has our prefix
     const cleanBackupId = backupId.startsWith('backup-') 
       ? backupId.substring(7) 
       : backupId;
     
-
     // This is a real API call
     try {
       console.log(`Getting details for real DigitalOcean backup ${cleanBackupId}`);
@@ -2005,7 +1981,6 @@ runcmd:
       };
     }
     
-
     // This is a real API call
     try {
       console.log(`Getting details for real DigitalOcean snapshot ${snapshotId}`);
