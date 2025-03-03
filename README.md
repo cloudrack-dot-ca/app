@@ -140,6 +140,9 @@ CloudRack is a comprehensive cloud VPS hosting provider platform with advanced s
 - PostgreSQL database
 - PayPal Developer Account (for payment processing)
 - DigitalOcean API Key (for production deployment)
+- ts-node
+- TypeScript
+
 
 ### Environment Configuration
 Required environment variables:
@@ -191,33 +194,38 @@ DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
 
 ### Running the Project in Different Environments
 
-1. **Local Development**
+1. **Development Environment Setup**
    ```bash
-   # Set development environment
-   export NODE_ENV=development
+   # Install required global packages
+   npm install -g ts-node typescript
 
-   # Start the development server
+   # Install project dependencies
+   npm install
+
+   # Set development environment and disable SSL for local development
+   export NODE_ENV=development
+   export NODE_TLS_REJECT_UNAUTHORIZED=0  # Only for development/testing
+
+   # Start the development server (two options)
    npm run dev
+   # OR
+   node index.js
    ```
 
-2. **Testing Database Migrations**
+2. **Production Environment Setup**
    ```bash
-   # For first-time database setup
-   export NODE_ENV=development
-   export NODE_TLS_REJECT_UNAUTHORIZED=0
-   npm run db:push
-   ```
+   # Install required global packages
+   npm install -g ts-node typescript pm2
 
-3. **Production Deployment**
-   ```bash
+   # Install project dependencies
+   npm install
+
    # Set production environment
    export NODE_ENV=production
 
-   # Build and start the application
-   npm run build
-   pm2 start npm --name "cloudrack" -- start
+   # Start the server using PM2
+   pm2 start index.js --name "cloudrack"
    ```
-
 
 ### System Requirements
 1. A VPS running Ubuntu 20.04 or later
@@ -225,7 +233,7 @@ DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
 3. 20GB SSD Storage
 4. Root access to the server
 
-### Step-by-Step Deployment Instructions
+### Step-by-Step VPS Deployment
 
 #### 1. Initial Server Setup
 ```bash
@@ -236,15 +244,18 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y build-essential git curl
 ```
 
-#### 2. Install Node.js
+#### 2. Install Node.js and Required Global Packages
 ```bash
-# Install Node.js 20.x
+# Add NodeSource repository and install Node.js 20.x
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Verify installation
 node --version  # Should show v20.x.x
 npm --version   # Should show 9.x.x or higher
+
+# Install required global packages
+npm install -g ts-node typescript pm2
 ```
 
 #### 3. Install and Configure PostgreSQL
@@ -288,20 +299,20 @@ cd cloudrack
 # Install dependencies
 npm install
 
-# Build the application
-npm run build
+# Initialize database schema (in development mode)
+export NODE_ENV=development
+export NODE_TLS_REJECT_UNAUTHORIZED=0
+npm run db:push
 
-# Push database schema
-NODE_ENV=development npm run db:push
+# Switch back to production mode
+export NODE_ENV=production
+unset NODE_TLS_REJECT_UNAUTHORIZED
 ```
 
 #### 6. Running in Production
 ```bash
-# Install PM2 process manager
-sudo npm install -y pm2 -g
-
-# Start the application
-pm2 start npm --name "cloudrack" -- start
+# Start the application with PM2
+pm2 start index.js --name "cloudrack"
 
 # Make PM2 start on boot
 pm2 startup
@@ -309,15 +320,13 @@ sudo env PATH=$PATH:/usr/bin pm2 startup ubuntu -u $USER --hp /home/$USER
 pm2 save
 ```
 
-#### 7. Configure Nginx (Optional, for reverse proxy)
+#### 7. Configure Nginx (Recommended for Production)
 ```bash
 # Install Nginx
 sudo apt install -y nginx
 
 # Create Nginx configuration
-sudo nano /etc/nginx/sites-available/cloudrack
-
-# Add the following configuration:
+sudo tee /etc/nginx/sites-available/cloudrack << 'EOF'
 server {
     listen 80;
     server_name your_domain.com;
@@ -331,56 +340,64 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 }
+EOF
 
-# Enable the site
+# Enable the site and restart Nginx
 sudo ln -s /etc/nginx/sites-available/cloudrack /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-### Troubleshooting Tips
+### Security Setup
 
-1. **Database Connection Issues**
-   - Verify PostgreSQL is running: `sudo systemctl status postgresql`
-   - Check database logs: `sudo tail -f /var/log/postgresql/postgresql-*.log`
-   - Ensure DATABASE_URL is correct in your environment
-
-2. **Application Not Starting**
-   - Check PM2 logs: `pm2 logs cloudrack`
-   - Verify Node.js version: `node --version`
-   - Check application logs: `pm2 log`
-
-3. **Permission Issues**
-   - Ensure proper file ownership: `sudo chown -R $USER:$USER /path/to/cloudrack`
-   - Check PostgreSQL user permissions: `sudo -u postgres psql -c "\du"`
-
-### Security Considerations
-
-1. **Firewall Setup**
+1. **Configure Firewall**
 ```bash
-# Configure UFW firewall
+# Setup UFW firewall
 sudo ufw allow ssh
 sudo ufw allow http
 sudo ufw allow https
 sudo ufw enable
 ```
 
-2. **SSL/TLS Configuration**
+2. **SSL Configuration**
 ```bash
-# Install Certbot for HTTPS
+# Install Certbot and configure SSL
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d your_domain.com
 ```
 
-3. **Database Security**
-- Use strong passwords
-- Configure pg_hba.conf for restricted access
-- Regular security updates
-- Backup strategy implementation
+### Maintenance and Monitoring
 
-### Maintenance
+1. **View Application Logs**
+```bash
+# Check PM2 logs
+pm2 logs cloudrack
 
-1. **Regular Updates**
+# View Nginx access logs
+sudo tail -f /var/log/nginx/access.log
+
+# View PostgreSQL logs
+sudo tail -f /var/log/postgresql/postgresql-*.log
+```
+
+2. **Database Backup**
+```bash
+# Create a backup script
+cat > ~/backup-db.sh << 'EOF'
+#!/bin/bash
+BACKUP_DIR="/home/$USER/backups"
+mkdir -p $BACKUP_DIR
+pg_dump -U cloudrack cloudrack > $BACKUP_DIR/cloudrack_$(date +%Y%m%d).sql
+EOF
+
+# Make the script executable
+chmod +x ~/backup-db.sh
+
+# Add to crontab (runs daily at 2 AM)
+(crontab -l 2>/dev/null; echo "0 2 * * * /home/$USER/backup-db.sh") | crontab -
+```
+
+3. **Regular Updates**
 ```bash
 # Update system packages
 sudo apt update && sudo apt upgrade -y
@@ -392,14 +409,25 @@ npm update
 pm2 restart cloudrack
 ```
 
-2. **Backup Strategy**
-```bash
-# Database backup
-pg_dump -U cloudrack cloudrack > backup_$(date +%Y%m%d).sql
+### Troubleshooting
 
-# Application backup
-tar -czf cloudrack_backup_$(date +%Y%m%d).tar.gz /path/to/cloudrack
-```
+1. **Common Issues and Solutions**
+   - If the application fails to start, check logs: `pm2 logs cloudrack`
+   - For database connection issues: `sudo systemctl status postgresql`
+   - For permission issues: `sudo chown -R $USER:$USER /path/to/cloudrack`
+
+2. **Database Issues**
+   - Check PostgreSQL status: `sudo systemctl status postgresql`
+   - Verify connection: `psql -U cloudrack -d cloudrack -h localhost`
+   - Review logs: `sudo tail -f /var/log/postgresql/postgresql-*.log`
+
+3. **Node.js Issues**
+   - Verify installation: `node --version && npm --version`
+   - Check global packages: `npm list -g --depth=0`
+   - Clear npm cache: `npm cache clean --force`
+
+Remember to replace placeholder values (your_domain.com, your_secure_password, etc.) with your actual values before using these commands.
+
 
 ## 📚 API Documentation
 
