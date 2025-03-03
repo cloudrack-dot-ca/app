@@ -3,14 +3,21 @@ import paypal from "@paypal/checkout-server-sdk";
 
 const clientId = process.env.PAYPAL_CLIENT_ID;
 const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+const mode = process.env.PAYPAL_MODE || 'sandbox';
 
 if (!clientId || !clientSecret) {
   throw new Error("PayPal credentials not found");
 }
 
 function environment() {
-  // Use Live environment instead of Sandbox for production
-  return new paypal.core.LiveEnvironment(clientId, clientSecret);
+  // Use environment variable to determine mode
+  if (mode === 'live') {
+    console.log('Using PayPal Live Environment');
+    return new paypal.core.LiveEnvironment(clientId, clientSecret);
+  } else {
+    console.log('Using PayPal Sandbox Environment');
+    return new paypal.core.SandboxEnvironment(clientId, clientSecret);
+  }
 }
 
 const client = new paypal.core.PayPalHttpClient(environment());
@@ -65,6 +72,9 @@ export async function getSubscriptionDetails(subscriptionId: string) {
   }
 }
 
+// Export current mode for frontend reference
+export const paypalMode = mode;
+
 export const plans = {
   basic: {
     id: "BASIC_PLAN",
@@ -78,7 +88,7 @@ export const plans = {
   },
   pro: {
     id: "PRO_PLAN",
-    name: "Pro Plan",
+    name: "Pro Plan", 
     description: "3 VPS Servers, 20GB Storage",
     price: 30.00,
     limits: {

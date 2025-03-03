@@ -143,7 +143,6 @@ CloudRack is a comprehensive cloud VPS hosting provider platform with advanced s
 - ts-node
 - TypeScript
 
-
 ### Environment Configuration
 Required environment variables:
 ```
@@ -151,9 +150,14 @@ DATABASE_URL=postgresql://username:password@localhost:5432/cloudrack
 SESSION_SECRET=your_session_secret_here
 PAYPAL_CLIENT_ID=your_paypal_client_id
 PAYPAL_CLIENT_SECRET=your_paypal_client_secret
-PAYPAL_MODE=sandbox  # Use 'live' for production
+PAYPAL_MODE=sandbox  # Use 'live' for production payments
 DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
 ```
+
+Note: To switch between PayPal sandbox and live environments:
+- Use `PAYPAL_MODE=sandbox` for testing payments (default)
+- Use `PAYPAL_MODE=live` for processing real transactions
+- Ensure you use the appropriate PayPal API credentials for each mode
 
 ### Getting Started with CloudRack
 1. **Register an Account**: Create a new user account on the platform
@@ -282,6 +286,8 @@ DATABASE_URL=postgresql://cloudrack:your_secure_password@localhost:5432/cloudrac
 SESSION_SECRET=your_session_secret_here
 PAYPAL_CLIENT_ID=your_paypal_client_id
 PAYPAL_CLIENT_SECRET=your_paypal_client_secret
+VITE_PAYPAL_CLIENT_ID=your_paypal_client_id
+VITE_PAYPAL_CLIENT_SECRET=your_paypal_client_secret
 PAYPAL_MODE=sandbox  # Change to 'live' for production
 DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
 EOL
