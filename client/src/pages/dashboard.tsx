@@ -67,11 +67,10 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const [processorFilter, setProcessorFilter] = useState<string>("all");
-  const [applicationTypeFilter, setApplicationTypeFilter] = useState<string>("all");
   const [installMode, setInstallMode] = useState<"application" | "distribution">("application");
   const [currentPage, setCurrentPage] = useState(1);
   const SERVERS_PER_PAGE = 9;
-  
+
   const { data: servers = [], isLoading } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
   });
@@ -87,7 +86,7 @@ export default function Dashboard() {
   const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
-  
+
   const { data: distributions = [] } = useQuery<Distribution[]>({
     queryKey: ["/api/distributions"],
   });
@@ -127,11 +126,11 @@ export default function Dashboard() {
       (server.ipAddress && server.ipAddress.includes(searchQuery))
     );
   });
-  
+
   // Calculate pagination
   const totalServers = filteredServers.length;
   const totalPages = Math.max(1, Math.ceil(totalServers / SERVERS_PER_PAGE));
-  
+
   // Get current page servers
   const paginatedServers = filteredServers.slice(
     (currentPage - 1) * SERVERS_PER_PAGE,
@@ -249,7 +248,7 @@ export default function Dashboard() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={form.control}
@@ -304,133 +303,42 @@ export default function Dashboard() {
                           : "Install a clean operating system without any pre-configured applications."}
                       </p>
                     </div>
-                    
+
                     {installMode === "application" && (
-                      <>
-                        <div className="col-span-2 mb-1">
-                          <Label className="text-sm">Application Type</Label>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            <Button 
-                              type="button"
-                              size="sm" 
-                              variant={applicationTypeFilter === "all" ? "default" : "outline"} 
-                              onClick={() => setApplicationTypeFilter("all")}
-                              className="text-xs h-8"
+                      <FormField
+                        control={form.control}
+                        name="application"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel className="text-sm">Application</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
                             >
-                              All
-                            </Button>
-                            <Button 
-                              type="button"
-                              size="sm" 
-                              variant={applicationTypeFilter === "game-server" ? "default" : "outline"} 
-                              onClick={() => setApplicationTypeFilter("game-server")}
-                              className="text-xs h-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:text-white"
-                            >
-                              Game Servers
-                            </Button>
-                            <Button 
-                              type="button"
-                              size="sm" 
-                              variant={applicationTypeFilter === "bot" ? "default" : "outline"} 
-                              onClick={() => setApplicationTypeFilter("bot")}
-                              className="text-xs h-8 bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 hover:text-white"
-                            >
-                              Discord Bots
-                            </Button>
-                            <Button 
-                              type="button"
-                              size="sm" 
-                              variant={applicationTypeFilter === "application" ? "default" : "outline"} 
-                              onClick={() => setApplicationTypeFilter("application")}
-                              className="text-xs h-8"
-                            >
-                              Web Dev
-                            </Button>
-                            <Button 
-                              type="button"
-                              size="sm" 
-                              variant={applicationTypeFilter === "cms" ? "default" : "outline"} 
-                              onClick={() => setApplicationTypeFilter("cms")}
-                              className="text-xs h-8"
-                            >
-                              CMS
-                            </Button>
-                            <Button 
-                              type="button"
-                              size="sm" 
-                              variant={applicationTypeFilter === "ecommerce" ? "default" : "outline"} 
-                              onClick={() => setApplicationTypeFilter("ecommerce")}
-                              className="text-xs h-8"
-                            >
-                              E-commerce
-                            </Button>
-                            <Button 
-                              type="button"
-                              size="sm" 
-                              variant={applicationTypeFilter === "database" ? "default" : "outline"} 
-                              onClick={() => setApplicationTypeFilter("database")}
-                              className="text-xs h-8"
-                            >
-                              Database
-                            </Button>
-                            <Button 
-                              type="button"
-                              size="sm" 
-                              variant={applicationTypeFilter === "data-science" ? "default" : "outline"} 
-                              onClick={() => setApplicationTypeFilter("data-science")}
-                              className="text-xs h-8"
-                            >
-                              Data Science
-                            </Button>
-                            <Button 
-                              type="button"
-                              size="sm" 
-                              variant={applicationTypeFilter === "devops" ? "default" : "outline"} 
-                              onClick={() => setApplicationTypeFilter("devops")}
-                              className="text-xs h-8"
-                            >
-                              DevOps
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        <FormField
-                          control={form.control}
-                          name="application"
-                          render={({ field }) => (
-                            <FormItem className="col-span-2">
-                              <FormLabel className="text-sm">Application</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="h-9">
-                                    <SelectValue placeholder="Select application" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {applications
-                                    .filter(app => applicationTypeFilter === "all" ? true : app.type === applicationTypeFilter)
-                                    .map((app) => (
-                                      <SelectItem key={app.slug} value={app.slug}>
-                                        {app.name}
-                                        {app.distribution && (
-                                          <span className="text-xs ml-1 text-muted-foreground">
-                                            {" "}({distributions.find(d => d.slug === app.distribution)?.name || app.distribution})
-                                          </span>
-                                        )}
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage className="text-xs" />
-                            </FormItem>
-                          )}
-                        />
-                      </>
+                              <FormControl>
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Select application" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {applications.map((app) => (
+                                  <SelectItem key={app.slug} value={app.slug}>
+                                    {app.name}
+                                    {app.distribution && (
+                                      <span className="text-xs ml-1 text-muted-foreground">
+                                        {" "}({distributions.find(d => d.slug === app.distribution)?.name || app.distribution})
+                                      </span>
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="text-xs" />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                    
+
                     {installMode === "distribution" && (
                       <FormField
                         control={form.control}
@@ -461,7 +369,7 @@ export default function Dashboard() {
                         )}
                       />
                     )}
-                    
+
                     {/* Processor Type Filter */}
                     <div className="col-span-2 mb-2">
                       <Label className="text-sm">Processor Type</Label>
@@ -540,7 +448,7 @@ export default function Dashboard() {
                       )}
                     />
                     </div>
-                    
+
                     <FormField
                       control={form.control}
                       name="auth"
@@ -612,7 +520,7 @@ export default function Dashboard() {
                 <ServerCard key={server.id} server={server} />
               ))}
             </div>
-            
+
             {totalPages > 1 && (
               <div className="flex justify-center mt-6">
                 <div className="flex space-x-2">
@@ -624,7 +532,7 @@ export default function Dashboard() {
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  
+
                   {Array.from({ length: totalPages }).map((_, index) => (
                     <Button
                       key={index}
@@ -635,7 +543,7 @@ export default function Dashboard() {
                       {index + 1}
                     </Button>
                   ))}
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
