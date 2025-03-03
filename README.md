@@ -187,15 +187,219 @@ DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
    ```
 5. Access the application at http://localhost:5000
 
-### Production Deployment
-1. Build the production bundle:
+## 🚀 Detailed VPS Deployment Guide
+
+### Running the Project in Different Environments
+
+1. **Local Development**
+   ```bash
+   # Set development environment
+   export NODE_ENV=development
+
+   # Start the development server
+   npm run dev
    ```
+
+2. **Testing Database Migrations**
+   ```bash
+   # For first-time database setup
+   export NODE_ENV=development
+   export NODE_TLS_REJECT_UNAUTHORIZED=0
+   npm run db:push
+   ```
+
+3. **Production Deployment**
+   ```bash
+   # Set production environment
+   export NODE_ENV=production
+
+   # Build and start the application
    npm run build
+   pm2 start npm --name "cloudrack" -- start
    ```
-2. Start the production server:
-   ```
-   npm start
-   ```
+
+
+### System Requirements
+1. A VPS running Ubuntu 20.04 or later
+2. Minimum 1GB RAM
+3. 20GB SSD Storage
+4. Root access to the server
+
+### Step-by-Step Deployment Instructions
+
+#### 1. Initial Server Setup
+```bash
+# Update system packages
+sudo apt update && sudo apt upgrade -y
+
+# Install essential build tools
+sudo apt install -y build-essential git curl
+```
+
+#### 2. Install Node.js
+```bash
+# Install Node.js 20.x
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify installation
+node --version  # Should show v20.x.x
+npm --version   # Should show 9.x.x or higher
+```
+
+#### 3. Install and Configure PostgreSQL
+```bash
+# Install PostgreSQL
+sudo apt install -y postgresql postgresql-contrib
+
+# Start and enable PostgreSQL service
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# Create database and user
+sudo -u postgres psql -c "CREATE USER cloudrack WITH PASSWORD 'your_secure_password';"
+sudo -u postgres psql -c "CREATE DATABASE cloudrack OWNER cloudrack;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cloudrack TO cloudrack;"
+```
+
+#### 4. Configure Environment Variables
+```bash
+# Create environment file
+cat > ~/.env << EOL
+NODE_ENV=production
+DATABASE_URL=postgresql://cloudrack:your_secure_password@localhost:5432/cloudrack
+SESSION_SECRET=your_session_secret_here
+PAYPAL_CLIENT_ID=your_paypal_client_id
+PAYPAL_CLIENT_SECRET=your_paypal_client_secret
+PAYPAL_MODE=sandbox  # Change to 'live' for production
+DIGITAL_OCEAN_API_KEY=your_digital_ocean_api_key
+EOL
+
+# Load environment variables
+source ~/.env
+```
+
+#### 5. Clone and Setup Application
+```bash
+# Clone repository
+git clone <your-repo-url> cloudrack
+cd cloudrack
+
+# Install dependencies
+npm install
+
+# Build the application
+npm run build
+
+# Push database schema
+NODE_ENV=development npm run db:push
+```
+
+#### 6. Running in Production
+```bash
+# Install PM2 process manager
+sudo npm install -y pm2 -g
+
+# Start the application
+pm2 start npm --name "cloudrack" -- start
+
+# Make PM2 start on boot
+pm2 startup
+sudo env PATH=$PATH:/usr/bin pm2 startup ubuntu -u $USER --hp /home/$USER
+pm2 save
+```
+
+#### 7. Configure Nginx (Optional, for reverse proxy)
+```bash
+# Install Nginx
+sudo apt install -y nginx
+
+# Create Nginx configuration
+sudo nano /etc/nginx/sites-available/cloudrack
+
+# Add the following configuration:
+server {
+    listen 80;
+    server_name your_domain.com;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# Enable the site
+sudo ln -s /etc/nginx/sites-available/cloudrack /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### Troubleshooting Tips
+
+1. **Database Connection Issues**
+   - Verify PostgreSQL is running: `sudo systemctl status postgresql`
+   - Check database logs: `sudo tail -f /var/log/postgresql/postgresql-*.log`
+   - Ensure DATABASE_URL is correct in your environment
+
+2. **Application Not Starting**
+   - Check PM2 logs: `pm2 logs cloudrack`
+   - Verify Node.js version: `node --version`
+   - Check application logs: `pm2 log`
+
+3. **Permission Issues**
+   - Ensure proper file ownership: `sudo chown -R $USER:$USER /path/to/cloudrack`
+   - Check PostgreSQL user permissions: `sudo -u postgres psql -c "\du"`
+
+### Security Considerations
+
+1. **Firewall Setup**
+```bash
+# Configure UFW firewall
+sudo ufw allow ssh
+sudo ufw allow http
+sudo ufw allow https
+sudo ufw enable
+```
+
+2. **SSL/TLS Configuration**
+```bash
+# Install Certbot for HTTPS
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d your_domain.com
+```
+
+3. **Database Security**
+- Use strong passwords
+- Configure pg_hba.conf for restricted access
+- Regular security updates
+- Backup strategy implementation
+
+### Maintenance
+
+1. **Regular Updates**
+```bash
+# Update system packages
+sudo apt update && sudo apt upgrade -y
+
+# Update Node.js packages
+npm update
+
+# Restart application
+pm2 restart cloudrack
+```
+
+2. **Backup Strategy**
+```bash
+# Database backup
+pg_dump -U cloudrack cloudrack > backup_$(date +%Y%m%d).sql
+
+# Application backup
+tar -czf cloudrack_backup_$(date +%Y%m%d).tar.gz /path/to/cloudrack
+```
 
 ## 📚 API Documentation
 
