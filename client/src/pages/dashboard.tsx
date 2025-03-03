@@ -9,18 +9,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertServerSchema } from "@shared/schema";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Search, LockKeyhole, Key, Server as ServerIcon } from "lucide-react";
+import { Loader2, Plus, Search, LockKeyhole, Server as ServerIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Progress } from "@/components/ui/progress";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
 import * as z from 'zod';
 
 interface Region {
@@ -41,19 +39,13 @@ interface Application {
   name: string;
   description: string;
   type: string;
+  distribution?: string;
 }
 
 interface Distribution {
   slug: string;
   name: string;
   description: string;
-}
-
-interface SSHKey {
-  id: number;
-  name: string;
-  publicKey: string;
-  createdAt: string;
 }
 
 function calculatePasswordStrength(password: string): number {
@@ -74,12 +66,10 @@ export default function Dashboard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
-  const [authType, setAuthType] = useState<"password" | "ssh">("password");
-  const [sshKey, setSshKey] = useState("");
-  const [selectedSSHKeyId, setSelectedSSHKeyId] = useState<number | string | null>(null);
-  const [newKeyName, setNewKeyName] = useState("");
   const [processorFilter, setProcessorFilter] = useState<string>("all");
-  const [applicationTypeFilter, setApplicationTypeFilter] = useState<string>("all");
+  const [installMode, setInstallMode] = useState<"application" | "distribution">("application");
+  const [currentPage, setCurrentPage] = useState(1);
+  const SERVERS_PER_PAGE = 9;
 
   const { data: servers = [], isLoading } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
@@ -101,19 +91,19 @@ export default function Dashboard() {
     queryKey: ["/api/distributions"],
   });
 
-  const { data: sshKeys = [] } = useQuery<SSHKey[]>({
-    queryKey: ["/api/ssh-keys"],
-  });
-
   const form = useForm({
     resolver: zodResolver(
       insertServerSchema.extend({
+        name: z.string()
+          .min(3, "Server name must be at least 3 characters")
+          .max(63, "Server name must be 63 characters or less")
+          .refine(
+            (value) => /^[a-z0-9]([a-z0-9\-\.]*[a-z0-9])?$/i.test(value),
+            "Server name must be a valid hostname (only letters, numbers, hyphens, and periods allowed. Cannot start or end with hyphens or periods)"
+          ),
         auth: insertServerSchema.shape.name.refine(
-          (value: string) => {
-            if (authType === "password") {
-              return value && value.length >= 8 && !value.match(/[^a-zA-Z0-9]$/);
-            }
-            return true;
+          (value) => {
+            return value && value.length >= 8 && !value.match(/[^a-zA-Z0-9]$/);
           },
           "Password must be at least 8 characters and not end with a special character"
         ),
@@ -129,7 +119,7 @@ export default function Dashboard() {
     },
   });
 
-  const filteredServers = servers.filter((server: Server) => {
+  const filteredServers = servers.filter((server) => {
     const searchLower = searchQuery.toLowerCase();
     return (
       server.name.toLowerCase().includes(searchLower) ||
@@ -137,51 +127,29 @@ export default function Dashboard() {
     );
   });
 
+  // Calculate pagination
+  const totalServers = filteredServers.length;
+  const totalPages = Math.max(1, Math.ceil(totalServers / SERVERS_PER_PAGE));
+
+  // Get current page servers
+  const paginatedServers = filteredServers.slice(
+    (currentPage - 1) * SERVERS_PER_PAGE,
+    currentPage * SERVERS_PER_PAGE
+  );
+
   const password = form.watch("auth");
   const passwordStrength = calculatePasswordStrength(password);
 
-  async function onSubmit(values: z.infer<typeof insertServerSchema>) {
+  async function onSubmit(values: any) {
     try {
-      // If adding a new SSH key, save it first
-      let sshKeyToUse = selectedSSHKeyId && typeof selectedSSHKeyId === "number" 
-        ? sshKeys.find(key => key.id === selectedSSHKeyId)?.publicKey 
-        : undefined;
-
-      if (authType === "ssh" && sshKey && !selectedSSHKeyId) {
-        if (!newKeyName) {
-          toast({
-            title: "Error",
-            description: "Please provide a name for your SSH key",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        try {
-          const response = await apiRequest("POST", "/api/ssh-keys", {
-            name: newKeyName,
-            publicKey: sshKey,
-          });
-          sshKeyToUse = (response as any).publicKey;
-          queryClient.invalidateQueries({ queryKey: ["/api/ssh-keys"] });
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to save SSH key: " + (error as Error).message,
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
       const serverData = {
         name: values.name,
         region: values.region,
         size: values.size,
         application: values.application,
         auth: {
-          type: authType,
-          value: authType === "password" ? values.auth : sshKeyToUse || sshKey
+          type: "password",
+          value: values.auth
         }
       };
 
@@ -189,9 +157,6 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/servers"] });
       setCreateOpen(false);
       form.reset();
-      setNewKeyName("");
-      setSshKey("");
-      setSelectedSSHKeyId(null);
       toast({
         title: "Server created",
         description: "Your new server is being provisioned",
@@ -228,11 +193,6 @@ export default function Dashboard() {
                 <DropdownMenuItem asChild>
                   <Link href="/account">
                     Edit Account
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/ssh-keys">
-                    SSH Keys
                   </Link>
                 </DropdownMenuItem>
                 {user?.isAdmin && (
@@ -279,33 +239,100 @@ export default function Dashboard() {
                         <FormItem>
                           <FormLabel className="text-sm">Server Name</FormLabel>
                           <FormControl>
-                            <Input {...field} className="h-9" />
+                            <Input {...field} className="h-9" placeholder="e.g., my-server" />
                           </FormControl>
                           <FormMessage className="text-xs" />
+                          <p className="text-xs text-muted-foreground">
+                            Only letters, numbers, hyphens (-) and periods (.) allowed. Must start and end with a letter or number.
+                          </p>
                         </FormItem>
                       )}
                     />
 
                     <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="region"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Region</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Select region" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {regions.map((region) => (
+                                <SelectItem key={region.slug} value={region.slug}>
+                                  {region.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="col-span-2 mb-3">
+                      <Label className="text-sm">Installation Type</Label>
+                      <div className="flex items-center justify-between mt-2 p-2 border rounded-md">
+                        <Button 
+                          type="button"
+                          variant={installMode === "application" ? "default" : "outline"}
+                          onClick={() => setInstallMode("application")}
+                          className="w-full"
+                        >
+                          Application
+                        </Button>
+                        <Button 
+                          type="button"
+                          variant={installMode === "distribution" ? "default" : "outline"}
+                          onClick={() => setInstallMode("distribution")}
+                          className="w-full"
+                        >
+                          Clean OS
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {installMode === "application" 
+                          ? "Install a pre-configured application on your server." 
+                          : "Install a clean operating system without any pre-configured applications."}
+                      </p>
+                    </div>
+
+                    {installMode === "application" && (
                       <FormField
                         control={form.control}
-                        name="region"
+                        name="application"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm">Region</FormLabel>
+                          <FormItem className="col-span-2">
+                            <FormLabel className="text-sm">Application</FormLabel>
                             <Select
-                              onValueChange={field.onChange}
+                              onValueChange={(value) => {
+                                // Ensure we pass the correct application slug to the API
+                                const app = applications.find(a => a.slug === value);
+                                field.onChange(app?.slug || value);
+                              }}
                               defaultValue={field.value}
                             >
                               <FormControl>
                                 <SelectTrigger className="h-9">
-                                  <SelectValue placeholder="Select region" />
+                                  <SelectValue placeholder="Select application" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {regions.map((region) => (
-                                  <SelectItem key={region.slug} value={region.slug}>
-                                    {region.name}
+                                {applications.map((app) => (
+                                  <SelectItem key={app.slug} value={app.slug}>
+                                    {app.name}
+                                    {app.distribution && (
+                                      <span className="text-xs ml-1 text-muted-foreground">
+                                        {" "}({distributions.find(d => d.slug === app.distribution)?.name || app.distribution})
+                                      </span>
+                                    )}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -314,31 +341,30 @@ export default function Dashboard() {
                           </FormItem>
                         )}
                       />
+                    )}
 
+                    {installMode === "distribution" && (
                       <FormField
                         control={form.control}
-                        name="size"
+                        name="application"
                         render={({ field }) => (
                           <FormItem className="col-span-2">
-                            <FormLabel className="text-sm">Size</FormLabel>
+                            <FormLabel className="text-sm">Distribution</FormLabel>
                             <Select
                               onValueChange={field.onChange}
                               defaultValue={field.value}
                             >
                               <FormControl>
                                 <SelectTrigger className="h-9">
-                                  <SelectValue placeholder="Select size" />
+                                  <SelectValue placeholder="Select distribution" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {sizes
-                                  .filter(size => processorFilter === "all" ? true : (size.processor_type || 'regular') === processorFilter)
-                                  .map((size) => (
-                                    <SelectItem key={size.slug} value={size.slug}>
-                                      {size.processor_type === 'intel' && '🔷 '}
-                                      {size.processor_type === 'amd' && '🔶 '}
-                                      {size.memory / 1024}GB RAM, {size.vcpus} vCPUs (${(size.price_monthly / (24 * 30)).toFixed(3)}/hr)
-                                    </SelectItem>
+                                {distributions.map((distro) => (
+                                  <SelectItem key={distro.slug} value={distro.slug}>
+                                    {distro.name}
+                                    <span className="text-xs ml-1 text-muted-foreground"> ({distro.description})</span>
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -346,6 +372,85 @@ export default function Dashboard() {
                           </FormItem>
                         )}
                       />
+                    )}
+
+                    {/* Processor Type Filter */}
+                    <div className="col-span-2 mb-2">
+                      <Label className="text-sm">Processor Type</Label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "all" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("all")}
+                          className="text-xs h-8"
+                        >
+                          All Processors
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "regular" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("regular")}
+                          className="text-xs h-8"
+                        >
+                          Regular SSD
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "intel" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("intel")}
+                          className="text-xs h-8 bg-gradient-to-r from-blue-600 to-sky-600 text-white hover:from-blue-700 hover:to-sky-700 hover:text-white"
+                        >
+                          🔷 Intel
+                        </Button>
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          variant={processorFilter === "amd" ? "default" : "outline"} 
+                          onClick={() => setProcessorFilter("amd")}
+                          className="text-xs h-8 bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover:text-white"
+                        >
+                          🔶 AMD
+                        </Button>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Select a processor type to filter available server sizes
+                      </div>
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="size"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel className="text-sm">Server Size</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Select server size" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {sizes
+                                .filter(size => processorFilter === "all" ? true : (size.processor_type || 'regular') === processorFilter)
+                                .map((size) => (
+                                  <SelectItem key={size.slug} value={size.slug}>
+                                    {size.processor_type === 'intel' && '🔷 '}
+                                    {size.processor_type === 'amd' && '🔶 '}
+                                    {size.memory / 1024}GB RAM, {size.vcpus} vCPUs (${(size.price_monthly / (24 * 30)).toFixed(3)}/hr)
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
                     </div>
 
                     <FormField
@@ -353,59 +458,20 @@ export default function Dashboard() {
                       name="auth"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">Authentication Method</FormLabel>
-                          <RadioGroup value={authType} onValueChange={setAuthType}>
-                            <RadioGroupItem value="password">
-                              <Label>Password</Label>
-                              <Input type="password" {...field} className="mt-2 h-9" />
-                              <div className="mt-1">
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs">Password Strength</span>
-                                  <span className="text-xs">{passwordStrength}%</span>
-                                </div>
-                                <Progress value={passwordStrength} className="h-1.5" />
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                This password will be used to access your server via the web terminal.
-                              </div>
-                            </RadioGroupItem>
-                            <RadioGroupItem value="ssh">
-                              <Label>SSH Key</Label>
-                              <div className="flex flex-col">
-                                <Select
-                                  onValueChange={setSelectedSSHKeyId}
-                                  value={selectedSSHKeyId}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="h-9">
-                                      <SelectValue placeholder="Select SSH Key" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {sshKeys.map((key) => (
-                                      <SelectItem key={key.id} value={key.id}>
-                                        {key.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Textarea
-                                  placeholder="Paste your SSH public key here"
-                                  className="mt-2 h-24"
-                                  value={sshKey}
-                                  onChange={(e) => setSshKey(e.target.value)}
-                                />
-                                <Input
-                                  type="text"
-                                  placeholder="Enter a name for this key (optional)"
-                                  className="mt-2 h-9"
-                                  value={newKeyName}
-                                  onChange={(e) => setNewKeyName(e.target.value)}
-                                />
-                              </div>
-                              <FormMessage className="text-xs" />
-                            </RadioGroupItem>
-                          </RadioGroup>
+                          <FormLabel className="text-sm">Root Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" {...field} className="h-9" />
+                          </FormControl>
+                          <div className="mt-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs">Password Strength</span>
+                              <span className="text-xs">{passwordStrength}%</span>
+                            </div>
+                            <Progress value={passwordStrength} className="h-1.5" />
+                          </div>
+                          <FormDescription className="text-xs">
+                            This password will be used to access your server via the web terminal.
+                          </FormDescription>
                           <FormMessage className="text-xs" />
                         </FormItem>
                       )}
@@ -431,7 +497,7 @@ export default function Dashboard() {
             <Input
               placeholder="Search servers by name or IP address..."
               value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -452,11 +518,48 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
-            {filteredServers.map((server: Server) => (
-              <ServerCard key={server.id} server={server} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {paginatedServers.map((server) => (
+                <ServerCard key={server.id} server={server} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-6">
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+
+                  {Array.from({ length: totalPages }).map((_, index) => (
+                    <Button
+                      key={index}
+                      variant={currentPage === index + 1 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(index + 1)}
+                    >
+                      {index + 1}
+                    </Button>
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
