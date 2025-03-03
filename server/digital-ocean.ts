@@ -492,20 +492,51 @@ export class DigitalOceanClient {
 
   // Helper method to map application slugs to valid image IDs
   private getImageForApplication(appSlug?: string): string {
-    // Default to a guaranteed-to-exist Ubuntu LTS image
-    const defaultImage = 'ubuntu-20-04-x64';
-    
     if (!appSlug) {
-      return defaultImage;
+      return 'ubuntu-20-04-x64'; // Default to Ubuntu LTS if no app specified
     }
-    
+
     // Log the application selection
-    console.log(`Application selected: ${appSlug}, Using default image: ${defaultImage}`);
-    
-    // In a real implementation, this would map the application slug to a real marketplace slug
-    // For now, we always use the default Ubuntu image, which is guaranteed to exist
-    // This avoids issues with marketplace images that might not be available
-    return defaultImage;
+    console.log(`Attempting to create droplet with application: ${appSlug}`);
+
+    try {
+      // For marketplace applications, we need to use the proper format
+      // DO marketplace slugs are usually in the format: marketplace-slug
+      const marketplaceSlug = appSlug.includes('marketplace:') 
+        ? appSlug.replace('marketplace:', '') 
+        : appSlug;
+
+      // Common marketplace applications and their correct slugs
+      const marketplaceMap: Record<string, string> = {
+        'wordpress': 'wordpress-20-04',
+        'lamp': 'lamp-20-04',
+        'lemp': 'lemp-20-04',
+        'mean': 'mean-20-04',
+        'docker': 'docker-20-04',
+        'mongodb': 'mongodb-20-04',
+        'mysql': 'mysql-20-04',
+        'postgresql': 'postgresql-20-04',
+        'nodejs': 'nodejs-20-04',
+        'ghost': 'ghost-20-04',
+        'drupal': 'drupal-20-04',
+        'jenkins': 'jenkins-20-04',
+        'gitlab': 'gitlab-20-04',
+        'discordjs': 'nodejs-20-04', // Use Node.js image for Discord.js bots
+        'discordpy': 'python-20-04', // Use Python image for Discord.py bots
+        'minecraft': 'docker-20-04', // Use Docker for game servers
+        'csgo': 'docker-20-04',
+        'valheim': 'docker-20-04'
+      };
+
+      // If we have a mapped slug, use it, otherwise try the original slug
+      const imageSlug = marketplaceMap[marketplaceSlug] || marketplaceSlug;
+      console.log(`Using image slug: ${imageSlug} for application: ${appSlug}`);
+      return imageSlug;
+    } catch (error) {
+      console.error('Error mapping application to image:', error);
+      // Fallback to Ubuntu LTS if something goes wrong
+      return 'ubuntu-20-04-x64';
+    }
   }
 
   // Helper method for API requests
@@ -557,6 +588,7 @@ export class DigitalOceanClient {
         },
         body: actualMethod !== 'GET' && actualData ? JSON.stringify(actualData) : undefined
       });
+      
 
       if (!response.ok) {
         // Try to parse error response as JSON, but handle case where it might not be JSON
@@ -568,6 +600,7 @@ export class DigitalOceanClient {
           throw new Error(`DigitalOcean API Error: ${response.status} ${response.statusText}`);
         }
       }
+      
 
       // For DELETE operations, the response might be empty
       if (actualMethod === 'DELETE') {
@@ -575,6 +608,7 @@ export class DigitalOceanClient {
           return {} as T;
         }
       }
+      
 
       // Try to parse JSON response, but handle case where it might be empty
       try {
@@ -763,6 +797,7 @@ export class DigitalOceanClient {
     }
   }
   
+
   // Helper method to determine application type based on name
   private determineAppType(name: string): string {
     name = name.toLowerCase();
@@ -1013,6 +1048,7 @@ runcmd:
     }
   }
   
+
   // New method to attach volumes to droplets
   async attachVolumeToDroplet(volumeId: string, dropletId: string, region: string): Promise<void> {
     if (this.useMock) {
@@ -1040,6 +1076,7 @@ runcmd:
     }
   }
   
+
   // New method to detach volumes from droplets
   async detachVolumeFromDroplet(volumeId: string, dropletId: string, region: string): Promise<void> {
     if (this.useMock) {
@@ -1115,6 +1152,7 @@ runcmd:
     }
   }
   
+
   // Helper to extract the latest metric value from a timeseries
   private getLatestMetricValue(timeseries: Array<{time: string, value: number}> | undefined): number | null {
     if (!timeseries || !Array.isArray(timeseries) || timeseries.length === 0) {
@@ -1126,6 +1164,7 @@ runcmd:
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0].value;
   }
   
+
   // Helper to generate consistent mock metrics
   private generateMockMetrics() {
     return {
@@ -1143,6 +1182,7 @@ runcmd:
     };
   }
   
+
   // Mock firewall data
   public mockFirewalls: Record<string, Firewall> = {};
   // Create default firewall for a droplet - this is public so it can be called from routes
@@ -1178,6 +1218,7 @@ runcmd:
     return newFirewall;
   }
   
+
   // Firewall methods
   async getFirewalls(): Promise<Firewall[]> {
     try {
@@ -1309,6 +1350,7 @@ runcmd:
         throw new Error(`Cannot update mock firewall with real API: ${error}`);
       }
     }
+    
 
     // This is a real firewall ID, update it
     try {
@@ -1362,6 +1404,7 @@ runcmd:
         throw new Error(`Cannot add droplets to mock firewall with real API: ${error}`);
       }
     }
+    
 
     // This is a real firewall ID, make the real API call
     try {
@@ -1412,6 +1455,7 @@ runcmd:
         throw new Error(`Cannot remove droplets from mock firewall with real API: ${error}`);
       }
     }
+    
 
     // This is a real firewall ID, make the real API call
     try {
@@ -1465,6 +1509,7 @@ runcmd:
         throw new Error(`Cannot add rules to mock firewall with real API: ${error}`);
       }
     }
+    
 
     // This is a real firewall ID, make the real API call
     try {
@@ -1532,6 +1577,7 @@ runcmd:
         throw new Error(`Cannot remove rules from mock firewall with real API: ${error}`);
       }
     }
+    
 
     // This is a real firewall ID, make the real API call
     try {
@@ -1566,6 +1612,7 @@ runcmd:
       }
       return;
     }
+    
 
     // This is a real firewall ID, make the real API call
     try {
@@ -1592,6 +1639,7 @@ runcmd:
       const snapshotId = `snapshot-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       return snapshotId;
     }
+    
 
     // This is a real API call
     try {
@@ -1608,6 +1656,7 @@ runcmd:
         type: "snapshot",
         name: name
       });
+      
 
       // In a real implementation, we'd need to poll the action status until completion
       // For now, we'll just return a generated snapshot ID
@@ -1648,6 +1697,7 @@ runcmd:
         }
       ];
     }
+    
 
     // This is a real API call
     try {
@@ -1678,6 +1728,7 @@ runcmd:
       // No actual API call, just simulate success
       return;
     }
+    
 
     // This is a real API call to Digital Ocean
     try {
@@ -1710,6 +1761,7 @@ runcmd:
       console.log(`[MOCK] Creating mock backup ${mockBackupId} for droplet ${dropletId}`);
       return mockBackupId;
     }
+    
 
     // This is a real API call to Digital Ocean
     try {
@@ -1753,6 +1805,7 @@ runcmd:
         status: 'completed'
       }));
     }
+    
 
     // This is a real API call to Digital Ocean
     try {
@@ -1789,11 +1842,13 @@ runcmd:
       console.log(`[MOCK] Deleting mock backup ${backupId} - mock mode: ${this.useMock}`);
       return;
     }
+    
 
     // Extract the backup ID if it has our prefix
     const cleanBackupId = backupId.startsWith('backup-') 
       ? backupId.substring(7) 
       : backupId;
+    
 
     // This is a real API call to Digital Ocean
     try {
@@ -1820,11 +1875,13 @@ runcmd:
       console.log(`[MOCK] Restoring mock droplet ${dropletId} from backup ${backupId}`);
       return;
     }
+    
 
     // Extract the backup ID if it has our prefix
     const cleanBackupId = backupId.startsWith('backup-') 
       ? backupId.substring(7) 
       : backupId;
+    
 
     // This is a real API call to Digital Ocean
     try {
@@ -1883,11 +1940,13 @@ runcmd:
         status: 'completed'
       };
     }
+    
 
     // Extract the backup ID if it has our prefix
     const cleanBackupId = backupId.startsWith('backup-') 
       ? backupId.substring(7) 
       : backupId;
+    
 
     // This is a real API call
     try {
@@ -1912,6 +1971,7 @@ runcmd:
     }
   }
   
+
   /**
    * Restore a droplet from a snapshot
    * @param dropletId The ID of the target droplet
@@ -1944,6 +2004,7 @@ runcmd:
         size_gigabytes: 25
       };
     }
+    
 
     // This is a real API call
     try {
