@@ -1,4 +1,4 @@
-import { Switch, Route, Link } from "wouter";
+import { Switch, Route, Link, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
@@ -122,9 +122,19 @@ function Router() {
     }
   });
 
-  // If maintenance mode is enabled and user is not admin, show maintenance page
-  if (maintenanceSettings?.enabled && (!user || !user.isAdmin)) {
+  // Check if current path is /auth to allow authentication even during maintenance
+  const [currentPath] = useLocation();
+  const isAuthPage = currentPath === '/auth';
+  
+  // If maintenance mode is enabled and user is not admin, and we're not on auth page
+  if (maintenanceSettings?.enabled && (!user || !user.isAdmin) && !isAuthPage) {
     return <MaintenancePage message={maintenanceSettings.maintenanceMessage} />;
+  }
+  
+  // If coming soon mode is enabled for specific features
+  if (maintenanceSettings?.comingSoonEnabled) {
+    // We'll handle this in individual routes instead of globally
+    // This allows us to selectively mark features as "coming soon"
   }
 
   return (

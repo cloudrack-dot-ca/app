@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 interface MaintenanceSettings {
   enabled: boolean;
   maintenanceMessage: string;
-  comingSoonEnabled?: boolean;
+  comingSoonEnabled: boolean;
   comingSoonMessage: string;
   updatedBy?: number;
 }
@@ -88,6 +88,23 @@ export default function MaintenanceSettings() {
               onCheckedChange={(checked) => {
                 if (settings) {
                   updateSettings.mutate({ ...settings, enabled: checked });
+                }
+              }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Coming Soon Mode</Label>
+              <p className="text-sm text-muted-foreground">
+                Enable to show coming soon page for features under development
+              </p>
+            </div>
+            <Switch
+              checked={settings?.comingSoonEnabled}
+              onCheckedChange={(checked) => {
+                if (settings) {
+                  updateSettings.mutate({ ...settings, comingSoonEnabled: checked });
                 }
               }}
             />
