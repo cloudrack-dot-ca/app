@@ -921,12 +921,12 @@ export default function DocsPage() {
                             value={section.order}
                             onChange={(e) => {
                               const newOrder = parseInt(e.target.value);
-                              if (!isNaN(newOrder) && newOrder > 0) {
+                              if (!isNaN(newOrder) && newOrder> 0) {
                                 reorderSection.mutate({ id: section.id, order: newOrder });
                               }
                             }}
                           />
-                          <span className="flex-growfont-medium">{section.title}</span>
+                          <span className="flex-grow font-medium">{section.title}</span>
                           <span className="text-sm text-muted-foreground whitespace-nowrap">
                             Position: {section.order}
                           </span>
@@ -935,19 +935,19 @@ export default function DocsPage() {
                     </div>
                   </div>
 
-                  <Separator />
+                  <Separator className="my-6" />
 
                   <div>
                     <h3 className="text-lg font-medium mb-4">Articles by Section</h3>
                     <div className="space-y-6">
                       {sections.map((section: DocSection) => (
-                        <div key={section.id} className="space-y-2">
-                          <h4 className="font-medium text-muted-foreground">
-                            {section.title} (Section {section.order})
+                        <div key={section.id} className="space-y-3 border rounded-lg p-4">
+                          <h4 className="font-medium text-lg">
+                            {section.title} <span className="text-muted-foreground">(Section {section.order})</span>
                           </h4>
                           <div className="space-y-2 ml-4">
                             {section.children.map((article: DocArticle) => (
-                              <div key={article.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                              <div key={article.id} className="flex items-center gap-4 p-4 border rounded-lg bg-background">
                                 <Input
                                   type="number"
                                   min="1"
@@ -961,24 +961,22 @@ export default function DocsPage() {
                                   }}
                                 />
                                 <span className="flex-grow">{article.title}</span>
-                                <div className="text-sm text-muted-foreground whitespace-nowrap">
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
                                   Position: {article.order}
-                                </div>
+                                </span>
                               </div>
                             ))}
                             <Button
                               variant="outline"
                               size="sm"
-                              className="ml-4"
+                              className="mt-2"
                               onClick={() => {
-                                // Get next available order for this section
                                 const nextOrder = getNextAvailableOrder(section.children);
                                 setIsNewArticle(true);
                                 setCurrentArticle(null);
                                 setArticleTitle("");
                                 setArticleContent("");
                                 setArticleSectionId(section.id);
-                                // Pre-set the order for the new article
                                 setArticleOrder(nextOrder);
                                 setEditArticleDialogOpen(true);
                               }}
@@ -992,7 +990,7 @@ export default function DocsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 p-4 bg-muted rounded-lg">
+                  <div className="mt-6 p-4 bg-muted rounded-lg">
                     <h4 className="font-medium mb-2">Quick Tips:</h4>
                     <ul className="list-disc ml-4 space-y-1 text-sm text-muted-foreground">
                       <li>Each section must have a unique order number</li>
@@ -1001,6 +999,7 @@ export default function DocsPage() {
                       <li>Lower numbers appear first in the documentation</li>
                     </ul>
                   </div>
+
                 </div>
               </CardContent>
             </Card>
