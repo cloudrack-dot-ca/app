@@ -69,7 +69,7 @@ export function ComingSoon({
             <Link href={redirectPath}>
               <Button className="w-full">Return to Dashboard</Button>
             </Link>
-            {user && (
+            {user ? (
               <Button 
                 variant="outline" 
                 className="w-full"
@@ -77,6 +77,15 @@ export function ComingSoon({
               >
                 Logout
               </Button>
+            ) : (
+              <Link href="/auth">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  Login
+                </Button>
+              </Link>
             )}
           </div>
         </CardContent>
