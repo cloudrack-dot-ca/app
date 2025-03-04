@@ -25,17 +25,17 @@ export default function ApiDocsPage() {
     requestSample?: string;
     responseSample: string;
   }) => {
-    const baseUrl = "https://api.cloudrack.ca";
+    const baseUrl = import.meta.env.DEV ? "http://localhost:5000" : window.location.origin;
     const fullEndpoint = `${baseUrl}${endpoint}`;
     const isCopied = copiedEndpoint === endpoint;
-    
+
     const requestCode = requestSample ? 
       `curl -X ${method} ${fullEndpoint} \\
-  -H "X-API-Key: YOUR_API_KEY"${requestSample ? ` \\
-  -H "Content-Type: application/json" \\
-  -d '${requestSample}'` : ''}` : 
+-H "X-API-Key: YOUR_API_KEY"${requestSample ? ` \\
+-H "Content-Type: application/json" \\
+-d '${requestSample}'` : ''}` : 
       `curl -X ${method} ${fullEndpoint} \\
-  -H "X-API-Key: YOUR_API_KEY"`;
+-H "X-API-Key: YOUR_API_KEY"`;
 
     return (
       <div className="mb-8">
@@ -147,8 +147,8 @@ export default function ApiDocsPage() {
                 </p>
                 <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs">
                   <code>
-                    {`curl -X GET https://api.cloudrack.ca/v1/servers \\
-  -H "X-API-Key: YOUR_API_KEY"`}
+                    {`curl -X GET ${import.meta.env.DEV ? "http://localhost:5000" : window.location.origin}/api/servers \\
+-H "X-API-Key: YOUR_API_KEY"`}
                   </code>
                 </pre>
               </CardContent>
@@ -163,7 +163,7 @@ export default function ApiDocsPage() {
               </CardHeader>
               <CardContent>
                 <CodeExample 
-                  endpoint="/v1/servers"
+                  endpoint="/api/servers"
                   method="GET"
                   description="List all servers in your account"
                   responseSample={`{
@@ -193,7 +193,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/servers/{server_id}"
+                  endpoint="/api/servers/{server_id}"
                   method="GET"
                   description="Get detailed information about a specific server"
                   responseSample={`{
@@ -219,7 +219,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/servers"
+                  endpoint="/api/servers"
                   method="POST"
                   description="Create a new server"
                   requestSample={`{
@@ -242,7 +242,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/servers/{server_id}/reboot"
+                  endpoint="/api/servers/{server_id}/reboot"
                   method="POST"
                   description="Reboot a server"
                   responseSample={`{
@@ -253,7 +253,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/servers/{server_id}"
+                  endpoint="/api/servers/{server_id}"
                   method="DELETE"
                   description="Delete a server"
                   responseSample={`{
@@ -274,7 +274,7 @@ export default function ApiDocsPage() {
               </CardHeader>
               <CardContent>
                 <CodeExample 
-                  endpoint="/v1/volumes"
+                  endpoint="/api/volumes"
                   method="GET"
                   description="List all volumes in your account"
                   responseSample={`{
@@ -300,7 +300,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/volumes/{volume_id}"
+                  endpoint="/api/volumes/{volume_id}"
                   method="GET"
                   description="Get detailed information about a specific volume"
                   responseSample={`{
@@ -316,7 +316,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/volumes"
+                  endpoint="/api/volumes"
                   method="POST"
                   description="Create a new volume"
                   requestSample={`{
@@ -338,7 +338,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/volumes/{volume_id}"
+                  endpoint="/api/volumes/{volume_id}"
                   method="DELETE"
                   description="Delete a volume"
                   responseSample={`{
@@ -359,7 +359,7 @@ export default function ApiDocsPage() {
               </CardHeader>
               <CardContent>
                 <CodeExample 
-                  endpoint="/v1/billing/balance"
+                  endpoint="/api/billing/balance"
                   method="GET"
                   description="Get your current account balance"
                   responseSample={`{
@@ -370,7 +370,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/billing/transactions"
+                  endpoint="/api/billing/transactions"
                   method="GET"
                   description="List your recent billing transactions"
                   responseSample={`{
@@ -413,7 +413,7 @@ export default function ApiDocsPage() {
               </CardHeader>
               <CardContent>
                 <CodeExample 
-                  endpoint="/v1/account"
+                  endpoint="/api/account"
                   method="GET"
                   description="Get your account information"
                   responseSample={`{
@@ -427,7 +427,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/account/api-key"
+                  endpoint="/api/account/api-key"
                   method="GET"
                   description="Get your current API key"
                   responseSample={`{
@@ -436,7 +436,7 @@ export default function ApiDocsPage() {
                 />
 
                 <CodeExample 
-                  endpoint="/v1/account/api-key"
+                  endpoint="/api/account/api-key"
                   method="POST"
                   description="Generate a new API key (invalidates the current key)"
                   requestSample={`{

@@ -3,7 +3,10 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { Toaster } from "@/components/ui/toaster";
+import { useQuery } from "@tanstack/react-query";
 import NotFound from "@/pages/not-found";
+import MaintenancePage from "@/pages/maintenance-page";
+import ComingSoonPage from "@/pages/coming-soon-page";
 import HomePage from "@/pages/home-page";
 import Dashboard from "@/pages/dashboard";
 import AuthPage from "@/pages/auth-page";
@@ -93,6 +96,28 @@ function Nav() {
 }
 
 function Router() {
+  const { user } = useAuth();
+
+  // Query maintenance mode settings
+  const { data: maintenanceSettings } = useQuery({
+    queryKey: ['/api/admin/maintenance'],
+    // Return undefined if the query fails
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/admin/maintenance');
+        if (!response.ok) return undefined;
+        return response.json();
+      } catch (error) {
+        return undefined;
+      }
+    }
+  });
+
+  // If maintenance mode is enabled and user is not admin, show maintenance page
+  if (maintenanceSettings?.enabled && (!user || !user.isAdmin)) {
+    return <MaintenancePage message={maintenanceSettings.maintenanceMessage} />;
+  }
+
   return (
     <>
       <Nav />
@@ -112,6 +137,8 @@ function Router() {
         <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />
         <ProtectedRoute path="/servers/:id/bandwidth-details" component={BandwidthDetailsPage} />
         <ProtectedRoute path="/terminal/:serverId" component={TerminalPage} />
+        <Route path="/maintenance" component={() => <MaintenancePage message={maintenanceSettings?.maintenanceMessage} />} />
+        <Route path="/coming-soon" component={() => <ComingSoonPage message={maintenanceSettings?.comingSoonMessage} />} />
         <Route component={NotFound} />
       </Switch>
     </>

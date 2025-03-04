@@ -361,6 +361,61 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   
   // Admin API routes have been moved to server/admin/routes.ts
 
+  // Add maintenance mode routes after existing admin routes
+  app.get("/api/admin/maintenance", adminMiddleware, async (_req, res) => {
+    try {
+      const [settings] = await db.select().from(schema.maintenanceSettings).limit(1);
+      res.json(settings || {
+        enabled: false,
+        maintenanceMessage: "We're currently performing maintenance. Please check back soon.",
+        comingSoonEnabled: false,
+        comingSoonMessage: "This feature is coming soon. Stay tuned for updates!"
+      });
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/admin/maintenance", adminMiddleware, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const parsed = schema.insertMaintenanceSettingsSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
+
+      // Check if settings exist
+      const [existing] = await db.select().from(schema.maintenanceSettings).limit(1);
+
+      if (existing) {
+        // Update existing settings
+        const [updated] = await db
+          .update(schema.maintenanceSettings)
+          .set({
+            ...parsed.data,
+            updatedAt: new Date(),
+            updatedBy: req.user.id
+          })
+          .where(eq(schema.maintenanceSettings.id, existing.id))
+          .returning();
+        res.json(updated);
+      } else {
+        // Create new settings
+        const [settings] = await db
+          .insert(schema.maintenanceSettings)
+          .values({
+            ...parsed.data,
+            updatedBy: req.user.id
+          })
+          .returning();
+        res.json(settings);
+      }
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
   app.get("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     
