@@ -2,6 +2,8 @@
 import React from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface ComingSoonProps {
   featureName?: string;
@@ -19,13 +21,6 @@ export function ComingSoon({
   const { user } = useAuth();
   const currentPath = window.location.pathname;
 
-  // ADMIN CHECK - FIRST THING WE DO
-  if (user?.isAdmin) {
-    console.log('ADMIN DETECTED:', user);
-    console.log('ComingSoon: Admin user - BYPASSING COMING SOON PAGE');
-    return null;
-  }
-
   // Get maintenance settings
   const { data: maintenanceSettings } = useQuery({
     queryKey: ['/api/maintenance'],
@@ -40,13 +35,19 @@ export function ComingSoon({
     }
   });
 
-  // If coming soon mode is disabled, return null
+  // Skip everything if the user is admin
+  if (user && user.isAdmin === true) {
+    console.log('ADMIN USER - SKIPPING COMING SOON CHECK ENTIRELY', user);
+    return null;
+  }
+
+  // If coming soon mode is disabled, don't show the message
   if (!maintenanceSettings?.comingSoonEnabled) {
     return null;
   }
 
-  // Check if current path is in bypass list
-  if (bypassPaths && bypassPaths.some(path => currentPath.startsWith(path))) {
+  // Allow access to auth pages for everyone
+  if (bypassPaths.some(path => currentPath.startsWith(path))) {
     return null;
   }
 
@@ -78,6 +79,11 @@ export function ComingSoon({
           {customMessage || maintenanceSettings?.comingSoonMessage || 
             `${featureName} is coming soon. Stay tuned for updates!`}
         </p>
+        <div className="flex justify-end">
+          <Button asChild>
+            <Link to={redirectPath}>Go to Dashboard</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -88,16 +94,18 @@ export function withComingSoon(Component: React.ComponentType, options: ComingSo
   return function ComingSoonWrapper(props: any) {
     const { user } = useAuth();
     
-    // CHECK IF USER IS ADMIN, RETURN THE COMPONENT IF TRUE
-    if (user?.isAdmin) {
-      console.log('withComingSoon HOC: Admin user detected, showing component');
+    // If user is admin, directly render the component without any checks
+    if (user && user.isAdmin === true) {
+      console.log("Admin user bypassing coming soon check:", user);
       return <Component {...props} />;
     }
-
+    
+    // For non-admin users, first check if component should be shown
+    // then render coming soon component as a sibling that will overlay if needed
     return (
       <>
-        <ComingSoon {...options} />
         <Component {...props} />
+        <ComingSoon {...options} />
       </>
     );
   };
