@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -9,11 +8,18 @@ interface ComingSoonProps {
   featureName?: string;
   customMessage?: string;
   redirectPath?: string;
+  bypassPaths?: string[];
 }
 
-export function ComingSoon({ featureName = 'This feature', customMessage, redirectPath = '/dashboard' }: ComingSoonProps) {
+export function ComingSoon({ 
+  featureName = 'This feature', 
+  customMessage, 
+  redirectPath = '/dashboard',
+  bypassPaths = ['/auth', '/logout']
+}: ComingSoonProps) {
   const { user } = useAuth();
-  
+  const currentPath = window.location.pathname;
+
   // Get maintenance settings
   const { data: maintenanceSettings } = useQuery({
     queryKey: ['/api/maintenance'],
@@ -27,14 +33,27 @@ export function ComingSoon({ featureName = 'This feature', customMessage, redire
       }
     }
   });
-  
-  // If user is admin or coming soon mode is disabled, return null to render the actual feature
-  if ((user?.isAdmin) || !maintenanceSettings?.comingSoonEnabled) {
+
+  // If user is admin, coming soon mode is disabled, or current path is in bypass list, return null
+  if (
+    (user?.isAdmin) || 
+    !maintenanceSettings?.comingSoonEnabled ||
+    bypassPaths.includes(currentPath)
+  ) {
     return null;
   }
-  
+
   const message = customMessage || maintenanceSettings?.comingSoonMessage || `${featureName} is coming soon. Stay tuned for updates!`;
-  
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/auth';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-[70vh]">
       <Card className="max-w-md w-full">
@@ -46,9 +65,20 @@ export function ComingSoon({ featureName = 'This feature', customMessage, redire
         </CardHeader>
         <CardContent className="space-y-4">
           <p>{message}</p>
-          <Link href={redirectPath}>
-            <Button className="w-full">Return to Dashboard</Button>
-          </Link>
+          <div className="flex flex-col gap-2">
+            <Link href={redirectPath}>
+              <Button className="w-full">Return to Dashboard</Button>
+            </Link>
+            {user && (
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleLogout}
+              >
+                Logout
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

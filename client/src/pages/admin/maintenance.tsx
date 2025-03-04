@@ -50,6 +50,13 @@ export default function MaintenancePage() {
       enabled: checked,
       comingSoonEnabled: checked ? false : localSettings.comingSoonEnabled
     });
+
+    // Show toast notification
+    if (checked) {
+      toast.info('Maintenance mode will be enabled when you save changes');
+    } else {
+      toast.info('Maintenance mode will be disabled when you save changes');
+    }
   };
 
   const handleComingSoonToggle = (checked: boolean) => {
@@ -58,6 +65,13 @@ export default function MaintenancePage() {
       comingSoonEnabled: checked,
       enabled: checked ? false : localSettings.enabled
     });
+
+    // Show toast notification
+    if (checked) {
+      toast.info('Coming Soon mode will be enabled when you save changes');
+    } else {
+      toast.info('Coming Soon mode will be disabled when you save changes');
+    }
   };
 
   const mutation = useMutation({
@@ -70,9 +84,15 @@ export default function MaintenancePage() {
       if (!response.ok) throw new Error('Failed to update maintenance settings');
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
-      toast.success('Maintenance settings updated successfully');
+      if (data.enabled) {
+        toast.success('Maintenance mode enabled successfully');
+      } else if (data.comingSoonEnabled) {
+        toast.success('Coming Soon mode enabled successfully');
+      } else {
+        toast.success('Settings updated successfully');
+      }
     },
     onError: (error) => {
       toast.error('Failed to update maintenance settings: ' + (error as Error).message);
