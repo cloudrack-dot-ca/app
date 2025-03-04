@@ -1,6 +1,6 @@
 modules = ["nodejs-20", "web", "postgresql-16"]
 run = "npm run dev"
-hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+hidden = [".config", ".git", "generated-icon.png"]
 
 [nix]
 channel = "stable-24_05"
@@ -14,8 +14,11 @@ run = ["npm", "run", "start"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
 [workflows]
-runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
