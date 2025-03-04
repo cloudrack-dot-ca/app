@@ -167,10 +167,10 @@ async function createTestData() {
     const port = 5000;
     server.listen({
       port,
-      host: "0.0.0.0",
+      host: "0.0.0.0", // Explicitly listen on all network interfaces
       reusePort: true,
     }, () => {
-      log(`serving on port ${port}`);
+      log(`serving on port ${port} and accessible from all network interfaces`);
     });
   } catch (error) {
     console.error("Application startup error:", error);
