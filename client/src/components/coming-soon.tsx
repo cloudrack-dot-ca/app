@@ -1,4 +1,8 @@
 
+import React from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+
 interface ComingSoonProps {
   featureName?: string;
   customMessage?: string;
@@ -15,6 +19,13 @@ export function ComingSoon({
   const { user } = useAuth();
   const currentPath = window.location.pathname;
 
+  // ADMIN CHECK - FIRST THING WE DO
+  if (user?.isAdmin) {
+    console.log('ADMIN DETECTED:', user);
+    console.log('ComingSoon: Admin user - BYPASSING COMING SOON PAGE');
+    return null;
+  }
+
   // Get maintenance settings
   const { data: maintenanceSettings } = useQuery({
     queryKey: ['/api/maintenance'],
@@ -29,27 +40,13 @@ export function ComingSoon({
     }
   });
 
-  console.log('ComingSoon Component State:', {
-    user,
-    isAdmin: user?.isAdmin,
-    comingSoonEnabled: maintenanceSettings?.comingSoonEnabled,
-    currentPath,
-    bypassPaths
-  });
-
-  // Admin check - ABSOLUTELY RETURN NULL if admin
-  if (user && user.isAdmin === true) {
-    console.log('ADMIN USER DETECTED - Returning NULL');
-    return null;
-  }
-
   // If coming soon mode is disabled, return null
   if (!maintenanceSettings?.comingSoonEnabled) {
     return null;
   }
 
   // Check if current path is in bypass list
-  if (bypassPaths.some(path => currentPath.startsWith(path))) {
+  if (bypassPaths && bypassPaths.some(path => currentPath.startsWith(path))) {
     return null;
   }
 
@@ -91,21 +88,17 @@ export function withComingSoon(Component: React.ComponentType, options: ComingSo
   return function ComingSoonWrapper(props: any) {
     const { user } = useAuth();
     
-    // DIRECTLY CHECK FOR ADMIN WITHOUT ANY OTHER LOGIC
-    if (user && user.isAdmin === true) {
+    // CHECK IF USER IS ADMIN, RETURN THE COMPONENT IF TRUE
+    if (user?.isAdmin) {
       console.log('withComingSoon HOC: Admin user detected, showing component');
       return <Component {...props} />;
     }
 
-    // Render the ComingSoon component that handles all other checks
-    const comingSoon = <ComingSoon {...options} />;
-
-    // If ComingSoon returns null, show the actual component
-    if (comingSoon === null) {
-      return <Component {...props} />;
-    }
-
-    // Otherwise show the coming soon page
-    return comingSoon;
+    return (
+      <>
+        <ComingSoon {...options} />
+        <Component {...props} />
+      </>
+    );
   };
 }
