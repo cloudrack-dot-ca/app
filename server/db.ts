@@ -1,22 +1,12 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
+
+import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
 import * as schema from "@shared/schema";
 
 console.log("NODE_ENV:", process.env.NODE_ENV);
 
-// Configure WebSocket for local development
-if (process.env.NODE_ENV === 'development') {
-  console.log("Using development configuration - disabling WebSocket");
-  // In development, use direct connection without WebSocket
-  neonConfig.useSecureWebSocket = false;
-  neonConfig.webSocketConstructor = undefined;
-} else {
-  console.log("Using production configuration - enabling WebSocket");
-  // In production, use secure WebSocket
-  neonConfig.webSocketConstructor = ws;
-}
-
+// Use direct connection without WebSocket
+console.log("Configuring direct PostgreSQL connection without WebSocket");
 if (!process.env.DATABASE_URL) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
@@ -30,9 +20,9 @@ export const pool = new Pool({
   idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
   connectionTimeoutMillis: 5000, // How long to wait for a connection
   maxUses: 7500, // Number of times a client can be used before being recycled
-  ssl: {
-    rejectUnauthorized: process.env.NODE_ENV !== 'development' // Only reject unauthorized in production
-  }
+  ssl: process.env.NODE_ENV === 'production' ? 
+    { rejectUnauthorized: true } : 
+    { rejectUnauthorized: false }
 });
 
 // Handle pool errors

@@ -1,3 +1,4 @@
+
 #!/usr/bin/env node
 require('dotenv').config();
 require('ts-node').register();
@@ -19,4 +20,5 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
+console.log("Starting application with database:", process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] || 'unknown');
 require('./server/index.ts');
