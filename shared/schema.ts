@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -6,6 +6,13 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+});
+
+export const servers = pgTable("servers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const siteSettings = pgTable("site_settings", {
@@ -16,11 +23,19 @@ export const siteSettings = pgTable("site_settings", {
   comingSoonMessage: text("coming_soon_message").notNull().default("This feature is coming soon. Stay tuned for updates!"),
 });
 
+// Schema for inserting users
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
 });
 
+// Schema for inserting servers
+export const insertServerSchema = createInsertSchema(servers).pick({
+  name: true,
+  status: true,
+});
+
+// Schema for updating site settings
 export const updateSiteSettingsSchema = createInsertSchema(siteSettings).pick({
   maintenanceMode: true,
   maintenanceMessage: true,
@@ -28,7 +43,10 @@ export const updateSiteSettingsSchema = createInsertSchema(siteSettings).pick({
   comingSoonMessage: true,
 });
 
+// Export types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertServer = z.infer<typeof insertServerSchema>;
+export type Server = typeof servers.$inferSelect;
 export type SiteSettings = typeof siteSettings.$inferSelect;
 export type UpdateSiteSettings = z.infer<typeof updateSiteSettingsSchema>;
