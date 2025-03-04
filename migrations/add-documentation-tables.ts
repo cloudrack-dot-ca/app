@@ -1,10 +1,9 @@
-
 import { sql } from 'drizzle-orm';
 import { db } from '../server/db';
 
 async function main() {
   console.log('Running migration: add-documentation-tables');
-  
+
   // Create the doc_sections table
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS doc_sections (
@@ -13,7 +12,7 @@ async function main() {
       "order" INTEGER NOT NULL
     );
   `);
-  
+
   // Create the doc_articles table
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS doc_articles (
@@ -25,7 +24,7 @@ async function main() {
       last_updated TIMESTAMP NOT NULL DEFAULT NOW()
     );
   `);
-  
+
   console.log('Migration completed successfully');
 }
 
@@ -36,6 +35,6 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await pool.end();
+    // Clean exit, no need to close pool as db connection is managed elsewhere
     process.exit(0);
   });

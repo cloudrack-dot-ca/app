@@ -92,9 +92,9 @@ const ArticleViewer = ({ article }: { article: DocArticle | null }) => {
           <h1 className="text-3xl font-bold text-foreground">{article.title}</h1>
           <p className="text-sm text-muted-foreground">Last updated: {new Date(article.lastUpdated).toLocaleDateString()}</p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           className="flex items-center gap-1 self-start sm:self-auto"
           onClick={() => {
             // Open print dialog
@@ -111,12 +111,12 @@ const ArticleViewer = ({ article }: { article: DocArticle | null }) => {
 };
 
 // Documentation sidebar component
-const DocSidebar = ({ 
-  sections, 
-  activeArticleId, 
-  setActiveArticleId 
-}: { 
-  sections: DocSection[], 
+const DocSidebar = ({
+  sections,
+  activeArticleId,
+  setActiveArticleId
+}: {
+  sections: DocSection[],
   activeArticleId: number | null,
   setActiveArticleId: (id: number) => void
 }) => {
@@ -140,22 +140,22 @@ const DocSidebar = ({
   };
 
   // Filter sections/articles based on search query
-  const filteredSections = searchQuery.trim() === '' 
-    ? sections 
+  const filteredSections = searchQuery.trim() === ''
+    ? sections
     : sections.map(section => {
-        const filteredChildren = section.children.filter(article => 
-          article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          article.content.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        return { ...section, children: filteredChildren };
-      }).filter(section => section.children.length > 0);
+      const filteredChildren = section.children.filter(article =>
+        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        article.content.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      return { ...section, children: filteredChildren };
+    }).filter(section => section.children.length > 0);
 
   return (
     <div className="w-full">
       <div className="mb-4 relative">
         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-        <Input 
-          placeholder="Search documentation..." 
+        <Input
+          placeholder="Search documentation..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -163,15 +163,15 @@ const DocSidebar = ({
       </div>
 
       <div className="space-y-1">
-        {filteredSections.map(section => (
+        {filteredSections.map((section: DocSection) => (
           <div key={section.id} className="mb-2">
             <button
               onClick={() => toggleSection(section.id)}
               className="w-full flex items-center justify-between px-2 py-1.5 text-sm font-medium hover:bg-muted rounded-md transition-colors text-foreground"
             >
               <span>{section.title}</span>
-              {expandedSections[section.id] ? 
-                <ChevronDown className="h-4 w-4 text-muted-foreground" /> : 
+              {expandedSections[section.id] ?
+                <ChevronDown className="h-4 w-4 text-muted-foreground" /> :
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               }
             </button>
@@ -232,10 +232,10 @@ export default function DocsPage() {
   });
 
   // Get the active article from the sections data
-  const activeArticle = activeArticleId 
+  const activeArticle = activeArticleId
     ? sections
-        .flatMap(section => section.children)
-        .find(article => article.id === activeArticleId) || null
+        .flatMap((section: DocSection) => section.children)
+        .find((article: DocArticle) => article.id === activeArticleId) || null
     : null;
 
   // Set first article as active if not set and sections are loaded
@@ -269,10 +269,10 @@ export default function DocsPage() {
       toast({ title: "Section Created", description: "Your section has been created successfully." });
     },
     onError: (error) => {
-      toast({ 
-        title: "Section Creation Failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Section Creation Failed",
+        description: error.message,
+        variant: "destructive"
       });
     }
   });
@@ -297,10 +297,10 @@ export default function DocsPage() {
       toast({ title: "Section Updated", description: "Your section has been updated successfully." });
     },
     onError: (error) => {
-      toast({ 
-        title: "Section Update Failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Section Update Failed",
+        description: error.message,
+        variant: "destructive"
       });
     }
   });
@@ -324,10 +324,10 @@ export default function DocsPage() {
       toast({ title: "Section Deleted", description: "The section and all its articles have been deleted." });
     },
     onError: (error) => {
-      toast({ 
-        title: "Section Deletion Failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Section Deletion Failed",
+        description: error.message,
+        variant: "destructive"
       });
     }
   });
@@ -353,10 +353,10 @@ export default function DocsPage() {
       toast({ title: "Article Created", description: "Your article has been created successfully." });
     },
     onError: (error) => {
-      toast({ 
-        title: "Article Creation Failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Article Creation Failed",
+        description: error.message,
+        variant: "destructive"
       });
     }
   });
@@ -366,8 +366,8 @@ export default function DocsPage() {
       const response = await fetch(`/api/docs/articles/${data.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title: data.title, 
+        body: JSON.stringify({
+          title: data.title,
           content: data.content,
           ...(data.sectionId ? { sectionId: data.sectionId } : {})
         })
@@ -385,10 +385,10 @@ export default function DocsPage() {
       toast({ title: "Article Updated", description: "Your article has been updated successfully." });
     },
     onError: (error) => {
-      toast({ 
-        title: "Article Update Failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Article Update Failed",
+        description: error.message,
+        variant: "destructive"
       });
     }
   });
@@ -412,10 +412,10 @@ export default function DocsPage() {
       toast({ title: "Article Deleted", description: "The article has been deleted successfully." });
     },
     onError: (error) => {
-      toast({ 
-        title: "Article Deletion Failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Article Deletion Failed",
+        description: error.message,
+        variant: "destructive"
       });
     }
   });
@@ -426,7 +426,7 @@ export default function DocsPage() {
 
     if (isNewSection) {
       // Create a new section
-      createSection.mutate({ 
+      createSection.mutate({
         title: sectionTitle,
         order: sections.length + 1
       });
@@ -451,7 +451,7 @@ export default function DocsPage() {
         sectionId: articleSectionId,
         title: articleTitle,
         content: articleContent,
-        order: sections.find(s => s.id === articleSectionId)?.children.length ?? 0 + 1
+        order: sections.find((s: DocSection) => s.id === articleSectionId)?.children.length ?? 0 + 1
       });
     } else if (currentArticle) {
       // Update existing article
@@ -525,8 +525,8 @@ export default function DocsPage() {
             <div className="md:col-span-3">
               <Card>
                 <CardContent className="p-4">
-                  <DocSidebar 
-                    sections={sections} 
+                  <DocSidebar
+                    sections={sections}
                     activeArticleId={activeArticleId}
                     setActiveArticleId={setActiveArticleId}
                   />
@@ -578,7 +578,7 @@ export default function DocsPage() {
                       </div>
 
                       <div className="border rounded-md divide-y">
-                        {sections.map(section => (
+                        {sections.map((section: DocSection) => (
                           <div key={section.id} className="p-4 flex justify-between items-center">
                             <div>
                               <h4 className="font-medium">{section.title}</h4>
@@ -587,8 +587,8 @@ export default function DocsPage() {
                               </p>
                             </div>
                             <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => {
                                   setIsNewSection(false);
@@ -600,9 +600,9 @@ export default function DocsPage() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
                               </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="text-red-500"
                                 onClick={() => handleDeleteSection(section.id)}
                               >
@@ -620,7 +620,7 @@ export default function DocsPage() {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <h3 className="text-lg font-medium">Documentation Articles</h3>
-                        <Button 
+                        <Button
                           onClick={() => {
                             setIsNewArticle(true);
                             setCurrentArticle(null);
@@ -637,8 +637,8 @@ export default function DocsPage() {
                       </div>
 
                       <div className="border rounded-md divide-y">
-                        {sections.flatMap(section => 
-                          section.children.map(article => (
+                        {sections.flatMap((section: DocSection) =>
+                          section.children.map((article: DocArticle) => (
                             <div key={article.id} className="p-4 flex justify-between items-center">
                               <div>
                                 <h4 className="font-medium">{article.title}</h4>
@@ -647,8 +647,8 @@ export default function DocsPage() {
                                 </p>
                               </div>
                               <div className="flex gap-2">
-                                <Button 
-                                  variant="outline" 
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   onClick={() => {
                                     setIsNewArticle(false);
@@ -662,9 +662,9 @@ export default function DocsPage() {
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit
                                 </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   className="text-red-500"
                                   onClick={() => handleDeleteArticle(article.id)}
                                 >
@@ -694,9 +694,9 @@ export default function DocsPage() {
                 <div className="space-y-4 py-2">
                   <div className="space-y-2">
                     <Label htmlFor="section-title">Section Title</Label>
-                    <Input 
-                      id="section-title" 
-                      value={sectionTitle} 
+                    <Input
+                      id="section-title"
+                      value={sectionTitle}
                       onChange={(e) => setSectionTitle(e.target.value)}
                       placeholder="e.g., Getting Started"
                     />
@@ -740,7 +740,7 @@ export default function DocsPage() {
                       className="w-full p-2 border rounded-md"
                     >
                       <option value="" disabled>Select a section</option>
-                      {sections.map(section => (
+                      {sections.map((section: DocSection) => (
                         <option key={section.id} value={section.id}>
                           {section.title}
                         </option>
@@ -749,9 +749,9 @@ export default function DocsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="article-title">Article Title</Label>
-                    <Input 
-                      id="article-title" 
-                      value={articleTitle} 
+                    <Input
+                      id="article-title"
+                      value={articleTitle}
                       onChange={(e) => setArticleTitle(e.target.value)}
                       placeholder="e.g., Getting Started with CloudHost"
                     />
