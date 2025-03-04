@@ -1,9 +1,3 @@
-why is my digitalocean app being wierd its in two containers 
-
-i built it on replit.com and then pushed to github i then went to run the app on digitaloceans app and would like to know how to possibly fix this but my app runs on port 5000 locally 
-
-my app spec is as followed
-
 alerts:
 - rule: DEPLOYMENT_FAILED
 - rule: DOMAIN_FAILED
@@ -15,15 +9,17 @@ envs:
 - key: DATABASE_URL
   scope: RUN_AND_BUILD_TIME
   type: SECRET
-  value: EV[1:uhwDGsFoWJ9r9mG7kZ3FdMuH6bUR9gka:lxmwUANLLqY3Br9FgxAcFve6E+fZKgIORHN7QsAxAF1/rHyJT7/0iYXnJtFftzlCu4zfGC/le+v5xD2UCt2L+2VNfv+E2j7o0dmqHXckgvuAYE905/3rvVqiEAY8iypjTRhMSOc10bNEsEfhdjOEvdCvayrvSwgZlEPTHDToaBftffXgFtzbKDH6rP/0UA==]
-- key: PGDATABASE
-  scope: RUN_AND_BUILD_TIME
   type: SECRET
   value: EV[1:Uuqz/U/ITThBsXaMzrjd3BIKNv7+n5CY:URAOaLw9hCgFgXZXvSsR5CgZpMWpYw==]
 - key: PGHOST
   scope: RUN_AND_BUILD_TIME
   type: SECRET
-  value: EV[1:ZMPt10j/Yihra7AOooO3HRvhxecwEU3w:38RHwX5oVYtutBrn3ss21D903CTxBe9tdsZI8+QHrMbFDc652kyTM/F/pDq6II/WwNUKDLr3UlLI0m+tKaskjHuHwK+JPeHSUJkSKg==]
+http_port: 5000
+internal_ports:
+- 5000
+health_check:
+  http_path: /
+  port: 5000
 - key: PGPORT
   scope: RUN_AND_BUILD_TIME
   type: SECRET
@@ -140,12 +136,11 @@ services:
     repo: cloudrack-dot-ca/app
   health_check:
     http_path: /
-  http_port: 80
+  http_port: 5000
   instance_count: 2
   instance_size_slug: apps-s-1vcpu-1gb
   internal_ports:
   - 5000
   name: app
   run_command: npm run db:push && npm start
-  source_dir: / 
-
+  source_dir: /
