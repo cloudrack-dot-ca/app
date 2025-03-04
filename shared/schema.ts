@@ -213,3 +213,37 @@ export type InsertIPBan = z.infer<typeof insertIPBanSchema>;
 export type IPBan = typeof ipBans.$inferSelect;
 export type InsertSnapshot = z.infer<typeof insertSnapshotSchema>;
 export type Snapshot = typeof snapshots.$inferSelect;
+
+// Documentation schema
+export const docSections = pgTable("doc_sections", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  order: integer("order").notNull(),
+});
+
+export const docArticles = pgTable("doc_articles", {
+  id: serial("id").primaryKey(),
+  sectionId: integer("section_id").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  order: integer("order").notNull(),
+  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+});
+
+// Insert schemas for documentation
+export const insertDocSectionSchema = createInsertSchema(docSections).pick({
+  title: true,
+  order: true,
+});
+
+export const insertDocArticleSchema = createInsertSchema(docArticles).pick({
+  sectionId: true,
+  title: true,
+  content: true,
+  order: true,
+});
+
+export type DocSection = typeof docSections.$inferSelect;
+export type DocArticle = typeof docArticles.$inferSelect;
+export type InsertDocSection = z.infer<typeof insertDocSectionSchema>;
+export type InsertDocArticle = z.infer<typeof insertDocArticleSchema>;

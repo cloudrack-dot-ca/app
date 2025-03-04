@@ -2656,3 +2656,187 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   
   return httpServer;
 }
+
+  // Documentation API Routes
+  app.get("/api/docs/sections", async (_req, res) => {
+    try {
+      // Get all sections with their articles
+      const sections = await db.query.docSections.findMany({
+        orderBy: [asc(schema.docSections.order)]
+      });
+      
+      const articles = await db.query.docArticles.findMany({
+        orderBy: [asc(schema.docArticles.order)]
+      });
+      
+      // Group articles by section
+      const sectionsWithArticles = sections.map(section => {
+        const sectionArticles = articles.filter(article => article.sectionId === section.id);
+        return {
+          ...section,
+          children: sectionArticles
+        };
+      });
+      
+      res.json(sectionsWithArticles);
+    } catch (error) {
+      console.error("Error fetching documentation:", error);
+      res.status(500).json({ message: "Failed to fetch documentation" });
+    }
+  });
+  
+  app.post("/api/docs/sections", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    
+    try {
+      const { title, order } = req.body;
+      
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+      
+      // Create new section
+      const section = await db.insert(schema.docSections)
+        .values({
+          title,
+          order: order || 0
+        })
+        .returning();
+      
+      res.status(201).json(section[0]);
+    } catch (error) {
+      console.error("Error creating section:", error);
+      res.status(500).json({ message: "Failed to create section" });
+    }
+  });
+  
+  app.patch("/api/docs/sections/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    
+    try {
+      const sectionId = parseInt(req.params.id);
+      const { title } = req.body;
+      
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+      
+      // Update section
+      const section = await db.update(schema.docSections)
+        .set({ title })
+        .where(eq(schema.docSections.id, sectionId))
+        .returning();
+      
+      if (section.length === 0) {
+        return res.status(404).json({ message: "Section not found" });
+      }
+      
+      res.json(section[0]);
+    } catch (error) {
+      console.error("Error updating section:", error);
+      res.status(500).json({ message: "Failed to update section" });
+    }
+  });
+  
+  app.delete("/api/docs/sections/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    
+    try {
+      const sectionId = parseInt(req.params.id);
+      
+      // First delete all articles in this section
+      await db.delete(schema.docArticles)
+        .where(eq(schema.docArticles.sectionId, sectionId));
+      
+      // Then delete the section
+      await db.delete(schema.docSections)
+        .where(eq(schema.docSections.id, sectionId));
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting section:", error);
+      res.status(500).json({ message: "Failed to delete section" });
+    }
+  });
+  
+  app.post("/api/docs/articles", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    
+    try {
+      const { sectionId, title, content, order } = req.body;
+      
+      if (!sectionId || !title || !content) {
+        return res.status(400).json({ message: "SectionId, title, and content are required" });
+      }
+      
+      // Create new article
+      const article = await db.insert(schema.docArticles)
+        .values({
+          sectionId: parseInt(sectionId),
+          title,
+          content,
+          order: order || 0,
+          lastUpdated: new Date()
+        })
+        .returning();
+      
+      res.status(201).json(article[0]);
+    } catch (error) {
+      console.error("Error creating article:", error);
+      res.status(500).json({ message: "Failed to create article" });
+    }
+  });
+  
+  app.patch("/api/docs/articles/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    
+    try {
+      const articleId = parseInt(req.params.id);
+      const { sectionId, title, content } = req.body;
+      
+      if (!title || !content) {
+        return res.status(400).json({ message: "Title and content are required" });
+      }
+      
+      // Update article
+      const updateData: any = { 
+        title, 
+        content,
+        lastUpdated: new Date()
+      };
+      
+      if (sectionId) {
+        updateData.sectionId = parseInt(sectionId);
+      }
+      
+      const article = await db.update(schema.docArticles)
+        .set(updateData)
+        .where(eq(schema.docArticles.id, articleId))
+        .returning();
+      
+      if (article.length === 0) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      
+      res.json(article[0]);
+    } catch (error) {
+      console.error("Error updating article:", error);
+      res.status(500).json({ message: "Failed to update article" });
+    }
+  });
+  
+  app.delete("/api/docs/articles/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    
+    try {
+      const articleId = parseInt(req.params.id);
+      
+      await db.delete(schema.docArticles)
+        .where(eq(schema.docArticles.id, articleId));
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting article:", error);
+      res.status(500).json({ message: "Failed to delete article" });
+    }
+  });
