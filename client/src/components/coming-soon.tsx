@@ -1,8 +1,10 @@
-import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+
+import React from 'react';
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 
 interface ComingSoonProps {
   featureName?: string;
@@ -38,7 +40,7 @@ export function ComingSoon({
   if (
     (user?.isAdmin) || 
     !maintenanceSettings?.comingSoonEnabled ||
-    bypassPaths.includes(currentPath)
+    bypassPaths.some(path => currentPath.startsWith(path))
   ) {
     return null;
   }
@@ -68,7 +70,7 @@ export function ComingSoon({
           <div className="flex flex-col gap-2 mt-4">
             {user ? (
               <>
-                <Link href={redirectPath}>
+                <Link to={redirectPath}>
                   <Button className="w-full" variant="default">
                     Return to Dashboard
                   </Button>
@@ -82,7 +84,7 @@ export function ComingSoon({
                 </Button>
               </>
             ) : (
-              <Link href="/auth">
+              <Link to="/auth">
                 <Button 
                   variant="outline" 
                   className="w-full"
