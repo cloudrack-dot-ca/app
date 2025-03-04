@@ -886,10 +886,10 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     const limit = parseInt(req.query.limit as string) || 10;
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
-    
+
     // Get all transactions for this user
     const allTransactions = await storage.getTransactionsByUser(req.user.id);
-    
+
     // Apply date filtering if provided
     let filteredTransactions = allTransactions;
     if (startDate || endDate) {
@@ -929,7 +929,82 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       }
     });
   });
-  
+
+  // Documentation section and article reordering endpoints
+  app.patch("/api/docs/sections/:id/reorder", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+
+    try {
+      const sectionId = parseInt(req.params.id);
+      const { order } = req.body;
+
+      if (typeof order !== 'number' || order < 1) {
+        return res.status(400).json({ message: "Invalid order number" });
+      }
+
+      // Get all sections to check for conflicts
+      const sections = await storage.getAllDocSections();
+      const targetSection = sections.find(s => s.id === sectionId);
+      
+      if (!targetSection) {
+        return res.status(404).json({ message: "Section not found" });
+      }
+
+      // If another section already has this order number, shift others
+      if (sections.some(s => s.order === order && s.id !== sectionId)) {
+        // Shift all sections with order >= new order up by one
+        for (const section of sections) {
+          if (section.order >= order && section.id !== sectionId) {
+            await storage.updateDocSection(section.id, { order: section.order + 1 });
+          }
+        }
+      }
+
+      const section = await storage.updateDocSection(sectionId, { order });
+      res.json(section);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  // Add reordering functionality for articles  
+  app.patch("/api/docs/articles/:id/reorder", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+
+    try {
+      const articleId = parseInt(req.params.id);
+      const { order } = req.body;
+
+      if (typeof order !== 'number' || order < 1) {
+        return res.status(400).json({ message: "Invalid order number" });
+      }
+
+      // Get the article to find its section
+      const article = await storage.getDocArticle(articleId);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // Get all articles in the same section
+      const sectionArticles = await storage.getDocArticlesBySection(article.sectionId);
+
+      // If another article in this section has this order, shift others
+      if (sectionArticles.some(a => a.order === order && a.id !== articleId)) {
+        // Shift all articles with order >= new order up by one
+        for (const existingArticle of sectionArticles) {
+          if (existingArticle.order >= order && existingArticle.id !== articleId) {
+            await storage.updateDocArticle(existingArticle.id, { order: existingArticle.order + 1 });
+          }
+        }
+      }
+
+      const updatedArticle = await storage.updateDocArticle(articleId, { order });
+      res.json(updatedArticle);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
   // Get invoice for a specific transaction
   app.get("/api/billing/transactions/:id/invoice", async (req, res) => {
     if (!req.user) return res.sendStatus(401);

@@ -555,6 +555,21 @@ export default function DocsPage() {
     );
   }
 
+  const getNextAvailableOrder = (items: Array<{ id: number; order: number }>, currentItemId?: number): number => {
+    const orders = items
+      .filter(item => item.id !== currentItemId)
+      .map(item => item.order)
+      .sort((a, b) => a - b);
+
+    let nextOrder = 1;
+    for (const order of orders) {
+      if (order > nextOrder) break;
+      nextOrder = order + 1;
+    }
+    return nextOrder;
+  };
+
+
   return (
     <div className="container mx-auto max-w-7xl py-8">
       <div className="flex items-center mb-6">
@@ -859,7 +874,8 @@ export default function DocsPage() {
               <CardHeader>
                 <CardTitle>Reorder Documentation</CardTitle>
                 <CardDescription>
-                  Adjust the order of sections and articles using numbers. Lower numbers appear first.
+                  Adjust the order of sections and articles. Each number must be unique within its group.
+                  Lower numbers appear first.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -882,6 +898,9 @@ export default function DocsPage() {
                             }}
                           />
                           <span className="flex-grow font-medium">{section.title}</span>
+                          <span className="text-sm text-muted-foreground">
+                            Current position: {section.order}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -894,7 +913,9 @@ export default function DocsPage() {
                     <div className="space-y-6">
                       {sections.map((section: DocSection) => (
                         <div key={section.id} className="space-y-2">
-                          <h4 className="font-medium text-muted-foreground">{section.title}</h4>
+                          <h4 className="font-medium text-muted-foreground">
+                            {section.title} (Section {section.order})
+                          </h4>
                           <div className="space-y-2 ml-4">
                             {section.children.map((article: DocArticle) => (
                               <div key={article.id} className="flex items-center gap-4 p-4 border rounded-lg">
@@ -906,19 +927,59 @@ export default function DocsPage() {
                                   onChange={(e) => {
                                     const newOrder = parseInt(e.target.value);
                                     if (!isNaN(newOrder) && newOrder > 0) {
-                                      reorderArticle.mutate({ id: article.id, order: newOrder });
+                                                                            reorderArticle.mutate({ id: article.id, order: newOrder });
                                     }
                                   }}
                                 />
                                 <span className="flex-grow">{article.title}</span>
+                                <div className="text-sm text-muted-foreground whitespace-nowrap">
+                                  Position: {article.order}
+                                </div>
                               </div>
                             ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="ml-4"
+                              onClick={() => {
+                                // Get next available order for this section
+                                const nextOrder = getNextAvailableOrder(section.children);
+                                setIsNewArticle(true);
+                                setCurrentArticle(null);
+                                setArticleTitle("");
+                                setArticleContent("");
+                                setArticleSectionId(section.id);
+                                // Set the order to the next available number
+                                if (createArticle.mutate) {
+                                  createArticle.mutate({
+                                    sectionId: section.id,
+                                    title: "New Article",
+                                    content: "",
+                                    order: nextOrder
+                                  });
+                                }
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Article at Position {getNextAvailableOrder(section.children)}
+                            </Button>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                </div>              </CardContent>
+
+                  <div className="mt-4 p-4 bg-muted rounded-lg">
+                    <h4 className="font-medium mb-2">Quick Tips:</h4>
+                    <ul className="list-disc ml-4 space-y-1 text-sm text-muted-foreground">
+                      <li>Each section must have a unique order number</li>
+                      <li>Articles within each section must have unique order numbers</li>
+                      <li>The system will automatically adjust other items' order if needed</li>
+                      <li>Lower numbers appear first in the documentation</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
         )}
