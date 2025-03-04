@@ -1,6 +1,3 @@
-import React from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
 
 interface ComingSoonProps {
   featureName?: string;
@@ -41,7 +38,7 @@ export function ComingSoon({
   });
 
   // Admin check - ABSOLUTELY RETURN NULL if admin
-  if (user && user.isAdmin) {
+  if (user && user.isAdmin === true) {
     console.log('ADMIN USER DETECTED - Returning NULL');
     return null;
   }
@@ -93,9 +90,9 @@ export function ComingSoon({
 export function withComingSoon(Component: React.ComponentType, options: ComingSoonProps = {}) {
   return function ComingSoonWrapper(props: any) {
     const { user } = useAuth();
-
+    
     // DIRECTLY CHECK FOR ADMIN WITHOUT ANY OTHER LOGIC
-    if (user && user.isAdmin) {
+    if (user && user.isAdmin === true) {
       console.log('withComingSoon HOC: Admin user detected, showing component');
       return <Component {...props} />;
     }
