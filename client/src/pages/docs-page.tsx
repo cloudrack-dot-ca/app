@@ -926,9 +926,9 @@ export default function DocsPage() {
                               }
                             }}
                           />
-                          <<span className="flex-grow font-medium">{section.title}</span>
-                          <span className="text-sm text-muted-foreground">
-                            Current position: {section.order}
+                          <span className="flex-growfont-medium">{section.title}</span>
+                          <span className="text-sm text-muted-foreground whitespace-nowrap">
+                            Position: {section.order}
                           </span>
                         </div>
                       ))}
