@@ -20,13 +20,16 @@ import { Textarea } from "@/components/ui/textarea";
 // Map regions to flag emojis
 const regionFlags: { [key: string]: string } = {
   'nyc1': '🇺🇸 New York',
-  'sfo1': '🇺🇸 San Francisco',
-  'ams1': '🇳🇱 Amsterdam',
+  'nyc2': '🇺🇸 New York',
+  'nyc3': '🇺🇸 New York','
+  'sfo3': '🇺🇸 San Francisco',
+  'sfo2': '🇺🇸 San Francisco',
+  'ams3': '🇳🇱 Amsterdam',
   'sgp1': '🇸🇬 Singapore',
   'lon1': '🇬🇧 London',
-  'fra1': '🇩🇪 Frankfurt',
   'tor1': '🇨🇦 Toronto',
   'blr1': '🇮🇳 Bangalore',
+  'syd1': '🇦🇺 Sydney',
 };
 
 const MAX_VOLUME_SIZE = 1000;
@@ -53,7 +56,7 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
       )
     })),
     defaultValues: {
-      name: "",
+      name: "SkyVPS360-SSD-0",
       size: 10,
     },
   });

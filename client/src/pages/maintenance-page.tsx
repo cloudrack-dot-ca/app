@@ -12,7 +12,7 @@ export default function MaintenancePage({ message }: MaintenancePageProps) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-8 w-8 text-yellow-500" />
-            <CardTitle>Under Maintenance</CardTitle>
+            <CardTitle>SkyVPS360 Is Currently Under Maintenance</CardTitle>
           </div>
         </CardHeader>
         <CardContent>

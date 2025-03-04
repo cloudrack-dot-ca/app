@@ -1,7 +1,19 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, CheckCircle, Copy, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  Copy,
+  ExternalLink,
+} from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,23 +30,35 @@ export default function ApiDocsPage() {
   };
 
   // Function to format example code blocks
-  const CodeExample = ({ endpoint, method, description, requestSample, responseSample }: { 
+  const CodeExample = ({
+    endpoint,
+    method,
+    description,
+    requestSample,
+    responseSample,
+  }: {
     endpoint: string;
-    method: "GET" | "POST" | "PUT" | "DELETE"; 
+    method: "GET" | "POST" | "PUT" | "DELETE";
     description: string;
     requestSample?: string;
     responseSample: string;
   }) => {
-    const baseUrl = import.meta.env.DEV ? "http://localhost:5000" : window.location.origin;
+    const baseUrl = import.meta.env.DEV
+      ? "http://skyvps360.com"
+      : window.location.origin;
     const fullEndpoint = `${baseUrl}${endpoint}`;
     const isCopied = copiedEndpoint === endpoint;
 
-    const requestCode = requestSample ? 
-      `curl -X ${method} ${fullEndpoint} \\
--H "X-API-Key: YOUR_API_KEY"${requestSample ? ` \\
+    const requestCode = requestSample
+      ? `curl -X ${method} ${fullEndpoint} \\
+-H "X-API-Key: YOUR_API_KEY"${
+          requestSample
+            ? ` \\
 -H "Content-Type: application/json" \\
--d '${requestSample}'` : ''}` : 
-      `curl -X ${method} ${fullEndpoint} \\
+-d '${requestSample}'`
+            : ""
+        }`
+      : `curl -X ${method} ${fullEndpoint} \\
 -H "X-API-Key: YOUR_API_KEY"`;
 
     return (
@@ -42,17 +66,25 @@ export default function ApiDocsPage() {
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-lg font-semibold mb-1 flex items-center">
-              <span className={
-                method === "GET" ? "text-blue-500" :
-                method === "POST" ? "text-green-500" :
-                method === "PUT" ? "text-amber-500" : "text-red-500"
-              }>{method}</span>
+              <span
+                className={
+                  method === "GET"
+                    ? "text-blue-500"
+                    : method === "POST"
+                      ? "text-green-500"
+                      : method === "PUT"
+                        ? "text-amber-500"
+                        : "text-red-500"
+                }
+              >
+                {method}
+              </span>
               <span className="mx-2">{endpoint}</span>
             </h3>
             <p className="text-sm text-muted-foreground mb-3">{description}</p>
           </div>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             className="flex items-center gap-1"
             onClick={() => copyToClipboard(requestCode, endpoint)}
@@ -70,7 +102,7 @@ export default function ApiDocsPage() {
             )}
           </Button>
         </div>
-        
+
         <div className="space-y-4">
           <div>
             <h4 className="text-sm font-medium mb-2">Request</h4>
@@ -78,7 +110,7 @@ export default function ApiDocsPage() {
               <code>{requestCode}</code>
             </pre>
           </div>
-          
+
           <div>
             <h4 className="text-sm font-medium mb-2">Response</h4>
             <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs">
@@ -100,9 +132,12 @@ export default function ApiDocsPage() {
               Back to API Key Management
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold mb-2">CloudRack API Documentation</h1>
+          <h1 className="text-3xl font-bold mb-2">
+            SkyVPS360 API Documentation
+          </h1>
           <p className="text-muted-foreground">
-            Comprehensive guide for integrating your applications with the CloudRack API
+            Comprehensive guide for integrating your applications with the
+            SkyVPS360 API
           </p>
         </div>
 
@@ -114,11 +149,36 @@ export default function ApiDocsPage() {
               </CardHeader>
               <CardContent>
                 <nav className="space-y-1">
-                  <a href="#authentication" className="block p-2 hover:bg-muted rounded-md">Authentication</a>
-                  <a href="#servers" className="block p-2 hover:bg-muted rounded-md">Servers</a>
-                  <a href="#volumes" className="block p-2 hover:bg-muted rounded-md">Volumes</a>
-                  <a href="#billing" className="block p-2 hover:bg-muted rounded-md">Billing</a>
-                  <a href="#account" className="block p-2 hover:bg-muted rounded-md">Account</a>
+                  <a
+                    href="#authentication"
+                    className="block p-2 hover:bg-muted rounded-md"
+                  >
+                    Authentication
+                  </a>
+                  <a
+                    href="#servers"
+                    className="block p-2 hover:bg-muted rounded-md"
+                  >
+                    Servers
+                  </a>
+                  <a
+                    href="#volumes"
+                    className="block p-2 hover:bg-muted rounded-md"
+                  >
+                    Volumes
+                  </a>
+                  <a
+                    href="#billing"
+                    className="block p-2 hover:bg-muted rounded-md"
+                  >
+                    Billing
+                  </a>
+                  <a
+                    href="#account"
+                    className="block p-2 hover:bg-muted rounded-md"
+                  >
+                    Account
+                  </a>
                 </nav>
               </CardContent>
             </Card>
@@ -136,18 +196,21 @@ export default function ApiDocsPage() {
                 <Alert>
                   <AlertTitle>Important</AlertTitle>
                   <AlertDescription>
-                    Your API key grants full access to your account. Keep it secure and never share it.
-                    Regenerate your key immediately if you suspect it has been compromised.
+                    Your API key grants full access to your account. Keep it
+                    secure and never share it. Regenerate your key immediately
+                    if you suspect it has been compromised.
                   </AlertDescription>
                 </Alert>
 
                 <h3 className="text-lg font-semibold">API Key Header</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Include your API key in all requests using the <code className="bg-muted px-1 rounded">X-API-Key</code> header.
+                  Include your API key in all requests using the{" "}
+                  <code className="bg-muted px-1 rounded">X-API-Key</code>{" "}
+                  header.
                 </p>
                 <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs">
                   <code>
-                    {`curl -X GET ${import.meta.env.DEV ? "http://localhost:5000" : window.location.origin}/api/servers \\
+                    {`curl -X GET ${import.meta.env.DEV ? "http://skynet360.com" : window.location.origin}/api/servers \\
 -H "X-API-Key: YOUR_API_KEY"`}
                   </code>
                 </pre>
@@ -162,7 +225,7 @@ export default function ApiDocsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/servers"
                   method="GET"
                   description="List all servers in your account"
@@ -192,7 +255,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/servers/{server_id}"
                   method="GET"
                   description="Get detailed information about a specific server"
@@ -218,7 +281,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/servers"
                   method="POST"
                   description="Create a new server"
@@ -241,7 +304,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/servers/{server_id}/reboot"
                   method="POST"
                   description="Reboot a server"
@@ -252,7 +315,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/servers/{server_id}"
                   method="DELETE"
                   description="Delete a server"
@@ -273,7 +336,7 @@ export default function ApiDocsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/volumes"
                   method="GET"
                   description="List all volumes in your account"
@@ -299,7 +362,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/volumes/{volume_id}"
                   method="GET"
                   description="Get detailed information about a specific volume"
@@ -315,7 +378,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/volumes"
                   method="POST"
                   description="Create a new volume"
@@ -337,7 +400,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/volumes/{volume_id}"
                   method="DELETE"
                   description="Delete a volume"
@@ -358,7 +421,7 @@ export default function ApiDocsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/billing/balance"
                   method="GET"
                   description="Get your current account balance"
@@ -369,7 +432,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/billing/transactions"
                   method="GET"
                   description="List your recent billing transactions"
@@ -412,7 +475,7 @@ export default function ApiDocsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/account"
                   method="GET"
                   description="Get your account information"
@@ -426,7 +489,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/account/api-key"
                   method="GET"
                   description="Get your current API key"
@@ -435,7 +498,7 @@ export default function ApiDocsPage() {
 }`}
                 />
 
-                <CodeExample 
+                <CodeExample
                   endpoint="/api/account/api-key"
                   method="POST"
                   description="Generate a new API key (invalidates the current key)"
@@ -457,7 +520,11 @@ export default function ApiDocsPage() {
                   Back to API Key Management
                 </Button>
               </Link>
-              <a href="https://digitalocean.com" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://digitalocean.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <Button variant="outline">
                   <ExternalLink className="mr-2 h-4 w-4" />
                   DigitalOcean Documentation

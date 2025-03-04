@@ -28,7 +28,7 @@ export function ConfirmFirewallAction({
   onConfirm,
   title,
   description,
-  confirmationText = 'I CONFIRM DELETION OF RULES',
+  confirmationText = 'I Confirm',
   confirmButtonText = 'Confirm',
   confirmButtonVariant = 'destructive'
 }: ConfirmFirewallActionProps) {

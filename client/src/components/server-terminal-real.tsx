@@ -246,7 +246,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
       // Handle socket events
       socket.on('connect', () => {
         console.log('Socket connected to backend');
-        term.writeln('\x1b[1;32mEstablished connection to CloudRack...\x1b[0m');
+        term.writeln('\x1b[1;32mEstablished connection to SkyVPS360...\x1b[0m');
         setConnectionStatus('Connected to WebSocket');
       });
       
@@ -268,7 +268,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
           setConnectionStatus('Connected');
           term.writeln('\x1b[1;32mSecure connection established!\x1b[0m');
           term.writeln('\x1b[1;32m-----------------------------------------\x1b[0m');
-          term.writeln('\x1b[1;32mWelcome to CloudRack Terminal Access\x1b[0m');
+          term.writeln('\x1b[1;32mWelcome to SkyVPS360 Web Terminal Access\x1b[0m');
           term.writeln('\x1b[1;32m-----------------------------------------\x1b[0m');
           
           // Display authentication method used
@@ -435,7 +435,7 @@ export default function ServerTerminal({ serverId, serverName, ipAddress }: Serv
                 </span>
               ) : (
                 <span className="text-xs text-blue-400 flex items-center gap-1">
-                  <Key className="h-3 w-3" /> CloudRack Terminal Key authentication
+                  <Key className="h-3 w-3" /> SkyVPS360 Terminal Key authentication
                 </span>
               )}
             </div>

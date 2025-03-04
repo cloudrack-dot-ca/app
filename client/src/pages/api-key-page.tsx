@@ -1,10 +1,22 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { AlertCircle, Check, Copy, Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -33,7 +45,7 @@ export default function ApiKeyPage() {
 
   // Use react-query to fetch the API key
   const { data, isLoading } = useQuery<ApiKeyResponse>({
-    queryKey: ['/api/account/api-key'],
+    queryKey: ["/api/account/api-key"],
     enabled: !!user,
     staleTime: 60000, // 1 minute
   });
@@ -52,9 +64,13 @@ export default function ApiKeyPage() {
   }
 
   // Create a mutation for regenerating the API key
-  const regenerateKeyMutation = useMutation<RegenerateKeyResponse, Error, ApiKeyFormValues>({
+  const regenerateKeyMutation = useMutation<
+    RegenerateKeyResponse,
+    Error,
+    ApiKeyFormValues
+  >({
     mutationFn: async (values: ApiKeyFormValues) => {
-      const response = await apiRequest('POST', '/api/account/api-key', values);
+      const response = await apiRequest("POST", "/api/account/api-key", values);
       return response as unknown as RegenerateKeyResponse;
     },
     onSuccess: () => {
@@ -64,7 +80,7 @@ export default function ApiKeyPage() {
       });
       form.reset();
       refetchUser();
-      queryClient.invalidateQueries({ queryKey: ['/api/account/api-key'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/account/api-key"] });
     },
     onError: (error) => {
       setServerError(error.message);
@@ -103,7 +119,8 @@ export default function ApiKeyPage() {
           <CardHeader>
             <CardTitle>API Key Management</CardTitle>
             <CardDescription>
-              View and manage your CloudRack API key for integration with external services
+              View and manage your SkyVPS360 API key for integration with
+              external services
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -114,44 +131,57 @@ export default function ApiKeyPage() {
                 <AlertDescription>{serverError}</AlertDescription>
               </Alert>
             )}
-            
+
             {/* Current API Key Display */}
             <div className="mb-8">
               <h3 className="text-lg font-medium mb-2">Your API Key</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                This key grants full access to your account via the CloudRack API. Keep it secure and never share it.
+                This key grants full access to your account via the SkyVPS360
+                API. Keep it secure and never share it.
               </p>
-              
+
               <div className="flex items-center gap-2 mb-2">
                 <div className="relative flex-grow">
-                  <Input 
-                    type="text" 
-                    value={isLoading ? "Loading..." : (data?.apiKey || "No API key generated")} 
-                    readOnly 
+                  <Input
+                    type="text"
+                    value={
+                      isLoading
+                        ? "Loading..."
+                        : data?.apiKey || "No API key generated"
+                    }
+                    readOnly
                     className="pr-10 font-mono"
                   />
                   {data?.apiKey && (
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="absolute right-0 top-0" 
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute right-0 top-0"
                       onClick={copyApiKey}
                     >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {copied ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </Button>
                   )}
                 </div>
               </div>
             </div>
-            
+
             {/* Regenerate API Key Form */}
             <div>
               <h3 className="text-lg font-medium mb-2">Regenerate API Key</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Regenerating your API key will invalidate your existing key. Any applications using the old key will stop working.
+                Regenerating your API key will invalidate your existing key. Any
+                applications using the old key will stop working.
               </p>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="password"
@@ -164,9 +194,9 @@ export default function ApiKeyPage() {
                       </FormItem>
                     )}
                   />
-                  <Button 
-                    type="submit" 
-                    variant="destructive" 
+                  <Button
+                    type="submit"
+                    variant="destructive"
                     className="w-full"
                     disabled={regenerateKeyMutation.isPending}
                   >
@@ -188,51 +218,58 @@ export default function ApiKeyPage() {
           <CardHeader>
             <CardTitle>API Usage Guide</CardTitle>
             <CardDescription>
-              Learn how to authenticate and use the CloudRack API
+              Learn how to authenticate and use the SkyVPS360 API
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <h3>Authentication</h3>
               <p>
-                Include your API key in the <code>X-API-Key</code> header with every request:
+                Include your API key in the <code>X-API-Key</code> header with
+                every request:
               </p>
               <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                 <code>
-                  {`curl -X GET https://api.cloudrack.ca/v1/servers \\
+                  {`curl -X GET https://skyvps360.com/api/servers \\
   -H "X-API-Key: YOUR_API_KEY"`}
                 </code>
               </pre>
-              
+
               <h3>Examples</h3>
-              
+
               <h4>List Servers</h4>
               <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                 <code>
-                  {`curl -X GET https://api.cloudrack.ca/v1/servers \\
+                  {`curl -X GET https://skyvps360.com/api/servers \\
   -H "X-API-Key: YOUR_API_KEY"`}
                 </code>
               </pre>
-              
+
               <h4>Get Server Details</h4>
               <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                 <code>
-                  {`curl -X GET https://api.cloudrack.ca/v1/servers/SERVER_ID \\
+                  {`curl -X GET https://skyvps360.com/api/servers/SERVER_ID \\
   -H "X-API-Key: YOUR_API_KEY"`}
                 </code>
               </pre>
-              
+
               <h4>Reboot Server</h4>
               <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                 <code>
-                  {`curl -X POST https://api.cloudrack.ca/v1/servers/SERVER_ID/reboot \\
+                  {`curl -X POST https://skyvps360.com/api/servers/SERVER_ID/reboot \\
   -H "X-API-Key: YOUR_API_KEY"`}
                 </code>
               </pre>
-              
+
               <p>
-                For more detailed API documentation, please visit our 
-                <a href="/api-docs" className="ml-1 text-primary hover:underline">API Documentation page</a>.
+                For more detailed API documentation, please visit our
+                <a
+                  href="/api-docs"
+                  className="ml-1 text-primary hover:underline"
+                >
+                  API Documentation page
+                </a>
+                .
               </p>
             </div>
           </CardContent>

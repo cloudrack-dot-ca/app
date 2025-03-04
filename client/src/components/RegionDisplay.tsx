@@ -9,15 +9,17 @@ interface RegionDisplayProps {
 const RegionDisplay: React.FC<RegionDisplayProps> = ({ region, className = '' }) => {
   // Map of region codes to human-readable names
   const regionNames: Record<string, string> = {
-    'nyc1': 'New York City',
-    'nyc3': 'New York City',
-    'sfo3': 'San Francisco',
-    'ams3': 'Amsterdam',
-    'sgp1': 'Singapore',
-    'lon1': 'London',
-    'fra1': 'Frankfurt',
-    'tor1': 'Toronto',
-    'blr1': 'Bangalore',
+    'nyc1': '🇺🇸 New York',
+    'nyc2': '🇺🇸 New York',
+    'nyc3': '🇺🇸 New York','
+    'sfo3': '🇺🇸 San Francisco',
+    'sfo2': '🇺🇸 San Francisco',
+    'ams3': '🇳🇱 Amsterdam',
+    'sgp1': '🇸🇬 Singapore',
+    'lon1': '🇬🇧 London',
+    'tor1': '🇨🇦 Toronto',
+    'blr1': '🇮🇳 Bangalore',
+    'syd1': '🇦🇺 Sydney',
     // Add more region mappings as needed
   };
 

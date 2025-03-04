@@ -25,7 +25,7 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">CloudRack</h1>
+          <h1 className="text-2xl font-bold">SkyVPS360</h1>
           <div className="space-x-4">
             {user ? (
               <Button asChild>
@@ -46,7 +46,7 @@ export default function HomePage() {
           <h1 className="text-5xl font-bold mb-6">High-Performance VPS Hosting</h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Deploy your applications on powerful virtual servers with worldwide locations.
-            Powered by CloudRacks infrastructure.
+            Powered by SkyVPS360 infrastructure.
           </p>
           <Button size="lg" asChild>
             <Link href={user ? "/dashboard" : "/auth"}>Get Started</Link>

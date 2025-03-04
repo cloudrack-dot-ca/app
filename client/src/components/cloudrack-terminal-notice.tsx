@@ -13,9 +13,9 @@ export function CloudRackTerminalNotice() {
       <AlertTitle className="text-blue-800 dark:text-blue-400">Terminal Password Authentication</AlertTitle>
       <AlertDescription className="text-blue-700 dark:text-blue-300">
         <p className="mt-2">
-          CloudRack uses secure password authentication for terminal access to your VPS servers. 
+          SkyVPS360 uses secure password authentication for terminal access to your VPS servers. 
           The root password you set during server creation is used to authenticate your terminal 
-          sessions directly from the CloudRack web interface.
+          sessions directly from the SkyVPS360 web interface.
         </p>
         <p className="mt-2">
           <strong>How it works:</strong> When you create a new server, your chosen root password is securely stored 

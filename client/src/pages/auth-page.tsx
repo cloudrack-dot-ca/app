@@ -6,7 +6,14 @@ import { insertUserSchema } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation } from "wouter";
 import { Loader2, Server } from "lucide-react";
@@ -27,7 +34,7 @@ export default function AuthPage() {
       <div className="flex-1 p-8 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Welcome to CloudRack</CardTitle>
+            <CardTitle>Welcome to SkyVPS360</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login">
@@ -39,7 +46,9 @@ export default function AuthPage() {
                 <LoginForm onSubmit={(data) => loginMutation.mutate(data)} />
               </TabsContent>
               <TabsContent value="register">
-                <RegisterForm onSubmit={(data) => registerMutation.mutate(data)} />
+                <RegisterForm
+                  onSubmit={(data) => registerMutation.mutate(data)}
+                />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -50,8 +59,9 @@ export default function AuthPage() {
           <Server className="h-16 w-16 mx-auto mb-6 text-primary" />
           <h2 className="text-3xl font-bold mb-4">Cloud VPS Hosting</h2>
           <p className="text-muted-foreground">
-            Deploy your applications on high-performance virtual servers powered by CloudRack.
-            Choose from multiple locations worldwide and scale your infrastructure with ease.
+            Deploy your applications on high-performance virtual servers powered
+            by SkyVPS360. Choose from multiple locations worldwide and scale
+            your infrastructure with ease.
           </p>
         </div>
       </div>
@@ -62,7 +72,7 @@ export default function AuthPage() {
 function LoginForm({ onSubmit }: { onSubmit: (data: any) => void }) {
   const form = useForm({
     resolver: zodResolver(insertUserSchema),
-    defaultValues: { username: "", password: "" }
+    defaultValues: { username: "", password: "" },
   });
 
   return (
@@ -94,7 +104,11 @@ function LoginForm({ onSubmit }: { onSubmit: (data: any) => void }) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={form.formState.isSubmitting}
+        >
           {form.formState.isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -109,7 +123,7 @@ function LoginForm({ onSubmit }: { onSubmit: (data: any) => void }) {
 function RegisterForm({ onSubmit }: { onSubmit: (data: any) => void }) {
   const form = useForm({
     resolver: zodResolver(insertUserSchema),
-    defaultValues: { username: "", password: "" }
+    defaultValues: { username: "", password: "" },
   });
 
   return (
@@ -141,7 +155,11 @@ function RegisterForm({ onSubmit }: { onSubmit: (data: any) => void }) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={form.formState.isSubmitting}
+        >
           {form.formState.isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
