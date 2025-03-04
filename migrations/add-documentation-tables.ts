@@ -36,6 +36,6 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await db.end();
+    await pool.end();
     process.exit(0);
   });
