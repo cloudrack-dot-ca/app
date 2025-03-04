@@ -27,8 +27,16 @@ import {
   Terminal,
   Cpu,
   Wifi,
-  Save
+  Save,
+  GripVertical,
+  Move
 } from "lucide-react";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult
+} from '@hello-pangea/dnd';
 
 // Documentation section types
 interface DocArticle {
@@ -420,6 +428,62 @@ export default function DocsPage() {
     }
   });
 
+  const reorderSection = useMutation({
+    mutationFn: async ({ id, order }: { id: number; order: number }) => {
+      const response = await fetch(`/api/docs/sections/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to reorder section');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documentation'] });
+      toast({ title: "Section reordered", description: "The section order has been updated." });
+    },
+    onError: (error) => {
+      toast({
+        title: "Reorder Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const reorderArticle = useMutation({
+    mutationFn: async ({ id, order, sectionId }: { id: number; order: number; sectionId: number }) => {
+      const response = await fetch(`/api/docs/articles/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order, sectionId })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to reorder article');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documentation'] });
+      toast({ title: "Article reordered", description: "The article order has been updated." });
+    },
+    onError: (error) => {
+      toast({
+        title: "Reorder Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Handler for saving a section
   const handleSaveSection = () => {
     if (!sectionTitle.trim()) return;
@@ -486,6 +550,75 @@ export default function DocsPage() {
     }
   };
 
+  // Add handler for drag end
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId, type } = result;
+
+    if (!destination) return;
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    if (type === 'section') {
+      const newSections = Array.from(sections);
+      const [removed] = newSections.splice(source.index, 1);
+      newSections.splice(destination.index, 0, removed);
+
+      // Update order for all affected sections
+      newSections.forEach((section, index) => {
+        if (section.order !== index + 1) {
+          reorderSection.mutate({ id: section.id, order: index + 1 });
+        }
+      });
+    } else if (type === 'article') {
+      const sourceSection = sections.find(s => s.id.toString() === source.droppableId);
+      const destSection = sections.find(s => s.id.toString() === destination.droppableId);
+
+      if (!sourceSection || !destSection) return;
+
+      const sourceArticles = Array.from(sourceSection.children);
+      const destArticles = source.droppableId === destination.droppableId
+        ? sourceArticles
+        : Array.from(destSection.children);
+
+      const [removed] = sourceArticles.splice(source.index, 1);
+      destArticles.splice(destination.index, 0, removed);
+
+      // Update order for affected articles
+      if (source.droppableId === destination.droppableId) {
+        destArticles.forEach((article, index) => {
+          if (article.order !== index + 1) {
+            reorderArticle.mutate({
+              id: article.id,
+              order: index + 1,
+              sectionId: parseInt(destination.droppableId)
+            });
+          }
+        });
+      } else {
+        // Handle moving between sections
+        sourceArticles.forEach((article, index) => {
+          reorderArticle.mutate({
+            id: article.id,
+            order: index + 1,
+            sectionId: parseInt(source.droppableId)
+          });
+        });
+        destArticles.forEach((article, index) => {
+          reorderArticle.mutate({
+            id: article.id,
+            order: index + 1,
+            sectionId: parseInt(destination.droppableId)
+          });
+        });
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-7xl py-8">
@@ -512,10 +645,16 @@ export default function DocsPage() {
             Documentation
           </TabsTrigger>
           {isAdmin && (
-            <TabsTrigger value="editor">
-              <Edit className="h-4 w-4 mr-2" />
-              Editor
-            </TabsTrigger>
+            <>
+              <TabsTrigger value="editor">
+                <Edit className="h-4 w-4 mr-2" />
+                Editor
+              </TabsTrigger>
+              <TabsTrigger value="reorder">
+                <Move className="h-4 w-4 mr-2" />
+                Reorder
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -786,6 +925,93 @@ export default function DocsPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+          </TabsContent>
+        )}
+        {isAdmin && (
+          <TabsContent value="reorder">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reorder Documentation</CardTitle                <CardDescription>
+                  Drag and drop sections and articles to reorder them
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="sections" type="section">
+                    {(provided) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className="space-y-4"
+                      >
+                        {sections.map((section, index) => (
+                          <Draggable
+                            key={section.id}
+                            draggableId={section.id.toString()}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                              >
+                                <Card>
+                                  <CardHeader
+                                    className="cursor-move"
+                                    {...provided.dragHandleProps}
+                                  >
+                                    <CardTitle className="text-lg flex items-center">
+                                      <GripVertical className="h-5 w-5 mr-2 text-muted-foreground" />
+                                      {section.title}
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <Droppable
+                                      droppableId={section.id.toString()}
+                                      type="article"
+                                    >
+                                      {(provided) => (
+                                        <div
+                                          {...provided.droppableProps}
+                                          ref={provided.innerRef}
+                                          className="space-y-2"
+                                        >
+                                          {section.children.map((article, index) => (
+                                            <Draggable
+                                              key={article.id}
+                                              draggableId={article.id.toString()}
+                                              index={index}
+                                            >
+                                              {(provided) => (
+                                                <div
+                                                  ref={provided.innerRef}
+                                                  {...provided.draggableProps}
+                                                  {...provided.dragHandleProps}
+                                                  className="p-3 bg-muted rounded-md cursor-move flex items-center gap-2"
+                                                >
+                                                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                                  {article.title}
+                                                </div>
+                                              )}
+                                            </Draggable>
+                                          ))}
+                                          {provided.placeholder}
+                                        </div>
+                                      )}
+                                    </Droppable>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              </CardContent>
+            </Card>
           </TabsContent>
         )}
       </Tabs>
