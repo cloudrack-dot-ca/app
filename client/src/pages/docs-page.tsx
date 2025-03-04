@@ -910,10 +910,10 @@ export default function DocsPage() {
               <CardContent>
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Sections</h3>
+                    <h3 className="text-lg font-medium mb-4 text-foreground">Sections</h3>
                     <div className="space-y-4">
                       {sections.map((section: DocSection) => (
-                        <div key={section.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                        <div key={section.id} className="flex items-center gap-4 p-4 border border-muted rounded-lg">
                           <Input
                             type="number"
                             min="1"
@@ -921,12 +921,12 @@ export default function DocsPage() {
                             value={section.order}
                             onChange={(e) => {
                               const newOrder = parseInt(e.target.value);
-                              if (!isNaN(newOrder) && newOrder> 0) {
+                              if (!isNaN(newOrder) && newOrder > 0) {
                                 reorderSection.mutate({ id: section.id, order: newOrder });
                               }
                             }}
                           />
-                          <span className="flex-grow font-medium">{section.title}</span>
+                          <span className="flex-grow font-medium text-foreground">{section.title}</span>
                           <span className="text-sm text-muted-foreground whitespace-nowrap">
                             Position: {section.order}
                           </span>
@@ -938,16 +938,16 @@ export default function DocsPage() {
                   <Separator className="my-6" />
 
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Articles by Section</h3>
+                    <h3 className="text-lg font-medium mb-4 text-foreground">Articles by Section</h3>
                     <div className="space-y-6">
                       {sections.map((section: DocSection) => (
-                        <div key={section.id} className="space-y-3 border rounded-lg p-4">
-                          <h4 className="font-medium text-lg">
+                        <div key={section.id} className="space-y-3 border border-muted rounded-lg p-4">
+                          <h4 className="font-medium text-lg text-foreground">
                             {section.title} <span className="text-muted-foreground">(Section {section.order})</span>
                           </h4>
-                          <div className="space-y-2 ml-4">
+                          <div className="space-y-2">
                             {section.children.map((article: DocArticle) => (
-                              <div key={article.id} className="flex items-center gap-4 p-4 border rounded-lg bg-background">
+                              <div key={article.id} className="flex items-center gap-4 p-4 border border-muted rounded-lg bg-card">
                                 <Input
                                   type="number"
                                   min="1"
@@ -960,7 +960,7 @@ export default function DocsPage() {
                                     }
                                   }}
                                 />
-                                <span className="flex-grow">{article.title}</span>
+                                <span className="flex-grow text-foreground">{article.title}</span>
                                 <span className="text-sm text-muted-foreground whitespace-nowrap">
                                   Position: {article.order}
                                 </span>
@@ -969,7 +969,7 @@ export default function DocsPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="mt-2"
+                              className="mt-3"
                               onClick={() => {
                                 const nextOrder = getNextAvailableOrder(section.children);
                                 setIsNewArticle(true);
@@ -990,8 +990,8 @@ export default function DocsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-6 p-4 bg-muted rounded-lg">
-                    <h4 className="font-medium mb-2">Quick Tips:</h4>
+                  <div className="mt-8 p-4 bg-muted rounded-lg">
+                    <h4 className="font-medium mb-2 text-foreground">Quick Tips:</h4>
                     <ul className="list-disc ml-4 space-y-1 text-sm text-muted-foreground">
                       <li>Each section must have a unique order number</li>
                       <li>Articles within each section must have unique order numbers</li>
