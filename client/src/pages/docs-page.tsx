@@ -204,6 +204,7 @@ export default function DocsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("documentation");
   const [activeArticleId, setActiveArticleId] = useState<number | null>(null);
+  const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
 
   // State for editing
   const [editSectionDialogOpen, setEditSectionDialogOpen] = useState(false);
@@ -212,13 +213,21 @@ export default function DocsPage() {
   const [currentArticle, setCurrentArticle] = useState<DocArticle | null>(null);
   const [isNewSection, setIsNewSection] = useState(false);
   const [isNewArticle, setIsNewArticle] = useState(false);
-  const [articleOrder, setArticleOrder] = useState<number>(0); // Added state for article order
+  const [articleOrder, setArticleOrder] = useState<number>(0);
 
   // Form state
   const [sectionTitle, setSectionTitle] = useState("");
   const [articleTitle, setArticleTitle] = useState("");
   const [articleContent, setArticleContent] = useState("");
   const [articleSectionId, setArticleSectionId] = useState<number | null>(null);
+
+  // Effect to handle opening dialog after tab switch
+  useEffect(() => {
+    if (activeTab === "editor" && pendingDialogOpen) {
+      setEditArticleDialogOpen(true);
+      setPendingDialogOpen(false);
+    }
+  }, [activeTab, pendingDialogOpen]);
 
   // React Query client for cache management
   const queryClient = useQueryClient();
@@ -569,6 +578,19 @@ export default function DocsPage() {
     return nextOrder;
   };
 
+
+  // Update the button onClick handler
+  const handleAddArticleAtPosition = (section: DocSection) => {
+    const nextOrder = getNextAvailableOrder(section.children);
+    setIsNewArticle(true);
+    setCurrentArticle(null);
+    setArticleTitle("");
+    setArticleContent("");
+    setArticleSectionId(section.id);
+    setArticleOrder(nextOrder);
+    setActiveTab("editor");
+    setPendingDialogOpen(true);
+  };
 
   return (
     <div className="container mx-auto max-w-7xl py-8">
@@ -970,16 +992,7 @@ export default function DocsPage() {
                               variant="outline"
                               size="sm"
                               className="mt-3"
-                              onClick={() => {
-                                const nextOrder = getNextAvailableOrder(section.children);
-                                setIsNewArticle(true);
-                                setCurrentArticle(null);
-                                setArticleTitle("");
-                                setArticleContent("");
-                                setArticleSectionId(section.id);
-                                setArticleOrder(nextOrder);
-                                setEditArticleDialogOpen(true);
-                              }}
+                              onClick={() => handleAddArticleAtPosition(section)}
                             >
                               <Plus className="h-4 w-4 mr-2" />
                               Add Article at Position {getNextAvailableOrder(section.children)}

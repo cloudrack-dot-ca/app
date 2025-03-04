@@ -118,7 +118,7 @@ async function createTestData() {
     // Test database connection first
     await pool.query('SELECT 1');
     console.log("Database connection successful");
-    
+
     // Run necessary migrations
     try {
       const { runMigration } = await import('../migrations/add-snapshots-table.js');
@@ -131,7 +131,7 @@ async function createTestData() {
     } catch (migrationError) {
       console.error("Error running snapshots migration:", migrationError);
     }
-    
+
     // Create test data including admin user
     await createTestData();
     
@@ -148,9 +148,8 @@ async function createTestData() {
       console.error("Express error handler:", err);
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      
+
       res.status(status).json({ message });
-      // Don't throw the error here, just log it
     });
 
     // importantly only setup vite in development and after
@@ -162,12 +161,10 @@ async function createTestData() {
       serveStatic(app);
     }
 
-    // DigitalOcean App Platform requires PORT 8080
-    const port = process.env.PORT || 8080;
+    // Use port 5000 for development
+    const port = process.env.NODE_ENV === 'development' ? 5000 : (process.env.PORT || 8080);
     console.log(`Starting server on port ${port}, NODE_ENV: ${process.env.NODE_ENV}`);
-    // Add debugging for deployment troubleshooting
-    console.log(`Platform: ${process.env.PLATFORM || 'unknown'}`);
-    console.log(`Host: 0.0.0.0 (listening on all interfaces)`);
+
     server.listen({
       port,
       host: "0.0.0.0", // Explicitly listen on all network interfaces
