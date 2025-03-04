@@ -1,41 +1,29 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-interface MaintenanceSettings {
-  enabled: boolean;
-  maintenanceMessage: string;
-  comingSoonEnabled?: boolean;
-  comingSoonMessage: string;
-  updatedBy?: number;
-}
+import type { MaintenanceSettings } from "@shared/schema";
 
 export default function MaintenanceSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch current maintenance settings from public endpoint
+  // Fetch current maintenance settings
   const { data: settings, isLoading } = useQuery<MaintenanceSettings>({
     queryKey: ['/api/maintenance'],
   });
 
-  // Update maintenance settings using admin endpoint
+  // Update maintenance settings
   const updateSettings = useMutation({
-    mutationFn: async (newSettings: MaintenanceSettings) => {
-      // Include updatedBy field required by the schema
+    mutationFn: async (newSettings: Partial<MaintenanceSettings>) => {
       const response = await fetch('/api/admin/maintenance', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newSettings,
-          updatedBy: 1, // Assuming admin ID is 1 (storm user)
-        }),
+        body: JSON.stringify(newSettings),
       });
       if (!response.ok) throw new Error('Failed to update maintenance settings');
       return response.json();
@@ -56,18 +44,16 @@ export default function MaintenanceSettings() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!settings) return;
-    updateSettings.mutate(settings);
-  };
-
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
+  if (!settings) {
+    return <div>No settings found</div>;
+  }
+
   return (
-    <form onSubmit={handleSubmit}>
+    <div className="container mx-auto py-8">
       <Card>
         <CardHeader>
           <CardTitle>Maintenance Mode Settings</CardTitle>
@@ -76,6 +62,7 @@ export default function MaintenanceSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Maintenance Mode Toggle */}
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Maintenance Mode</Label>
@@ -84,28 +71,40 @@ export default function MaintenanceSettings() {
               </p>
             </div>
             <Switch
-              checked={settings?.enabled}
+              checked={settings.enabled}
               onCheckedChange={(checked) => {
-                if (settings) {
-                  updateSettings.mutate({ ...settings, enabled: checked });
-                }
+                updateSettings.mutate({ enabled: checked });
               }}
             />
           </div>
 
+          {/* Coming Soon Mode Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Coming Soon Mode</Label>
+              <p className="text-sm text-muted-foreground">
+                Enable to show coming soon message on pages under development
+              </p>
+            </div>
+            <Switch
+              checked={settings.comingSoonEnabled}
+              onCheckedChange={(checked) => {
+                updateSettings.mutate({ comingSoonEnabled: checked });
+              }}
+            />
+          </div>
+
+          {/* Maintenance Message */}
           <div className="space-y-2">
             <Label htmlFor="maintenance-message">Maintenance Message</Label>
             <Textarea
               id="maintenance-message"
               placeholder="Enter the message to show during maintenance..."
-              value={settings?.maintenanceMessage}
+              value={settings.maintenanceMessage}
               onChange={(e) => {
-                if (settings) {
-                  updateSettings.mutate({
-                    ...settings,
-                    maintenanceMessage: e.target.value,
-                  });
-                }
+                updateSettings.mutate({
+                  maintenanceMessage: e.target.value,
+                });
               }}
               className="min-h-[100px]"
             />
@@ -114,19 +113,17 @@ export default function MaintenanceSettings() {
             </p>
           </div>
 
+          {/* Coming Soon Message */}
           <div className="space-y-2">
             <Label htmlFor="coming-soon-message">Coming Soon Message</Label>
             <Textarea
               id="coming-soon-message"
               placeholder="Enter the coming soon message..."
-              value={settings?.comingSoonMessage}
+              value={settings.comingSoonMessage}
               onChange={(e) => {
-                if (settings) {
-                  updateSettings.mutate({
-                    ...settings,
-                    comingSoonMessage: e.target.value,
-                  });
-                }
+                updateSettings.mutate({
+                  comingSoonMessage: e.target.value,
+                });
               }}
               className="min-h-[100px]"
             />
@@ -134,12 +131,8 @@ export default function MaintenanceSettings() {
               This message will be shown on pages under development
             </p>
           </div>
-
-          <Button type="submit" disabled={updateSettings.isPending}>
-            Save Changes
-          </Button>
         </CardContent>
       </Card>
-    </form>
+    </div>
   );
 }
