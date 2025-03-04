@@ -3,9 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import RichTextEditor from "react-simple-wysiwyg";
@@ -19,26 +21,14 @@ import {
   Edit,
   Trash2,
   ExternalLink,
-  GripVertical,
+  Server,
+  Shield,
+  HardDrive,
+  Terminal,
+  Cpu,
+  Wifi,
   Save
 } from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
 // Documentation section types
 interface DocArticle {
@@ -208,97 +198,6 @@ const DocSidebar = ({
   );
 };
 
-// Add SortableItem components
-const SortableSection = ({ section, children, onEdit, onDelete }: {
-  section: DocSection;
-  children: React.ReactNode;
-  onEdit: () => void;
-  onDelete: () => void;
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: section.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className="mb-2">
-      <div className="flex items-center justify-between px-2 py-1.5 text-sm font-medium hover:bg-muted rounded-md transition-colors text-foreground">
-        <div className="flex items-center flex-1">
-          <button {...attributes} {...listeners} className="p-1 hover:bg-muted-foreground/10 rounded">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <span className="ml-2">{section.title}</span>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="outline" size="sm" className="text-red-500" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-};
-
-const SortableArticle = ({ article, section, onEdit, onDelete }: {
-  article: DocArticle;
-  section: DocSection;
-  onEdit: () => void;
-  onDelete: () => void;
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: `${section.id}-${article.id}` });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className="flex items-center ml-2 border-l-2 border-muted">
-      <button {...attributes} {...listeners} className="p-1 hover:bg-muted-foreground/10 rounded">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </button>
-      <div className="flex-1 flex items-center justify-between px-3 py-1.5">
-        <span className="text-sm text-muted-foreground">{article.title}</span>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="outline" size="sm" className="text-red-500" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Main component updates
 // Main Documentation Page Component
 export default function DocsPage() {
   const { user } = useAuth();
@@ -587,100 +486,6 @@ export default function DocsPage() {
     }
   };
 
-  // Add new mutations for reordering
-  const reorderSection = useMutation({
-    mutationFn: async ({ id, newOrder }: { id: number; newOrder: number }) => {
-      const response = await fetch(`/api/docs/sections/${id}/reorder`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order: newOrder })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to reorder section');
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documentation'] });
-      toast({ title: "Sections Reordered", description: "The sections have been reordered successfully." });
-    }
-  });
-
-  const reorderArticle = useMutation({
-    mutationFn: async ({ id, sectionId, newOrder }: { id: number; sectionId: number; newOrder: number }) => {
-      const response = await fetch(`/api/docs/articles/${id}/reorder`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sectionId, order: newOrder })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to reorder article');
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documentation'] });
-      toast({ title: "Articles Reordered", description: "The articles have been reordered successfully." });
-    }
-  });
-
-  // Add drag sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  // Add drag end handlers
-  const handleSectionDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    const oldIndex = sections.findIndex(s => s.id === parseInt(active.id));
-    const newIndex = sections.findIndex(s => s.id === parseInt(over.id));
-
-    if (oldIndex !== -1 && newIndex !== -1) {
-      const newSections = arrayMove(sections, oldIndex, newIndex);
-      newSections.forEach((section, index) => {
-        reorderSection.mutate({ id: section.id, newOrder: index });
-      });
-    }
-  };
-
-  const handleArticleDragEnd = (event: DragEndEvent, sectionId: number) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    const section = sections.find(s => s.id === sectionId);
-    if (!section) return;
-
-    const activeId = (active.id as string).split('-')[1];
-    const overId = (over.id as string).split('-')[1];
-
-    const oldIndex = section.children.findIndex(a => a.id.toString() === activeId);
-    const newIndex = section.children.findIndex(a => a.id.toString() === overId);
-
-    if (oldIndex !== -1 && newIndex !== -1) {
-      const newArticles = arrayMove(section.children, oldIndex, newIndex);
-      newArticles.forEach((article, index) => {
-        reorderArticle.mutate({ id: parseInt(article.id.toString()), sectionId, newOrder: index });
-      });
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-7xl py-8">
@@ -747,7 +552,7 @@ export default function DocsPage() {
               <CardHeader>
                 <CardTitle>Documentation Editor</CardTitle>
                 <CardDescription>
-                  Manage documentation sections and articles. Drag items to reorder them.
+                  Manage documentation sections and articles
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -772,62 +577,42 @@ export default function DocsPage() {
                         </Button>
                       </div>
 
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleSectionDragEnd}
-                      >
-                        <SortableContext
-                          items={sections.map(s => s.id.toString())}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div className="border rounded-md divide-y">
-                            {sections.map((section: DocSection) => (
-                              <SortableSection
-                                key={section.id}
-                                section={section}
-                                onEdit={() => {
+                      <div className="border rounded-md divide-y">
+                        {sections.map((section: DocSection) => (
+                          <div key={section.id} className="p-4 flex justify-between items-center">
+                            <div>
+                              <h4 className="font-medium">{section.title}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {section.children.length} articles
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
                                   setIsNewSection(false);
                                   setCurrentSection(section);
                                   setSectionTitle(section.title);
                                   setEditSectionDialogOpen(true);
                                 }}
-                                onDelete={() => handleDeleteSection(section.id)}
                               >
-                                <DndContext
-                                  sensors={sensors}
-                                  collisionDetection={closestCenter}
-                                  onDragEnd={(e) => handleArticleDragEnd(e, section.id)}
-                                >
-                                  <SortableContext
-                                    items={section.children.map(a => `${section.id}-${a.id}`)}
-                                    strategy={verticalListSortingStrategy}
-                                  >
-                                    <div className="mt-1 space-y-1">
-                                      {section.children.map((article: DocArticle) => (
-                                        <SortableArticle
-                                          key={article.id}
-                                          article={article}
-                                          section={section}
-                                          onEdit={() => {
-                                            setIsNewArticle(false);
-                                            setCurrentArticle(article);
-                                            setArticleTitle(article.title);
-                                            setArticleContent(article.content);
-                                            setArticleSectionId(article.sectionId);
-                                            setEditArticleDialogOpen(true);
-                                          }}
-                                          onDelete={() => handleDeleteArticle(article.id)}
-                                        />
-                                      ))}
-                                    </div>
-                                  </SortableContext>
-                                </DndContext>
-                              </SortableSection>
-                            ))}
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-500"
+                                onClick={() => handleDeleteSection(section.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </Button>
+                            </div>
                           </div>
-                        </SortableContext>
-                      </DndContext>
+                        ))}
+                      </div>
                     </div>
                   </TabsContent>
 
