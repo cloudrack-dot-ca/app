@@ -1,7 +1,11 @@
 
 import 'dotenv/config';
-import { register } from 'ts-node';
-register();
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+require('ts-node').register({
+  transpileOnly: true,
+  esm: true
+});
 
 // Add environment validation
 const requiredEnvVars = [
