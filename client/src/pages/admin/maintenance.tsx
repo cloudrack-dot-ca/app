@@ -11,7 +11,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 interface MaintenanceSettings {
   enabled: boolean;
   maintenanceMessage: string;
+  comingSoonEnabled?: boolean;
   comingSoonMessage: string;
+  updatedBy?: number;
 }
 
 export default function MaintenanceSettings() {
@@ -26,10 +28,14 @@ export default function MaintenanceSettings() {
   // Update maintenance settings using admin endpoint
   const updateSettings = useMutation({
     mutationFn: async (newSettings: MaintenanceSettings) => {
+      // Include updatedBy field required by the schema
       const response = await fetch('/api/admin/maintenance', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newSettings),
+        body: JSON.stringify({
+          ...newSettings,
+          updatedBy: 1, // Assuming admin ID is 1 (storm user)
+        }),
       });
       if (!response.ok) throw new Error('Failed to update maintenance settings');
       return response.json();
