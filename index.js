@@ -1,7 +1,7 @@
 
-#!/usr/bin/env node
-require('dotenv').config();
-require('ts-node').register();
+import 'dotenv/config';
+import { register } from 'ts-node';
+register();
 
 // Add environment validation
 const requiredEnvVars = [
@@ -21,4 +21,4 @@ if (missingEnvVars.length > 0) {
 }
 
 console.log("Starting application with database:", process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] || 'unknown');
-require('./server/index.ts');
+import('./server/index.ts');
