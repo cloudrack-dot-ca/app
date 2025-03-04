@@ -29,7 +29,7 @@ export default function MaintenancePage() {
     enabled: false,
     maintenanceMessage: "We're currently performing maintenance. Please check back soon.",
     comingSoonEnabled: false,
-    comingSoonMessage: "This feature is coming soon. Stay tuned for updates!"
+    comingSoonMessage: ""
   });
 
   // Update local state when data is loaded
@@ -38,8 +38,8 @@ export default function MaintenancePage() {
       setLocalSettings({
         enabled: settings.enabled || false,
         maintenanceMessage: settings.maintenanceMessage || "We're currently performing maintenance. Please check back soon.",
-        comingSoonEnabled: settings.comingSoonEnabled || false,
-        comingSoonMessage: settings.comingSoonMessage || "This feature is coming soon. Stay tuned for updates!"
+        comingSoonEnabled: false,
+        comingSoonMessage: ""
       });
     }
   }, [settings]);
@@ -47,8 +47,7 @@ export default function MaintenancePage() {
   const handleMaintenanceToggle = (checked: boolean) => {
     setLocalSettings({
       ...localSettings,
-      enabled: checked,
-      comingSoonEnabled: checked ? false : localSettings.comingSoonEnabled
+      enabled: checked
     });
 
     // Show toast notification
@@ -56,21 +55,6 @@ export default function MaintenancePage() {
       toast.info('Maintenance mode will be enabled when you save changes');
     } else {
       toast.info('Maintenance mode will be disabled when you save changes');
-    }
-  };
-
-  const handleComingSoonToggle = (checked: boolean) => {
-    setLocalSettings({
-      ...localSettings,
-      comingSoonEnabled: checked,
-      enabled: checked ? false : localSettings.enabled
-    });
-
-    // Show toast notification
-    if (checked) {
-      toast.info('Coming Soon mode will be enabled when you save changes');
-    } else {
-      toast.info('Coming Soon mode will be disabled when you save changes');
     }
   };
 
@@ -135,8 +119,7 @@ export default function MaintenancePage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Important</AlertTitle>
             <AlertDescription>
-              Maintenance mode and Coming Soon mode cannot be enabled at the same time.
-              Enabling one will automatically disable the other.
+              When maintenance mode is enabled, only admin users can access the platform.
             </AlertDescription>
           </Alert>
 
@@ -163,35 +146,7 @@ export default function MaintenancePage() {
             </p>
           </div>
 
-          <div className="border-t pt-6">
-            <CardTitle className="mb-2">Coming Soon Mode</CardTitle>
-            <CardDescription className="mb-4">
-              Enable to show coming soon page for features under development
-            </CardDescription>
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="coming-soon-mode">Coming Soon Mode</Label>
-              <Switch 
-                id="coming-soon-mode" 
-                checked={localSettings.comingSoonEnabled}
-                onCheckedChange={handleComingSoonToggle}
-              />
             </div>
-
-            <div className="mt-4 space-y-2">
-              <Label htmlFor="coming-soon-message">Coming Soon Message</Label>
-              <Textarea 
-                id="coming-soon-message" 
-                rows={4}
-                value={localSettings.comingSoonMessage}
-                onChange={(e) => setLocalSettings({...localSettings, comingSoonMessage: e.target.value})}
-                placeholder="Enter message to show for features under development"
-              />
-              <p className="text-sm text-muted-foreground">
-                This message will be shown on pages under development
-              </p>
-            </div>
-          </div>
 
           <Button 
             onClick={handleSave}
