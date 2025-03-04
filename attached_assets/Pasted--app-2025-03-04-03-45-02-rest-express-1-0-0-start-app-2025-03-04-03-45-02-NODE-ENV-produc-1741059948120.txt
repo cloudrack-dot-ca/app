@@ -1,0 +1,34 @@
+[app] [2025-03-04 03:45:02] > rest-express@1.0.0 start
+[app] [2025-03-04 03:45:02] > NODE_ENV=production node dist/index.js
+[app] [2025-03-04 03:45:02] 
+[app] [2025-03-04 03:45:04] NODE_ENV: production
+[app] [2025-03-04 03:45:04] Configuring direct PostgreSQL connection without WebSocket
+[app] [2025-03-04 03:45:04] Using PayPal Live Environment
+[app] [2025-03-04 03:45:04] Successfully connected to database
+[app] [2025-03-04 03:45:04] Database connection successful
+[app] [2025-03-04 03:45:04] Running migration: add-snapshots-table
+[app] [2025-03-04 03:45:04] Successfully created snapshots table
+[app] [2025-03-04 03:45:04] Successfully added indexes to snapshots table
+[app] [2025-03-04 03:45:04] Snapshots table migration completed successfully
+[app] [2025-03-04 03:45:04] 3:45:04 AM [admin] Admin routes registered
+[app] [2025-03-04 03:45:04] 3:45:04 AM [express] serving on port 5000
+[app] [2025-03-04 03:45:04] npm notice
+[app] [2025-03-04 03:45:04] npm notice New major version of npm available! 10.9.2 -> 11.1.0
+[app] [2025-03-04 03:45:04] npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.1.0
+[app] [2025-03-04 03:45:04] npm notice To update run: npm install -g npm@11.1.0
+[app] [2025-03-04 03:45:04] npm notice
+[app] [2025-03-04 03:45:05]   Yes, I want to remove 1 table, 
+[app] [2025-03-04 03:45:05] > rest-express@1.0.0 start
+[app] [2025-03-04 03:45:05] > NODE_ENV=production node dist/index.js
+[app] [2025-03-04 03:45:05] 
+[app] [2025-03-04 03:45:08] NODE_ENV: production
+[app] [2025-03-04 03:45:08] Configuring direct PostgreSQL connection without WebSocket
+[app] [2025-03-04 03:45:08] Using PayPal Live Environment
+[app] [2025-03-04 03:45:08] Successfully connected to database
+[app] [2025-03-04 03:45:08] Database connection successful
+[app] [2025-03-04 03:45:08] Running migration: add-snapshots-table
+[app] [2025-03-04 03:45:08] Successfully created snapshots table
+[app] [2025-03-04 03:45:08] Successfully added indexes to snapshots table
+[app] [2025-03-04 03:45:08] Snapshots table migration completed successfully
+[app] [2025-03-04 03:45:08] 3:45:08 AM [admin] Admin routes registered
+[app] [2025-03-04 03:45:08] 3:45:08 AM [express] serving on port 5000
