@@ -2838,5 +2838,43 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
   });
 
+  // Add reordering functionality for sections
+  app.patch("/api/docs/sections/:id/reorder", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+
+    try {
+      const sectionId = parseInt(req.params.id);
+      const { order } = req.body;
+
+      if (typeof order !== 'number' || order < 1) {
+        return res.status(400).json({ message: "Invalid order number" });
+      }
+
+      const section = await storage.updateDocSection(sectionId, { order });
+      res.json(section);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  // Add reordering functionality for articles  
+  app.patch("/api/docs/articles/:id/reorder", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+
+    try {
+      const articleId = parseInt(req.params.id);
+      const { order } = req.body;
+
+      if (typeof order !== 'number' || order < 1) {
+        return res.status(400).json({ message: "Invalid order number" });
+      }
+
+      const article = await storage.updateDocArticle(articleId, { order });
+      res.json(article);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
   return httpServer;
 }

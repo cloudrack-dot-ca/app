@@ -27,7 +27,8 @@ import {
   Terminal,
   Cpu,
   Wifi,
-  Save
+  Save,
+  MoveVertical
 } from "lucide-react";
 
 // Documentation section types
@@ -420,6 +421,64 @@ export default function DocsPage() {
     }
   });
 
+  // Add reorderSection mutation
+  const reorderSection = useMutation({
+    mutationFn: async (data: { id: number, order: number }) => {
+      const response = await fetch(`/api/docs/sections/${data.id}/reorder`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: data.order })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to reorder section');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documentation'] });
+      toast({ title: "Section Reordered", description: "The section order has been updated successfully." });
+    },
+    onError: (error) => {
+      toast({
+        title: "Section Reorder Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Add reorderArticle mutation
+  const reorderArticle = useMutation({
+    mutationFn: async (data: { id: number, order: number }) => {
+      const response = await fetch(`/api/docs/articles/${data.id}/reorder`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: data.order })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to reorder article');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documentation'] });
+      toast({ title: "Article Reordered", description: "The article order has been updated successfully." });
+    },
+    onError: (error) => {
+      toast({
+        title: "Article Reorder Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Handler for saving a section
   const handleSaveSection = () => {
     if (!sectionTitle.trim()) return;
@@ -512,10 +571,16 @@ export default function DocsPage() {
             Documentation
           </TabsTrigger>
           {isAdmin && (
-            <TabsTrigger value="editor">
-              <Edit className="h-4 w-4 mr-2" />
-              Editor
-            </TabsTrigger>
+            <>
+              <TabsTrigger value="editor">
+                <Edit className="h-4 w-4 mr-2" />
+                Editor
+              </TabsTrigger>
+              <TabsTrigger value="reorder">
+                <MoveVertical className="h-4 w-4 mr-2" />
+                Reorder
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -786,6 +851,75 @@ export default function DocsPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+          </TabsContent>
+        )}
+        {isAdmin && (
+          <TabsContent value="reorder">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reorder Documentation</CardTitle>
+                <CardDescription>
+                  Adjust the order of sections and articles using numbers. Lower numbers appear first.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Sections</h3>
+                    <div className="space-y-4">
+                      {sections.map((section: DocSection) => (
+                        <div key={section.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                          <Input
+                            type="number"
+                            min="1"
+                            className="w-24"
+                            value={section.order}
+                            onChange={(e) => {
+                              const newOrder = parseInt(e.target.value);
+                              if (!isNaN(newOrder) && newOrder > 0) {
+                                reorderSection.mutate({ id: section.id, order: newOrder });
+                              }
+                            }}
+                          />
+                          <span className="flex-grow font-medium">{section.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Articles by Section</h3>
+                    <div className="space-y-6">
+                      {sections.map((section: DocSection) => (
+                        <div key={section.id} className="space-y-2">
+                          <h4 className="font-medium text-muted-foreground">{section.title}</h4>
+                          <div className="space-y-2 ml-4">
+                            {section.children.map((article: DocArticle) => (
+                              <div key={article.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  className="w-24"
+                                  value={article.order}
+                                  onChange={(e) => {
+                                    const newOrder = parseInt(e.target.value);
+                                    if (!isNaN(newOrder) && newOrder > 0) {
+                                      reorderArticle.mutate({ id: article.id, order: newOrder });
+                                    }
+                                  }}
+                                />
+                                <span className="flex-grow">{article.title}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>              </CardContent>
+            </Card>
           </TabsContent>
         )}
       </Tabs>
