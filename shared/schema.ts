@@ -223,7 +223,7 @@ export const docSections = pgTable("doc_sections", {
 
 export const docArticles = pgTable("doc_articles", {
   id: serial("id").primaryKey(),
-  sectionId: integer("section_id").notNull(),
+  sectionId: integer("section_id").notNull().references(() => docSections.id, { onDelete: 'cascade' }),
   title: text("title").notNull(),
   content: text("content").notNull(),
   order: integer("order").notNull(),

@@ -1,4 +1,4 @@
-import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, serverMetrics, ipBans, snapshots, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey, type ServerMetric, type IPBan, type InsertIPBan, type Snapshot, type InsertSnapshot } from "@shared/schema";
+import { users, servers, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, serverMetrics, ipBans, snapshots, docSections, docArticles, type User, type Server, type Volume, type InsertUser, type BillingTransaction, type SupportTicket, type SupportMessage, type SSHKey, type ServerMetric, type IPBan, type InsertIPBan, type Snapshot, type InsertSnapshot, type DocSection, type DocArticle, type InsertDocSection, type InsertDocArticle } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, isNull } from "drizzle-orm";
 import session from "express-session";
@@ -34,7 +34,7 @@ export interface IStorage {
   createServerMetric(metric: Omit<ServerMetric, "id">): Promise<ServerMetric>;
   getLatestServerMetric(serverId: number): Promise<ServerMetric | undefined>;
   getServerMetricHistory(serverId: number, limit?: number): Promise<ServerMetric[]>;
-  
+
   createTransaction(transaction: Omit<BillingTransaction, "id">): Promise<BillingTransaction>;
   getTransactionsByUser(userId: number): Promise<BillingTransaction[]>;
   getAllTransactions(): Promise<BillingTransaction[]>; // Added for admin dashboard
@@ -43,7 +43,7 @@ export interface IStorage {
   getTicket(id: number): Promise<SupportTicket | undefined>;
   getTicketsByUser(userId: number): Promise<SupportTicket[]>;
   getTicketsByServer(serverId: number): Promise<SupportTicket[]>;
-  getAllTickets(): Promise<SupportTicket[]>; 
+  getAllTickets(): Promise<SupportTicket[]>;
   updateTicketStatus(id: number, status: string): Promise<SupportTicket>;
   updateTicketPriority(id: number, priority: string): Promise<SupportTicket>;
   updateTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket>;
@@ -66,7 +66,7 @@ export interface IStorage {
   createIPBan(ban: Omit<IPBan, "id" | "createdAt">): Promise<IPBan>;
   updateIPBan(id: number, updates: Partial<IPBan>): Promise<IPBan>;
   deleteIPBan(id: number): Promise<void>;
-  
+
   // Snapshot functionality
   getSnapshot(id: number): Promise<Snapshot | undefined>;
   getSnapshotsByServer(serverId: number): Promise<Snapshot[]>;
@@ -74,7 +74,21 @@ export interface IStorage {
   createSnapshot(snapshot: Omit<Snapshot, "id">): Promise<Snapshot>;
   updateSnapshot(id: number, updates: Partial<Snapshot>): Promise<Snapshot>;
   deleteSnapshot(id: number): Promise<void>;
-  
+
+  // Documentation methods
+  createDocSection(section: InsertDocSection): Promise<DocSection>;
+  getDocSection(id: number): Promise<DocSection | undefined>;
+  getAllDocSections(): Promise<DocSection[]>;
+  updateDocSection(id: number, updates: Partial<DocSection>): Promise<DocSection>;
+  deleteDocSection(id: number): Promise<void>;
+
+  createDocArticle(article: InsertDocArticle): Promise<DocArticle>;
+  getDocArticle(id: number): Promise<DocArticle | undefined>;
+  getDocArticlesBySection(sectionId: number): Promise<DocArticle[]>;
+  getAllDocArticles(): Promise<DocArticle[]>;
+  updateDocArticle(id: number, updates: Partial<DocArticle>): Promise<DocArticle>;
+  deleteDocArticle(id: number): Promise<void>;
+
   sessionStore: session.Store;
 }
 
@@ -106,7 +120,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
-  
+
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
@@ -150,7 +164,7 @@ export class DatabaseStorage implements IStorage {
           ipv6_address, specs, application, last_monitored, root_password
           FROM servers WHERE user_id = $1`;
         const result = await pool.query(query, [userId]);
-        
+
         // Convert snake_case keys to camelCase
         return result.rows.map(row => ({
           id: Number(row.id),
@@ -191,7 +205,7 @@ export class DatabaseStorage implements IStorage {
           ipv6_address, specs, application, last_monitored, root_password, is_suspended 
           FROM servers`;
         const result = await pool.query(query);
-        
+
         // Convert snake_case keys to camelCase
         return result.rows.map(row => ({
           id: Number(row.id),
@@ -272,7 +286,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(billingTransactions.userId, userId))
       .orderBy(billingTransactions.createdAt);
   }
-  
+
   async getAllTransactions(): Promise<BillingTransaction[]> {
     return await db
       .select()
@@ -284,7 +298,7 @@ export class DatabaseStorage implements IStorage {
     const [newTicket] = await db.insert(supportTickets)
       .values({
         ...ticket,
-        status: 'open', 
+        status: 'open',
       })
       .returning();
     return newTicket;
@@ -317,7 +331,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateTicketStatus(id: number, status: string): Promise<SupportTicket> {
     const [updatedTicket] = await db.update(supportTickets)
-      .set({ 
+      .set({
         status,
         updatedAt: sql`CURRENT_TIMESTAMP`
       })
@@ -328,7 +342,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateTicketPriority(id: number, priority: string): Promise<SupportTicket> {
     const [updatedTicket] = await db.update(supportTickets)
-      .set({ 
+      .set({
         priority,
         updatedAt: sql`CURRENT_TIMESTAMP`
       })
@@ -339,7 +353,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket> {
     const [updatedTicket] = await db.update(supportTickets)
-      .set({ 
+      .set({
         ...updates,
         updatedAt: sql`CURRENT_TIMESTAMP`
       })
@@ -372,11 +386,11 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedMessage;
   }
-  
+
   async deleteMessage(id: number): Promise<void> {
     await db.delete(supportMessages).where(eq(supportMessages.id, id));
   }
-  
+
   async deleteTicket(id: number): Promise<void> {
     await db.delete(supportTickets).where(eq(supportTickets.id, id));
   }
@@ -504,6 +518,66 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSnapshot(id: number): Promise<void> {
     await db.delete(snapshots).where(eq(snapshots.id, id));
+  }
+
+  // Documentation methods implementation
+  async createDocSection(section: InsertDocSection): Promise<DocSection> {
+    const [newSection] = await db.insert(docSections).values(section).returning();
+    return newSection;
+  }
+
+  async getDocSection(id: number): Promise<DocSection | undefined> {
+    const [section] = await db.select().from(docSections).where(eq(docSections.id, id));
+    return section;
+  }
+
+  async getAllDocSections(): Promise<DocSection[]> {
+    return await db.select().from(docSections).orderBy(docSections.order);
+  }
+
+  async updateDocSection(id: number, updates: Partial<DocSection>): Promise<DocSection> {
+    const [section] = await db.update(docSections)
+      .set(updates)
+      .where(eq(docSections.id, id))
+      .returning();
+    return section;
+  }
+
+  async deleteDocSection(id: number): Promise<void> {
+    await db.delete(docSections).where(eq(docSections.id, id));
+  }
+
+  async createDocArticle(article: InsertDocArticle): Promise<DocArticle> {
+    const [newArticle] = await db.insert(docArticles).values(article).returning();
+    return newArticle;
+  }
+
+  async getDocArticle(id: number): Promise<DocArticle | undefined> {
+    const [article] = await db.select().from(docArticles).where(eq(docArticles.id, id));
+    return article;
+  }
+
+  async getDocArticlesBySection(sectionId: number): Promise<DocArticle[]> {
+    return await db.select()
+      .from(docArticles)
+      .where(eq(docArticles.sectionId, sectionId))
+      .orderBy(docArticles.order);
+  }
+
+  async getAllDocArticles(): Promise<DocArticle[]> {
+    return await db.select().from(docArticles).orderBy(docArticles.order);
+  }
+
+  async updateDocArticle(id: number, updates: Partial<DocArticle>): Promise<DocArticle> {
+    const [article] = await db.update(docArticles)
+      .set(updates)
+      .where(eq(docArticles.id, id))
+      .returning();
+    return article;
+  }
+
+  async deleteDocArticle(id: number): Promise<void> {
+    await db.delete(docArticles).where(eq(docArticles.id, id));
   }
 }
 
