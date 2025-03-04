@@ -11,8 +11,24 @@ import NetworkUsage from "@/components/network-usage";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 // Extended Server interface with additional properties for UI display
 // Don't extend SchemaServer since the rootPassword types don't match
@@ -26,7 +42,7 @@ interface Server {
   status: string;
   ipAddress: string | null;
   ipv6Address: string | null;
-  specs: { memory: number; vcpus: number; disk: number; } | null;
+  specs: { memory: number; vcpus: number; disk: number } | null;
   application: string | null;
   lastMonitored: Date | null;
   rootPassword?: string | null; // Make optional with null
@@ -36,7 +52,14 @@ interface Server {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
@@ -48,16 +71,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { 
-  HardDrive, 
-  Server as ServerIcon, 
-  ArrowLeft, 
-  Trash2, 
-  RefreshCw, 
-  Power, 
-  PowerOff, 
+import {
+  HardDrive,
+  Server as ServerIcon,
+  ArrowLeft,
+  Trash2,
+  RefreshCw,
+  Power,
+  PowerOff,
   Terminal,
   CopyPlus,
   Edit,
@@ -81,7 +104,7 @@ import {
   RotateCcw,
   AlertTriangle,
   Clock,
-  Hash as HashIcon
+  Hash as HashIcon,
 } from "lucide-react";
 import VolumeManager from "@/components/volume-manager";
 import ServerMonitoring from "@/components/server-monitoring";
@@ -92,16 +115,19 @@ import { Separator } from "@/components/ui/separator";
 // Schema for firewall disable confirmation
 // Using a regular string for the schema instead of literal
 const confirmFirewallDisableSchema = z.object({
-  confirmationText: z.string()
-    .refine(val => val === "I CONFIRM DELETION OF RULES", {
-      message: "You must type 'I CONFIRM DELETION OF RULES' exactly to confirm"
+  confirmationText: z
+    .string()
+    .refine((val) => val === "I CONFIRM DELETION OF RULES", {
+      message: "You must type 'I CONFIRM DELETION OF RULES' exactly to confirm",
     }),
 });
 
-type ConfirmFirewallDisableFormValues = z.infer<typeof confirmFirewallDisableSchema>;
+type ConfirmFirewallDisableFormValues = z.infer<
+  typeof confirmFirewallDisableSchema
+>;
 
 interface FirewallRule {
-  protocol: 'tcp' | 'udp' | 'icmp';
+  protocol: "tcp" | "udp" | "icmp";
   ports: string;
   sources?: {
     addresses?: string[];
@@ -123,26 +149,36 @@ const commonPortDescriptions: Record<string, string> = {
   "21": "FTP",
   "25": "SMTP",
   "53": "DNS",
-  "3389": "RDP"
+  "3389": "RDP",
 };
 
 // Get friendly name for the port
 const getPortDescription = (port: string) => {
-  return port === "all" 
-    ? "All Ports" 
-    : commonPortDescriptions[port] 
-      ? `${port} (${commonPortDescriptions[port]})` 
-      : port.includes("-") 
-        ? `Port Range ${port}` 
+  return port === "all"
+    ? "All Ports"
+    : commonPortDescriptions[port]
+      ? `${port} (${commonPortDescriptions[port]})`
+      : port.includes("-")
+        ? `Port Range ${port}`
         : `Port ${port}`;
 };
 
 // ActiveFirewallCheck component to check if a firewall exists
-function ActiveFirewallCheck({ serverId, children }: { serverId: number, children: (exists: boolean) => JSX.Element }) {
-  const { data: firewall, isLoading, refetch } = useQuery({
-    queryKey: ['/api/servers', serverId, 'firewall'],
-    queryFn: () => fetch(`/api/servers/${serverId}/firewall`)
-      .then(res => {
+function ActiveFirewallCheck({
+  serverId,
+  children,
+}: {
+  serverId: number;
+  children: (exists: boolean) => JSX.Element;
+}) {
+  const {
+    data: firewall,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["/api/servers", serverId, "firewall"],
+    queryFn: () =>
+      fetch(`/api/servers/${serverId}/firewall`).then((res) => {
         if (res.status === 404) {
           return null;
         }
@@ -153,7 +189,7 @@ function ActiveFirewallCheck({ serverId, children }: { serverId: number, childre
       }),
     refetchOnWindowFocus: true,
     refetchInterval: 3000, // Refresh every 3 seconds to get updated status
-    staleTime: 2000       // Consider data stale after 2 seconds
+    staleTime: 2000, // Consider data stale after 2 seconds
   });
 
   // Effect to refetch when the component mounts or when serverId changes
@@ -178,12 +214,17 @@ function ActiveFirewallCheck({ serverId, children }: { serverId: number, childre
 function ActiveFirewallRules({ serverId }: { serverId: number }) {
   const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   // Fetch current firewall configuration
-  const { data: firewall, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/servers', serverId, 'firewall'],
-    queryFn: () => fetch(`/api/servers/${serverId}/firewall`)
-      .then(res => {
+  const {
+    data: firewall,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["/api/servers", serverId, "firewall"],
+    queryFn: () =>
+      fetch(`/api/servers/${serverId}/firewall`).then((res) => {
         if (res.status === 404) {
           // No firewall exists yet
           return { inbound_rules: [], outbound_rules: [] };
@@ -195,9 +236,9 @@ function ActiveFirewallRules({ serverId }: { serverId: number }) {
       }),
     refetchOnWindowFocus: true,
     refetchInterval: 3000, // Refresh every 3 seconds to get updated status
-    staleTime: 2000       // Consider data stale after 2 seconds
+    staleTime: 2000, // Consider data stale after 2 seconds
   });
-  
+
   // Effect to refetch when the component mounts or when serverId changes
   useEffect(() => {
     refetch();
@@ -216,7 +257,9 @@ function ActiveFirewallRules({ serverId }: { serverId: number }) {
     return (
       <div className="p-4 text-center">
         <p className="text-sm text-red-500">Error loading firewall rules.</p>
-        <p className="text-xs text-muted-foreground mt-1">Please use the "Configure Firewall" button to manage rules.</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Please use the "Configure Firewall" button to manage rules.
+        </p>
       </div>
     );
   }
@@ -225,41 +268,56 @@ function ActiveFirewallRules({ serverId }: { serverId: number }) {
     return (
       <div className="p-4 text-center bg-yellow-50 border border-yellow-200 rounded-lg">
         <Shield className="h-5 w-5 text-yellow-600 mx-auto mb-2" />
-        <p className="text-sm text-yellow-700">No firewall has been created yet</p>
-        <p className="text-xs text-yellow-600 mt-1">Click "Manage Firewall" to create a firewall first</p>
+        <p className="text-sm text-yellow-700">
+          No firewall has been created yet
+        </p>
+        <p className="text-xs text-yellow-600 mt-1">
+          Click "Manage Firewall" to create a firewall first
+        </p>
       </div>
     );
   }
-  
+
   if (!firewall.inbound_rules || firewall.inbound_rules.length === 0) {
     return (
       <div className="p-4 text-center bg-yellow-50 border border-yellow-200 rounded-lg">
         <Shield className="h-5 w-5 text-yellow-600 mx-auto mb-2" />
         <p className="text-sm text-yellow-700">No firewall rules configured.</p>
-        <p className="text-xs text-yellow-600 mt-1">Use "Manage Firewall" to set up protection.</p>
+        <p className="text-xs text-yellow-600 mt-1">
+          Use "Manage Firewall" to set up protection.
+        </p>
       </div>
     );
   }
 
   // Rules to display (limit to the first few unless expanded)
-  const displayRules = isExpanded 
-    ? firewall.inbound_rules 
+  const displayRules = isExpanded
+    ? firewall.inbound_rules
     : firewall.inbound_rules.slice(0, 3);
 
   return (
     <div>
       {displayRules.map((rule: FirewallRule, index: number) => (
-        <div key={`rule-${index}`} className="flex justify-between items-center p-2 bg-muted rounded-md mb-2">
+        <div
+          key={`rule-${index}`}
+          className="flex justify-between items-center p-2 bg-muted rounded-md mb-2"
+        >
           <div className="flex items-center">
             <div className="bg-green-100 text-green-800 p-1 rounded-full mr-3">
-              {rule.protocol === 'tcp' ? <Globe className="h-4 w-4" /> : 
-               rule.protocol === 'udp' ? <Wifi className="h-4 w-4" /> : 
-               <Shield className="h-4 w-4" />}
+              {rule.protocol === "tcp" ? (
+                <Globe className="h-4 w-4" />
+              ) : rule.protocol === "udp" ? (
+                <Wifi className="h-4 w-4" />
+              ) : (
+                <Shield className="h-4 w-4" />
+              )}
             </div>
             <div>
-              <p className="text-sm font-medium">{rule.protocol.toUpperCase()} {getPortDescription(rule.ports)}</p>
+              <p className="text-sm font-medium">
+                {rule.protocol.toUpperCase()} {getPortDescription(rule.ports)}
+              </p>
               <p className="text-xs text-muted-foreground">
-                From: {rule.sources?.addresses?.join(', ') || 'Any source'}
+                From: {rule.sources?.addresses?.join(", ") || "Any source"}
               </p>
             </div>
           </div>
@@ -268,16 +326,18 @@ function ActiveFirewallRules({ serverId }: { serverId: number }) {
           </Badge>
         </div>
       ))}
-      
+
       {firewall.inbound_rules.length > 3 && (
         <div className="text-center mt-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
             className="text-sm"
           >
-            {isExpanded ? 'Show less' : `Show ${firewall.inbound_rules.length - 3} more rules`}
+            {isExpanded
+              ? "Show less"
+              : `Show ${firewall.inbound_rules.length - 3} more rules`}
           </Button>
         </div>
       )}
@@ -287,17 +347,17 @@ function ActiveFirewallRules({ serverId }: { serverId: number }) {
 
 // Map regions to flag emojis
 const regionFlags: { [key: string]: string } = {
-  'nyc1': '🇺🇸 New York',
-  'nyc2': '🇺🇸 New York',
-  'nyc3': '🇺🇸 New York','
-  'sfo3': '🇺🇸 San Francisco',
-  'sfo2': '🇺🇸 San Francisco',
-  'ams3': '🇳🇱 Amsterdam',
-  'sgp1': '🇸🇬 Singapore',
-  'lon1': '🇬🇧 London',
-  'tor1': '🇨🇦 Toronto',
-  'blr1': '🇮🇳 Bangalore',
-  'syd1': '🇦🇺 Sydney',
+  nyc1: "🇺🇸 New York",
+  nyc2: "🇺🇸 New York",
+  nyc3: "🇺🇸 New York",
+  sfo3: "🇺🇸 San Francisco",
+  sfo2: "🇺🇸 San Francisco",
+  ams3: "🇳🇱 Amsterdam",
+  sgp1: "🇸🇬 Singapore",
+  lon1: "🇬🇧 London",
+  tor1: "🇨🇦 Toronto",
+  blr1: "🇮🇳 Bangalore",
+  syd1: "🇦🇺 Sydney",
 };
 
 // Schema already defined above
@@ -306,28 +366,28 @@ export default function ServerDetailPage() {
   // Extract and validate params - simplified approach for better compatibility
   const params = useParams<{ id: string }>();
   const pathId = params?.id;
-  
+
   // Form for disabling firewall with confirmation text
   const disableFirewallForm = useForm<ConfirmFirewallDisableFormValues>({
     resolver: zodResolver(confirmFirewallDisableSchema),
     defaultValues: {
-      confirmationText: "" as any
-    }
+      confirmationText: "" as any,
+    },
   });
-  
+
   // Debug info
   console.log("ServerDetailPage Params:", params);
   console.log("Path ID:", pathId);
   console.log("URL Path:", window.location.pathname);
-  
+
   // Parse the server ID from the URL
   let serverId: number = -1;
-  
+
   if (pathId) {
     try {
       // Parse the server ID
       serverId = parseInt(pathId);
-      
+
       // If we get an invalid ID, show an error
       if (isNaN(serverId) || serverId <= 0) {
         console.error("Invalid server ID in URL:", pathId);
@@ -360,14 +420,19 @@ export default function ServerDetailPage() {
   const [newPassword, setNewPassword] = useState("");
   const [ipv6Enabled, setIpv6Enabled] = useState(false);
   const [confirmIpv6Enable, setConfirmIpv6Enable] = useState(false);
-  
+
   // Parse URL to check for tab query parameter
   const searchParams = new URLSearchParams(window.location.search);
-  const tabParam = searchParams.get('tab');
+  const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabParam || "overview");
-  
+
   // Fetch server details directly with a simplified approach
-  const { data: server, isLoading: serverLoading, error: serverError, refetch: refetchServer } = useQuery<Server>({
+  const {
+    data: server,
+    isLoading: serverLoading,
+    error: serverError,
+    refetch: refetchServer,
+  } = useQuery<Server>({
     queryKey: [`/api/servers/${serverId}`],
     queryFn: async () => {
       const response = await fetch(`/api/servers/${serverId}`);
@@ -383,7 +448,7 @@ export default function ServerDetailPage() {
     refetchOnWindowFocus: true,
     refetchOnMount: true, // Always refetch when component mounts
   });
-  
+
   // Log any server fetch errors to help debug
   useEffect(() => {
     if (serverError) {
@@ -412,7 +477,10 @@ export default function ServerDetailPage() {
   // Server action mutations
   const rebootServerMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", `/api/servers/${serverId}/actions/reboot`);
+      return await apiRequest(
+        "POST",
+        `/api/servers/${serverId}/actions/reboot`,
+      );
     },
     onSuccess: () => {
       toast({
@@ -427,12 +495,15 @@ export default function ServerDetailPage() {
         description: error.message || "Failed to reboot server",
         variant: "destructive",
       });
-    }
+    },
   });
 
   const powerActionMutation = useMutation({
     mutationFn: async (action: "start" | "stop") => {
-      return await apiRequest("POST", `/api/servers/${serverId}/actions/${action}`);
+      return await apiRequest(
+        "POST",
+        `/api/servers/${serverId}/actions/${action}`,
+      );
     },
     onSuccess: (_data, variables) => {
       toast({
@@ -447,40 +518,47 @@ export default function ServerDetailPage() {
         description: error.message || "Failed to perform power action",
         variant: "destructive",
       });
-    }
+    },
   });
 
   const updatePasswordMutation = useMutation({
     mutationFn: async (password: string) => {
       // CloudRack integration for password update
-      return await apiRequest("PATCH", `/api/servers/${serverId}/password`, { 
+      return await apiRequest("PATCH", `/api/servers/${serverId}/password`, {
         password,
-        cloudrack_integration: true  // Flag to indicate we're using CloudRack API for this
+        cloudrack_integration: true, // Flag to indicate we're using CloudRack API for this
       });
     },
     onSuccess: () => {
       toast({
         title: "Password Updated via CloudRack",
-        description: "Your server password has been updated through the CloudRack API and will be effective immediately.",
+        description:
+          "Your server password has been updated through the CloudRack API and will be effective immediately.",
       });
       setIsEditingPassword(false);
       setNewPassword("");
-      
+
       // Refresh the server details to update the UI
-      queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/details`] });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/servers/${serverId}/details`],
+      });
     },
     onError: (error: Error) => {
       toast({
         title: "CloudRack API Error",
-        description: error.message || "Failed to update password through CloudRack API. Please try again.",
+        description:
+          error.message ||
+          "Failed to update password through CloudRack API. Please try again.",
         variant: "destructive",
       });
-    }
+    },
   });
 
   const toggleIPv6Mutation = useMutation({
     mutationFn: async (enabled: boolean) => {
-      return await apiRequest("PATCH", `/api/servers/${serverId}/ipv6`, { enabled });
+      return await apiRequest("PATCH", `/api/servers/${serverId}/ipv6`, {
+        enabled,
+      });
     },
     onSuccess: (_, variables) => {
       setIpv6Enabled(variables);
@@ -496,7 +574,7 @@ export default function ServerDetailPage() {
         description: error.message || "Failed to update IPv6 settings",
         variant: "destructive",
       });
-    }
+    },
   });
 
   const deleteServerMutation = useMutation({
@@ -539,22 +617,23 @@ export default function ServerDetailPage() {
 
   if (!server) {
     // Add console logging to help diagnose the issue
-    console.log("Server data not available:", { serverError, serverId, userLoggedIn: !!user });
-    
+    console.log("Server data not available:", {
+      serverError,
+      serverId,
+      userLoggedIn: !!user,
+    });
+
     return (
       <div className="container py-8">
         <div className="text-center">
           <h2 className="text-2xl font-bold">Server not found</h2>
           <p className="text-muted-foreground mt-2">
-            {serverError 
-              ? `Error: ${(serverError as Error).message}` 
+            {serverError
+              ? `Error: ${(serverError as Error).message}`
               : "The requested server could not be found or you don't have permission to access it."}
           </p>
           <div className="mt-6 space-y-4">
-            <Button 
-              className="mx-2" 
-              onClick={() => navigate("/dashboard")}
-            >
+            <Button className="mx-2" onClick={() => navigate("/dashboard")}>
               Return to Dashboard
             </Button>
             <div className="flex flex-col gap-2 items-center mt-2">
@@ -565,7 +644,7 @@ export default function ServerDetailPage() {
                   // Refetch both user and server data
                   refetchUser();
                   refetchServer(); // Use the refetch function directly
-                  
+
                   toast({
                     title: "Refreshing data",
                     description: "Attempting to reload server information...",
@@ -576,7 +655,8 @@ export default function ServerDetailPage() {
                 Try Again
               </Button>
               <p className="text-xs text-muted-foreground">
-                If problems persist, try refreshing the page or logging out and back in
+                If problems persist, try refreshing the page or logging out and
+                back in
               </p>
             </div>
           </div>
@@ -593,23 +673,36 @@ export default function ServerDetailPage() {
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center gap-4 mb-6">
-        <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/dashboard")}
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
         <h1 className="text-3xl font-bold">{server.name}</h1>
         {/* Simple VPS status badge */}
-        <Badge 
+        <Badge
           variant={server.status === "active" ? "default" : "secondary"}
           className={server.status === "restoring" ? "animate-pulse" : ""}
         >
-          {server.status === "active" && <span className="h-2 w-2 mr-1 rounded-full bg-green-500 inline-block" />}
-          {server.status === "off" && <span className="h-2 w-2 mr-1 rounded-full bg-gray-500 inline-block" />}
-          {server.status === "restoring" && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-          {server.status === "active" ? "Running" : 
-           server.status === "off" ? "Offline" : 
-           server.status === "restoring" ? "Restoring" : 
-           server.status}
+          {server.status === "active" && (
+            <span className="h-2 w-2 mr-1 rounded-full bg-green-500 inline-block" />
+          )}
+          {server.status === "off" && (
+            <span className="h-2 w-2 mr-1 rounded-full bg-gray-500 inline-block" />
+          )}
+          {server.status === "restoring" && (
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          )}
+          {server.status === "active"
+            ? "Running"
+            : server.status === "off"
+              ? "Offline"
+              : server.status === "restoring"
+                ? "Restoring"
+                : server.status}
         </Badge>
       </div>
 
@@ -645,16 +738,22 @@ export default function ServerDetailPage() {
             <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle>Server Specifications</CardTitle>
-                <CardDescription>Technical details about your server</CardDescription>
+                <CardDescription>
+                  Technical details about your server
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Hardware</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                      Hardware
+                    </h3>
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span>Memory</span>
-                        <span className="font-medium">{specs.memory / 1024}GB</span>
+                        <span className="font-medium">
+                          {specs.memory / 1024}GB
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>vCPUs</span>
@@ -667,11 +766,15 @@ export default function ServerDetailPage() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Details</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                      Details
+                    </h3>
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span>Region</span>
-                        <span className="font-medium">{regionFlags[server.region] || server.region}</span>
+                        <span className="font-medium">
+                          {regionFlags[server.region] || server.region}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Size</span>
@@ -679,14 +782,16 @@ export default function ServerDetailPage() {
                       </div>
                       <div className="flex justify-between">
                         <span>Application</span>
-                        <span className="font-medium">{server.application || "No Application"}</span>
+                        <span className="font-medium">
+                          {server.application || "No Application"}
+                        </span>
                       </div>
                       {/* Display creation date if available */}
                       <div className="flex justify-between">
                         <span>Created</span>
                         <span className="font-medium">
-                          {server.createdAt 
-                            ? new Date(server.createdAt).toLocaleString() 
+                          {server.createdAt
+                            ? new Date(server.createdAt).toLocaleString()
                             : new Date().toLocaleString()}
                         </span>
                       </div>
@@ -697,13 +802,17 @@ export default function ServerDetailPage() {
                 <Separator className="my-4" />
 
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Authentication</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                    Authentication
+                  </h3>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm">Root Password</p>
-                      <p className="text-xs text-muted-foreground">Used for console access</p>
+                      <p className="text-xs text-muted-foreground">
+                        Used for console access
+                      </p>
                     </div>
-                    
+
                     {isEditingPassword ? (
                       <div className="flex gap-2">
                         <Input
@@ -713,17 +822,21 @@ export default function ServerDetailPage() {
                           placeholder="New password"
                           className="w-48"
                         />
-                        <Button 
-                          size="sm" 
-                          onClick={() => updatePasswordMutation.mutate(newPassword)}
-                          disabled={updatePasswordMutation.isPending || !newPassword}
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            updatePasswordMutation.mutate(newPassword)
+                          }
+                          disabled={
+                            updatePasswordMutation.isPending || !newPassword
+                          }
                         >
                           <Save className="h-4 w-4 mr-2" />
                           Save
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => {
                             setIsEditingPassword(false);
                             setNewPassword("");
@@ -749,12 +862,18 @@ export default function ServerDetailPage() {
 
                 {/* Volume Summary */}
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Storage</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                    Storage
+                  </h3>
                   <div className="flex justify-between items-center">
                     <div>
-                      <p>{volumes.length} Volume{volumes.length !== 1 ? 's' : ''} Attached</p>
+                      <p>
+                        {volumes.length} Volume{volumes.length !== 1 ? "s" : ""}{" "}
+                        Attached
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {volumes.reduce((total, v) => total + v.size, 0)}GB additional storage
+                        {volumes.reduce((total, v) => total + v.size, 0)}GB
+                        additional storage
                       </p>
                     </div>
                     {/* Manage Volumes button removed as requested */}
@@ -771,28 +890,30 @@ export default function ServerDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-2">
-                  <Button 
-                      variant="default" 
-                      onClick={() => powerActionMutation.mutate(isRunning ? "stop" : "start")}
-                      disabled={powerActionMutation.isPending}
-                      className={`w-full ${isRunning ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}`}
-                    >
-                      {isRunning ? (
-                        <>
-                          <PowerOff className="h-4 w-4 mr-2" />
-                          Power Off
-                        </>
-                      ) : (
-                        <>
-                          <Power className="h-4 w-4 mr-2" />
-                          Power On
-                        </>
-                      )}
-                    </Button>
+                  <Button
+                    variant="default"
+                    onClick={() =>
+                      powerActionMutation.mutate(isRunning ? "stop" : "start")
+                    }
+                    disabled={powerActionMutation.isPending}
+                    className={`w-full ${isRunning ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}`}
+                  >
+                    {isRunning ? (
+                      <>
+                        <PowerOff className="h-4 w-4 mr-2" />
+                        Power Off
+                      </>
+                    ) : (
+                      <>
+                        <Power className="h-4 w-4 mr-2" />
+                        Power On
+                      </>
+                    )}
+                  </Button>
                 </div>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="w-full"
                   onClick={() => rebootServerMutation.mutate()}
                   disabled={!isRunning || rebootServerMutation.isPending}
@@ -800,10 +921,10 @@ export default function ServerDetailPage() {
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Reboot
                 </Button>
-                
+
                 <Link href={`/terminal/${serverId}`}>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full mt-2"
                     disabled={!isRunning || !server.ipAddress}
                   >
@@ -825,17 +946,20 @@ export default function ServerDetailPage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete Server</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Are you sure you want to delete this server? This action cannot be undone
-                        and all data on the server will be permanently lost.
+                        Are you sure you want to delete this server? This action
+                        cannot be undone and all data on the server will be
+                        permanently lost.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
+                      <AlertDialogAction
                         onClick={() => deleteServerMutation.mutate()}
                         disabled={deleteServerMutation.isPending}
                       >
-                        {deleteServerMutation.isPending ? "Deleting..." : "Delete Server"}
+                        {deleteServerMutation.isPending
+                          ? "Deleting..."
+                          : "Delete Server"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -860,7 +984,6 @@ export default function ServerDetailPage() {
           </Card>
         </TabsContent>
 
-
         {/* Networking Tab */}
         <TabsContent value="networking">
           <Card>
@@ -872,7 +995,9 @@ export default function ServerDetailPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium mb-2">Network Configuration</h3>
+                <h3 className="text-lg font-medium mb-2">
+                  Network Configuration
+                </h3>
                 <div className="space-y-4">
                   {/* IPv4 Configuration */}
                   <Card>
@@ -885,15 +1010,21 @@ export default function ServerDetailPage() {
                     <CardContent className="p-4 pt-0 space-y-3">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <span className="text-xs text-muted-foreground">Public IPv4 Address</span>
+                          <span className="text-xs text-muted-foreground">
+                            Public IPv4 Address
+                          </span>
                           <div className="flex items-center gap-2">
-                            <code className="bg-muted px-2 py-1 rounded text-sm">{server.ipAddress}</code>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <code className="bg-muted px-2 py-1 rounded text-sm">
+                              {server.ipAddress}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="h-6 w-6 p-0"
                               onClick={() => {
-                                navigator.clipboard.writeText(server.ipAddress || "");
+                                navigator.clipboard.writeText(
+                                  server.ipAddress || "",
+                                );
                                 toast({
                                   title: "Copied",
                                   description: "IP address copied to clipboard",
@@ -906,29 +1037,45 @@ export default function ServerDetailPage() {
                         </div>
 
                         <div>
-                          <span className="text-xs text-muted-foreground">IPv4 Gateway</span>
+                          <span className="text-xs text-muted-foreground">
+                            IPv4 Gateway
+                          </span>
                           <div className="flex items-center gap-2">
                             <code className="bg-muted px-2 py-1 rounded text-sm">
-                              {server.ipAddress ? server.ipAddress.split('.').slice(0, 3).join('.') + '.1' : 'Unavailable'}
+                              {server.ipAddress
+                                ? server.ipAddress
+                                    .split(".")
+                                    .slice(0, 3)
+                                    .join(".") + ".1"
+                                : "Unavailable"}
                             </code>
                           </div>
                         </div>
                       </div>
 
                       <div>
-                        <span className="text-xs text-muted-foreground">IPv4 Subnet Mask</span>
+                        <span className="text-xs text-muted-foreground">
+                          IPv4 Subnet Mask
+                        </span>
                         <div>
-                          <code className="bg-muted px-2 py-1 rounded text-sm">255.255.255.0</code>
-                          <span className="ml-2 text-xs text-muted-foreground">(CIDR: /24)</span>
+                          <code className="bg-muted px-2 py-1 rounded text-sm">
+                            255.255.255.0
+                          </code>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (CIDR: /24)
+                          </span>
                         </div>
                       </div>
 
                       <div className="text-xs text-muted-foreground">
-                        <p>Your server has a static public IPv4 address assigned to the eth0 interface.</p>
+                        <p>
+                          Your server has a static public IPv4 address assigned
+                          to the eth0 interface.
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
-                  
+
                   {/* IPv6 Configuration */}
                   <Card>
                     <CardHeader className="p-4 pb-2">
@@ -943,9 +1090,9 @@ export default function ServerDetailPage() {
                             IPv6 Enabled
                           </div>
                         ) : (
-                          <Button 
+                          <Button
                             variant="outline"
-                            size="sm" 
+                            size="sm"
                             onClick={() => setConfirmIpv6Enable(true)}
                             disabled={toggleIPv6Mutation.isPending}
                           >
@@ -953,21 +1100,38 @@ export default function ServerDetailPage() {
                             Enable IPv6
                           </Button>
                         )}
-                        
-                        <Dialog open={confirmIpv6Enable} onOpenChange={setConfirmIpv6Enable}>
+
+                        <Dialog
+                          open={confirmIpv6Enable}
+                          onOpenChange={setConfirmIpv6Enable}
+                        >
                           <DialogContent>
                             <DialogHeader>
                               <DialogTitle>Enable IPv6</DialogTitle>
                             </DialogHeader>
                             <div className="py-4 text-sm">
-                              <p className="mb-2"><strong>Warning:</strong> Enabling IPv6 cannot be reversed.</p>
-                              <p>Once you enable IPv6 for this server, it cannot be disabled. IPv6 will remain enabled for the life of this server.</p>
-                              <p className="mt-2">Are you sure you want to enable IPv6?</p>
+                              <p className="mb-2">
+                                <strong>Warning:</strong> Enabling IPv6 cannot
+                                be reversed.
+                              </p>
+                              <p>
+                                Once you enable IPv6 for this server, it cannot
+                                be disabled. IPv6 will remain enabled for the
+                                life of this server.
+                              </p>
+                              <p className="mt-2">
+                                Are you sure you want to enable IPv6?
+                              </p>
                             </div>
                             <DialogFooter>
-                              <Button variant="outline" onClick={() => setConfirmIpv6Enable(false)}>Cancel</Button>
-                              <Button 
-                                variant="default" 
+                              <Button
+                                variant="outline"
+                                onClick={() => setConfirmIpv6Enable(false)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                variant="default"
                                 onClick={() => {
                                   toggleIPv6Mutation.mutate(true);
                                   setConfirmIpv6Enable(false);
@@ -985,20 +1149,25 @@ export default function ServerDetailPage() {
                         <>
                           <div className="grid grid-cols-1 gap-4">
                             <div>
-                              <span className="text-xs text-muted-foreground">Public IPv6 Address</span>
+                              <span className="text-xs text-muted-foreground">
+                                Public IPv6 Address
+                              </span>
                               <div className="flex items-center gap-2">
                                 <code className="bg-muted px-2 py-1 rounded text-sm overflow-x-auto max-w-full">
                                   {server.ipv6Address}
                                 </code>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-6 w-6 p-0"
                                   onClick={() => {
-                                    navigator.clipboard.writeText(server.ipv6Address || "");
+                                    navigator.clipboard.writeText(
+                                      server.ipv6Address || "",
+                                    );
                                     toast({
                                       title: "Copied",
-                                      description: "IPv6 address copied to clipboard",
+                                      description:
+                                        "IPv6 address copied to clipboard",
                                     });
                                   }}
                                 >
@@ -1009,14 +1178,22 @@ export default function ServerDetailPage() {
                           </div>
 
                           <div>
-                            <span className="text-xs text-muted-foreground">IPv6 Prefix Length</span>
+                            <span className="text-xs text-muted-foreground">
+                              IPv6 Prefix Length
+                            </span>
                             <div>
-                              <code className="bg-muted px-2 py-1 rounded text-sm">/64</code>
+                              <code className="bg-muted px-2 py-1 rounded text-sm">
+                                /64
+                              </code>
                             </div>
                           </div>
 
                           <div className="text-xs text-muted-foreground">
-                            <p>Your server has a static public IPv6 address assigned. IPv6 connectivity is available for all outgoing and incoming connections.</p>
+                            <p>
+                              Your server has a static public IPv6 address
+                              assigned. IPv6 connectivity is available for all
+                              outgoing and incoming connections.
+                            </p>
                           </div>
                         </>
                       ) : (
@@ -1024,7 +1201,10 @@ export default function ServerDetailPage() {
                           {toggleIPv6Mutation.isPending ? (
                             <p>Updating IPv6 configuration...</p>
                           ) : (
-                            <p>IPv6 is currently disabled. Enable IPv6 to get a public IPv6 address assigned to your server.</p>
+                            <p>
+                              IPv6 is currently disabled. Enable IPv6 to get a
+                              public IPv6 address assigned to your server.
+                            </p>
                           )}
                         </div>
                       )}
@@ -1038,135 +1218,177 @@ export default function ServerDetailPage() {
                 <div className="bg-card border rounded-lg p-4">
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <h4 className="text-sm font-medium">Firewall Configuration</h4>
-                      <p className="text-xs text-muted-foreground">Configure security rules for your server</p>
+                      <h4 className="text-sm font-medium">
+                        Firewall Configuration
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Configure security rules for your server
+                      </p>
                     </div>
-                    
+
                     {/* Create/Manage Firewall Button Group */}
                     <div className="flex gap-2">
                       <ActiveFirewallCheck serverId={serverId}>
                         {(firewallExists: boolean) => (
                           <>
                             {!firewallExists ? (
-                                // Create Empty Firewall Button (no default rules)
-                                <Button 
-                                  variant="default" 
-                                  size="sm"
-                                  onClick={async () => {
-                                    try {
-                                      // Create a firewall with no rules by default
-                                      const response = await apiRequest(
-                                        'PUT',
-                                        `/api/servers/${serverId}/firewall`,
-                                        {
-                                          inbound_rules: [],
-                                          outbound_rules: []
-                                        }
-                                      );
-                                      
-                                      toast({
-                                        title: "Firewall Created",
-                                        description: "Firewall has been enabled with no rules. Add rules for protection.",
-                                      });
-                                      
-                                      // Refresh the firewall display
-                                      queryClient.invalidateQueries({ queryKey: ['/api/servers', serverId, 'firewall'] });
-                                      
-                                    } catch (error) {
-                                      toast({
-                                        title: "Failed to create firewall",
-                                        description: error instanceof Error ? error.message : "An unknown error occurred",
-                                        variant: "destructive"
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <Shield className="h-4 w-4 mr-2" />
-                                  Enable Firewall
-                                </Button>
-                              ) : (
-                                // Delete Firewall Button with Confirmation
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button 
-                                      variant="destructive" 
-                                      size="sm"
+                              // Create Empty Firewall Button (no default rules)
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    // Create a firewall with no rules by default
+                                    const response = await apiRequest(
+                                      "PUT",
+                                      `/api/servers/${serverId}/firewall`,
+                                      {
+                                        inbound_rules: [],
+                                        outbound_rules: [],
+                                      },
+                                    );
+
+                                    toast({
+                                      title: "Firewall Created",
+                                      description:
+                                        "Firewall has been enabled with no rules. Add rules for protection.",
+                                    });
+
+                                    // Refresh the firewall display
+                                    queryClient.invalidateQueries({
+                                      queryKey: [
+                                        "/api/servers",
+                                        serverId,
+                                        "firewall",
+                                      ],
+                                    });
+                                  } catch (error) {
+                                    toast({
+                                      title: "Failed to create firewall",
+                                      description:
+                                        error instanceof Error
+                                          ? error.message
+                                          : "An unknown error occurred",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                <Shield className="h-4 w-4 mr-2" />
+                                Enable Firewall
+                              </Button>
+                            ) : (
+                              // Delete Firewall Button with Confirmation
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="destructive" size="sm">
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    Disable Firewall
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle className="text-destructive">
+                                      Disable Firewall Protection
+                                    </DialogTitle>
+                                    <div className="py-2">
+                                      <strong>Warning:</strong> This will delete
+                                      all firewall rules and leave your server
+                                      exposed to all network traffic. This is a
+                                      significant security risk.
+                                    </div>
+                                    <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md my-3 text-sm">
+                                      To confirm, please type{" "}
+                                      <span className="font-mono font-bold">
+                                        I CONFIRM DELETION OF RULES
+                                      </span>{" "}
+                                      in the field below.
+                                    </div>
+                                  </DialogHeader>
+
+                                  <Form {...disableFirewallForm}>
+                                    <form
+                                      onSubmit={disableFirewallForm.handleSubmit(
+                                        async (data) => {
+                                          try {
+                                            await apiRequest(
+                                              "PUT",
+                                              `/api/servers/${serverId}/firewall?action=disable`,
+                                            );
+                                            toast({
+                                              title: "Firewall Disabled",
+                                              description:
+                                                "All firewall rules have been removed.",
+                                            });
+                                            // Refresh the firewall display
+                                            queryClient.invalidateQueries({
+                                              queryKey: [
+                                                `/api/servers/${serverId}/firewall`,
+                                              ],
+                                            });
+                                            disableFirewallForm.reset(); // Reset the form
+                                          } catch (error) {
+                                            toast({
+                                              title:
+                                                "Failed to disable firewall",
+                                              description:
+                                                error instanceof Error
+                                                  ? error.message
+                                                  : "An unknown error occurred",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        },
+                                      )}
                                     >
-                                      <Shield className="h-4 w-4 mr-2" />
-                                      Disable Firewall
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle className="text-destructive">
-                                        Disable Firewall Protection
-                                      </DialogTitle>
-                                      <div className="py-2">
-                                        <strong>Warning:</strong> This will delete all firewall rules and leave your server exposed 
-                                        to all network traffic. This is a significant security risk.
-                                      </div>
-                                      <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md my-3 text-sm">
-                                        To confirm, please type <span className="font-mono font-bold">I CONFIRM DELETION OF RULES</span> in the field below.
-                                      </div>
-                                    </DialogHeader>
-                                    
-                                    <Form {...disableFirewallForm}>
-                                      <form onSubmit={disableFirewallForm.handleSubmit(async (data) => {
-                                        try {
-                                          await apiRequest('PUT', `/api/servers/${serverId}/firewall?action=disable`);
-                                          toast({
-                                            title: "Firewall Disabled",
-                                            description: "All firewall rules have been removed.",
-                                          });
-                                          // Refresh the firewall display
-                                          queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/firewall`] });
-                                          disableFirewallForm.reset(); // Reset the form
-                                        } catch (error) {
-                                          toast({
-                                            title: "Failed to disable firewall",
-                                            description: error instanceof Error ? error.message : "An unknown error occurred",
-                                            variant: "destructive"
-                                          });
-                                        }
-                                      })}>
-                                        <FormField
-                                          control={disableFirewallForm.control}
-                                          name="confirmationText"
-                                          render={({ field }) => (
-                                            <FormItem>
-                                              <FormLabel>Confirmation Text</FormLabel>
-                                              <FormControl>
-                                                <Input placeholder="Type the confirmation phrase" {...field} />
-                                              </FormControl>
-                                              <FormMessage />
-                                            </FormItem>
-                                          )}
-                                        />
-                                        
-                                        <div className="flex justify-end gap-2 mt-4">
-                                          <DialogClose asChild>
-                                            <Button variant="outline" type="button">Cancel</Button>
-                                          </DialogClose>
-                                          <Button variant="destructive" type="submit">
-                                            Disable Firewall
+                                      <FormField
+                                        control={disableFirewallForm.control}
+                                        name="confirmationText"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>
+                                              Confirmation Text
+                                            </FormLabel>
+                                            <FormControl>
+                                              <Input
+                                                placeholder="Type the confirmation phrase"
+                                                {...field}
+                                              />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+
+                                      <div className="flex justify-end gap-2 mt-4">
+                                        <DialogClose asChild>
+                                          <Button
+                                            variant="outline"
+                                            type="button"
+                                          >
+                                            Cancel
                                           </Button>
-                                        </div>
-                                      </form>
-                                    </Form>
-                                  </DialogContent>
-                                </Dialog>
-                              )}
-                            </>
-                          )}
-                        </ActiveFirewallCheck>
-                      
+                                        </DialogClose>
+                                        <Button
+                                          variant="destructive"
+                                          type="submit"
+                                        >
+                                          Disable Firewall
+                                        </Button>
+                                      </div>
+                                    </form>
+                                  </Form>
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                          </>
+                        )}
+                      </ActiveFirewallCheck>
+
                       {/* Open Firewall Manager Dialog */}
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                          >
+                          <Button variant="outline" size="sm">
                             <Shield className="h-4 w-4 mr-2" />
                             Manage Firewall Rules
                           </Button>
@@ -1175,7 +1397,8 @@ export default function ServerDetailPage() {
                           <DialogHeader className="mb-4">
                             <DialogTitle>Firewall Rules Manager</DialogTitle>
                             <DialogDescription>
-                              Add or remove rules to control network traffic to and from your server
+                              Add or remove rules to control network traffic to
+                              and from your server
                             </DialogDescription>
                           </DialogHeader>
                           <FirewallManager serverId={serverId} />
@@ -1183,23 +1406,24 @@ export default function ServerDetailPage() {
                       </Dialog>
                     </div>
                   </div>
-                  
+
                   {/* Active rules section - simplified display */}
                   <div className="space-y-3">
                     {/* Fetch and display actual rules from API */}
                     <ActiveFirewallRules serverId={serverId} />
                   </div>
-                  
+
                   <p className="text-xs text-muted-foreground mt-4">
-                    First, enable the firewall by clicking "Enable Firewall", then use "Manage Firewall Rules" 
-                    to add protection rules for your server. The firewall starts with no rules by default.
+                    First, enable the firewall by clicking "Enable Firewall",
+                    then use "Manage Firewall Rules" to add protection rules for
+                    your server. The firewall starts with no rules by default.
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Metrics Tab */}
         <TabsContent value="metrics">
           <div className="grid grid-cols-1 gap-6">
@@ -1215,7 +1439,7 @@ export default function ServerDetailPage() {
                 <ServerMonitoring serverId={serverId} />
               </CardContent>
             </Card>
-            
+
             {/* Network Performance & Bandwidth Monitoring */}
             <Card>
               <CardHeader>
@@ -1227,19 +1451,28 @@ export default function ServerDetailPage() {
               <CardContent className="space-y-4">
                 {/* Network Performance Info */}
                 <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md p-3">
-                  <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Network Throughput</p>
+                  <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">
+                    Network Throughput
+                  </p>
                   <p className="text-blue-600 dark:text-blue-400">
-                    Your server includes {server.size.includes('g-') ? '1Gbps' : '500Mbps'} network throughput. 
-                    Outbound data transfer is limited to {server.specs?.disk ? Math.max(1, Math.floor(server.specs.disk/25)) : 1}TB per month.
+                    Your server includes{" "}
+                    {server.size.includes("g-") ? "1Gbps" : "500Mbps"} network
+                    throughput. Outbound data transfer is limited to{" "}
+                    {server.specs?.disk
+                      ? Math.max(1, Math.floor(server.specs.disk / 25))
+                      : 1}
+                    TB per month.
                   </p>
                 </div>
-                
+
                 {/* Network Usage Monitoring */}
                 <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
-                  <h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-2">Bandwidth Monitoring</h3>
+                  <h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-2">
+                    Bandwidth Monitoring
+                  </h3>
                   <NetworkUsage serverId={serverId} size={server.size} />
                 </div>
-                
+
                 {/* Bandwidth Details Link */}
                 <div className="flex justify-end">
                   <Link href={`/servers/${serverId}/bandwidth-details`}>
@@ -1266,18 +1499,22 @@ export default function ServerDetailPage() {
             <CardContent>
               {/* CloudRack Terminal Notice */}
               <CloudRackTerminalNotice />
-              
+
               {/* Server Access Section - Password Authentication */}
               <div className="mb-6">
                 <h3 className="text-lg font-medium mb-2">Remote Access</h3>
-                <p className="text-sm mb-4">Connect to your server using SSH with password authentication:</p>
+                <p className="text-sm mb-4">
+                  Connect to your server using SSH with password authentication:
+                </p>
                 <div className="bg-muted p-3 rounded-md font-mono text-sm flex justify-between items-center">
                   <code>ssh root@{server.ipAddress}</code>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
-                      navigator.clipboard.writeText(`ssh root@${server.ipAddress}`);
+                      navigator.clipboard.writeText(
+                        `ssh root@${server.ipAddress}`,
+                      );
                       toast({
                         title: "Copied",
                         description: "SSH command copied to clipboard",
@@ -1288,20 +1525,23 @@ export default function ServerDetailPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  You will be prompted for the root password you set during server creation.
+                  You will be prompted for the root password you set during
+                  server creation.
                 </p>
-                
+
                 {/* Password Authentication */}
                 <div className="mt-4">
                   <div className="bg-card border rounded-md p-4">
-                    <h4 className="text-sm font-medium mb-2">Password Authentication</h4>
-                    
+                    <h4 className="text-sm font-medium mb-2">
+                      Password Authentication
+                    </h4>
+
                     <p className="text-xs text-muted-foreground mb-2">
-                      {isEditingPassword 
+                      {isEditingPassword
                         ? "Enter a new root password for your server."
                         : "Your root password is used to access your server via SSH or the web terminal. Keep it secure."}
                     </p>
-                    
+
                     {isEditingPassword ? (
                       <div className="flex items-center gap-2 mt-3">
                         <Input
@@ -1311,17 +1551,21 @@ export default function ServerDetailPage() {
                           placeholder="New password"
                           className="w-48"
                         />
-                        <Button 
-                          size="sm" 
-                          onClick={() => updatePasswordMutation.mutate(newPassword)}
-                          disabled={updatePasswordMutation.isPending || !newPassword}
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            updatePasswordMutation.mutate(newPassword)
+                          }
+                          disabled={
+                            updatePasswordMutation.isPending || !newPassword
+                          }
                         >
                           <Save className="h-4 w-4 mr-2" />
                           Save
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => {
                             setIsEditingPassword(false);
                             setNewPassword("");
@@ -1331,38 +1575,44 @@ export default function ServerDetailPage() {
                         </Button>
                       </div>
                     ) : (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => setIsEditingPassword(true)}
                       >
                         <Lock className="h-4 w-4 mr-2" />
-                        {server.rootPassUpdated ? "Change Password" : "Set Root Password"}
+                        {server.rootPassUpdated
+                          ? "Change Password"
+                          : "Set Root Password"}
                       </Button>
                     )}
                   </div>
                 </div>
               </div>
-              
+
               {/* Terminal Section */}
               <div className="mt-8 border-t pt-6">
-                <h3 className="text-lg font-medium mb-4">Interactive Terminal</h3>
-                
+                <h3 className="text-lg font-medium mb-4">
+                  Interactive Terminal
+                </h3>
+
                 <div className="bg-muted/50 rounded-md p-3 mb-4">
                   <div className="flex items-center text-amber-600">
                     <Terminal className="h-4 w-4 mr-2" />
                     <span className="text-sm font-medium">Terminal Access</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    This terminal uses secure password authentication with your root password. Full Linux command support with no external clients needed.
+                    This terminal uses secure password authentication with your
+                    root password. Full Linux command support with no external
+                    clients needed.
                   </p>
                 </div>
-                
+
                 <div className="w-full">
-                  <ServerTerminal 
-                    serverId={server.id} 
-                    serverName={server.name} 
-                    ipAddress={server.ipAddress || 'unknown'}
+                  <ServerTerminal
+                    serverId={server.id}
+                    serverName={server.name}
+                    ipAddress={server.ipAddress || "unknown"}
                   />
                 </div>
               </div>

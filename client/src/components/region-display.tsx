@@ -19,7 +19,7 @@ const regionToCountry: Record<string, string> = {
 const regionNames: Record<string, string> = {
   'nyc1': '🇺🇸 New York',
   'nyc2': '🇺🇸 New York',
-  'nyc3': '🇺🇸 New York','
+  'nyc3': '🇺🇸 New York',
   'sfo3': '🇺🇸 San Francisco',
   'sfo2': '🇺🇸 San Francisco',
   'ams3': '🇳🇱 Amsterdam',
