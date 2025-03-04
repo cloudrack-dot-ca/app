@@ -7,6 +7,8 @@ import { HardDrive, Trash2, Server as ServerIcon } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import RegionDisplay from "@/components/RegionDisplay"; // Import the RegionDisplay component
+
 
 interface ServerCardProps {
   server: Server;
@@ -70,7 +72,7 @@ export default function ServerCard({ server }: ServerCardProps) {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Region</span>
-                <span>{server.region}</span>
+                <RegionDisplay regionSlug={server.region} /> {/* Replaced simple span with RegionDisplay component */}
               </div>
             </div>
           </div>
