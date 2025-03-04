@@ -66,19 +66,21 @@ export function ComingSoon({
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">{message}</p>
           <div className="flex flex-col gap-2 mt-4">
-            <Link href={redirectPath}>
-              <Button className="w-full" variant="default">
-                Return to Dashboard
-              </Button>
-            </Link>
             {user ? (
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={handleLogout}
-              >
-                Logout
-              </Button>
+              <>
+                <Link href={redirectPath}>
+                  <Button className="w-full" variant="default">
+                    Return to Dashboard
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </Button>
+              </>
             ) : (
               <Link href="/auth">
                 <Button 
