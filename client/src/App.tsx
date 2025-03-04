@@ -125,16 +125,15 @@ function Router() {
   // Check if current path is /auth to allow authentication even during maintenance
   const [currentPath] = useLocation();
   const isAuthPage = currentPath === '/auth';
-  
+
   // If maintenance mode is enabled and user is not admin, and we're not on auth page
   if (maintenanceSettings?.enabled && (!user || !user.isAdmin) && !isAuthPage) {
     return <MaintenancePage message={maintenanceSettings.maintenanceMessage} />;
   }
-  
-  // If coming soon mode is enabled for specific features
-  if (maintenanceSettings?.comingSoonEnabled) {
-    // We'll handle this in individual routes instead of globally
-    // This allows us to selectively mark features as "coming soon"
+
+  // If coming soon mode is enabled
+  if (maintenanceSettings?.comingSoonEnabled && !isAuthPage) {
+    return <ComingSoonPage message={maintenanceSettings.comingSoonMessage} />;
   }
 
   return (
@@ -157,8 +156,6 @@ function Router() {
         <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />
         <ProtectedRoute path="/servers/:id/bandwidth-details" component={BandwidthDetailsPage} />
         <ProtectedRoute path="/terminal/:serverId" component={TerminalPage} />
-        <Route path="/maintenance" component={() => <MaintenancePage message={maintenanceSettings?.maintenanceMessage} />} />
-        <Route path="/coming-soon" component={() => <ComingSoonPage message={maintenanceSettings?.comingSoonMessage} />} />
         <Route component={NotFound} />
       </Switch>
     </>
