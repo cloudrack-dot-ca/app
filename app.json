@@ -1,0 +1,25 @@
+
+{
+  "name": "CloudRack",
+  "description": "Cloud server management application",
+  "repository": "https://github.com/cloudrack-dot-ca/app",
+  "keywords": ["node", "express", "react", "typescript"],
+  "addons": [
+    "heroku-postgresql"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "env": {
+    "NODE_ENV": {
+      "description": "Environment setting",
+      "value": "production"
+    },
+    "SESSION_SECRET": {
+      "description": "A secret key for session management",
+      "generator": "secret"
+    }
+  }
+}
