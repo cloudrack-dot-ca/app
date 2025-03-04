@@ -212,6 +212,7 @@ export default function DocsPage() {
   const [currentArticle, setCurrentArticle] = useState<DocArticle | null>(null);
   const [isNewSection, setIsNewSection] = useState(false);
   const [isNewArticle, setIsNewArticle] = useState(false);
+  const [articleOrder, setArticleOrder] = useState<number>(0); // Added state for article order
 
   // Form state
   const [sectionTitle, setSectionTitle] = useState("");
@@ -505,12 +506,12 @@ export default function DocsPage() {
     if (!articleTitle.trim() || !articleContent.trim() || !articleSectionId) return;
 
     if (isNewArticle) {
-      // Create a new article
+      // Create a new article with the specified order
       createArticle.mutate({
         sectionId: articleSectionId,
         title: articleTitle,
         content: articleContent,
-        order: sections.find((s: DocSection) => s.id === articleSectionId)?.children.length ?? 0 + 1
+        order: articleOrder || getNextAvailableOrder(sections.find((s: DocSection) => s.id === articleSectionId)?.children || [])
       });
     } else if (currentArticle) {
       // Update existing article
@@ -520,7 +521,6 @@ export default function DocsPage() {
         content: articleContent
       };
 
-      // If section changed, include it
       if (articleSectionId !== currentArticle.sectionId) {
         updateData.sectionId = articleSectionId;
       }
@@ -707,6 +707,7 @@ export default function DocsPage() {
                             setArticleTitle("");
                             setArticleContent("");
                             setArticleSectionId(sections[0]?.id || null);
+                            setArticleOrder(0); // Reset order for normal article creation
                             setEditArticleDialogOpen(true);
                           }}
                           disabled={sections.length === 0}
@@ -736,6 +737,7 @@ export default function DocsPage() {
                                     setArticleTitle(article.title);
                                     setArticleContent(article.content);
                                     setArticleSectionId(article.sectionId);
+                                    setArticleOrder(article.order); // Set current order for editing
                                     setEditArticleDialogOpen(true);
                                   }}
                                 >
@@ -836,6 +838,27 @@ export default function DocsPage() {
                       placeholder="e.g., Getting Started with CloudHost"
                     />
                   </div>
+                  {isNewArticle && (
+                    <div className="space-y-2">
+                      <Label htmlFor="article-order">Position</Label>
+                      <Input
+                        id="article-order"
+                        type="number"
+                        min="1"
+                        value={articleOrder}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value) && value > 0) {
+                            setArticleOrder(value);
+                          }
+                        }}
+                        className="w-24"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Position in the section's article list. Lower numbers appear first.
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="article-content">Content (HTML Editor)</Label>
                     <div className="border rounded-md">
@@ -851,7 +874,13 @@ export default function DocsPage() {
                 <DialogFooter>
                   <Button
                     variant="outline"
-                    onClick={() => setEditArticleDialogOpen(false)}
+                    onClick={() => {
+                      setEditArticleDialogOpen(false);
+                      // Reset the order when closing
+                      if (isNewArticle) {
+                        setArticleOrder(0);
+                      }
+                    }}
                   >
                     Cancel
                   </Button>
@@ -897,7 +926,7 @@ export default function DocsPage() {
                               }
                             }}
                           />
-                          <span className="flex-grow font-medium">{section.title}</span>
+                          <<span className="flex-grow font-medium">{section.title}</span>
                           <span className="text-sm text-muted-foreground">
                             Current position: {section.order}
                           </span>
@@ -927,7 +956,7 @@ export default function DocsPage() {
                                   onChange={(e) => {
                                     const newOrder = parseInt(e.target.value);
                                     if (!isNaN(newOrder) && newOrder > 0) {
-                                                                            reorderArticle.mutate({ id: article.id, order: newOrder });
+                                      reorderArticle.mutate({ id: article.id, order: newOrder });
                                     }
                                   }}
                                 />
@@ -949,15 +978,9 @@ export default function DocsPage() {
                                 setArticleTitle("");
                                 setArticleContent("");
                                 setArticleSectionId(section.id);
-                                // Set the order to the next available number
-                                if (createArticle.mutate) {
-                                  createArticle.mutate({
-                                    sectionId: section.id,
-                                    title: "New Article",
-                                    content: "",
-                                    order: nextOrder
-                                  });
-                                }
+                                // Pre-set the order for the new article
+                                setArticleOrder(nextOrder);
+                                setEditArticleDialogOpen(true);
                               }}
                             >
                               <Plus className="h-4 w-4 mr-2" />
