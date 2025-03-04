@@ -1,3 +1,4 @@
+
 import pg from 'pg';
 const { Pool } = pg;
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -16,14 +17,14 @@ if (!process.env.DATABASE_URL) {
 // Configure pool with more robust settings for Replit
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  max: 10, // Reduced number of clients to avoid overloading
+  idleTimeoutMillis: 10000, // Shorter idle timeout
+  connectionTimeoutMillis: 10000, // Longer connection timeout
   ssl: process.env.NODE_ENV === 'production' ? 
     { rejectUnauthorized: true } : 
-    undefined,
-  keepAlive: true, 
-  keepAliveInitialDelayMillis: 5000 
+    { rejectUnauthorized: false },
+  keepAlive: true, // Enable keep-alive to prevent idle connections from being terminated
+  keepAliveInitialDelayMillis: 5000 // Start keep-alive probing after 5 seconds of inactivity
 });
 
 // Handle pool errors
