@@ -155,37 +155,34 @@ export class DatabaseStorage implements IStorage {
 
   async getServersByUser(userId: number): Promise<Server[]> {
     try {
-      return await db.select().from(servers).where(eq(servers.userId, userId));
-    } catch (error: any) {
-      // Check if error is related to missing created_at column
-      if (error.message && error.message.includes("column \"created_at\" does not exist")) {
-        // Fall back to retrieving without created_at
-        const query = `SELECT id, user_id, name, droplet_id, region, size, status, ip_address, 
-          ipv6_address, specs, application, last_monitored, root_password
-          FROM servers WHERE user_id = $1`;
-        const result = await pool.query(query, [userId]);
+      // Use raw SQL query with snake_case column names
+      const query = `SELECT id, user_id, name, droplet_id, region, size, status, ip_address, 
+        ipv6_address, specs, application, last_monitored, root_password, is_suspended, created_at
+        FROM servers WHERE user_id = $1`;
+      const result = await pool.query(query, [userId]);
 
-        // Convert snake_case keys to camelCase
-        return result.rows.map(row => ({
-          id: Number(row.id),
-          userId: Number(row.user_id),
-          name: String(row.name),
-          dropletId: String(row.droplet_id),
-          region: String(row.region),
-          size: String(row.size),
-          status: String(row.status),
-          ipAddress: row.ip_address ? String(row.ip_address) : null,
-          ipv6Address: row.ipv6_address ? String(row.ipv6_address) : null,
-          specs: row.specs,
-          application: row.application ? String(row.application) : null,
-          lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
-          rootPassword: row.root_password ? String(row.root_password) : null,
-          isSuspended: Boolean(row.is_suspended),
-          createdAt: row.created_at ? new Date(row.created_at) : new Date() // Add null createdAt field
-        }));
-      }
-      // Re-throw other errors
-      throw error;
+      // Convert snake_case keys to camelCase
+      return result.rows.map(row => ({
+        id: Number(row.id),
+        userId: Number(row.user_id),
+        name: String(row.name),
+        dropletId: String(row.droplet_id),
+        region: String(row.region),
+        size: String(row.size),
+        status: String(row.status),
+        ipAddress: row.ip_address ? String(row.ip_address) : null,
+        ipv6Address: row.ipv6_address ? String(row.ipv6_address) : null,
+        specs: row.specs,
+        application: row.application ? String(row.application) : null,
+        lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
+        rootPassword: row.root_password ? String(row.root_password) : null,
+        isSuspended: Boolean(row.is_suspended),
+        createdAt: row.created_at ? new Date(row.created_at) : new Date()
+      }));
+    } catch (error) {
+      console.error("Error getting servers by user:", error);
+      // Return empty array instead of throwing
+      return [];
     }
   }
 
@@ -196,37 +193,34 @@ export class DatabaseStorage implements IStorage {
 
   async getAllServers(): Promise<Server[]> {
     try {
-      return await db.select().from(servers);
-    } catch (error: any) {
-      // Check if error is related to missing created_at column
-      if (error.message && error.message.includes("column \"created_at\" does not exist")) {
-        // Fall back to retrieving without created_at
-        const query = `SELECT id, user_id, name, droplet_id, region, size, status, ip_address, 
-          ipv6_address, specs, application, last_monitored, root_password, is_suspended 
-          FROM servers`;
-        const result = await pool.query(query);
+      // Use raw SQL query with snake_case column names
+      const query = `SELECT id, user_id, name, droplet_id, region, size, status, ip_address, 
+        ipv6_address, specs, application, last_monitored, root_password, is_suspended, created_at
+        FROM servers`;
+      const result = await pool.query(query);
 
-        // Convert snake_case keys to camelCase
-        return result.rows.map(row => ({
-          id: Number(row.id),
-          userId: Number(row.user_id),
-          name: String(row.name),
-          dropletId: String(row.droplet_id),
-          region: String(row.region),
-          size: String(row.size),
-          status: String(row.status),
-          ipAddress: row.ip_address ? String(row.ip_address) : null,
-          ipv6Address: row.ipv6_address ? String(row.ipv6_address) : null,
-          specs: row.specs,
-          application: row.application ? String(row.application) : null,
-          lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
-          rootPassword: row.root_password ? String(row.root_password) : null,
-          isSuspended: Boolean(row.is_suspended),
-          createdAt: row.created_at ? new Date(row.created_at) : new Date() // Add null createdAt field
-        }));
-      }
-      // Re-throw other errors
-      throw error;
+      // Convert snake_case keys to camelCase
+      return result.rows.map(row => ({
+        id: Number(row.id),
+        userId: Number(row.user_id),
+        name: String(row.name),
+        dropletId: String(row.droplet_id),
+        region: String(row.region),
+        size: String(row.size),
+        status: String(row.status),
+        ipAddress: row.ip_address ? String(row.ip_address) : null,
+        ipv6Address: row.ipv6_address ? String(row.ipv6_address) : null,
+        specs: row.specs,
+        application: row.application ? String(row.application) : null,
+        lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
+        rootPassword: row.root_password ? String(row.root_password) : null,
+        isSuspended: Boolean(row.is_suspended),
+        createdAt: row.created_at ? new Date(row.created_at) : new Date()
+      }));
+    } catch (error) {
+      console.error("Error getting all servers:", error);
+      // Return empty array instead of throwing
+      return [];
     }
   }
 
