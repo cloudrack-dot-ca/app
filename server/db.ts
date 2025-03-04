@@ -14,15 +14,17 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure pool with more robust settings
+// Configure pool with more robust settings for Replit
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: 5000, // How long to wait for a connection
+  max: 10, // Reduced number of clients to avoid overloading
+  idleTimeoutMillis: 10000, // Shorter idle timeout
+  connectionTimeoutMillis: 10000, // Longer connection timeout
   ssl: process.env.NODE_ENV === 'production' ? 
     { rejectUnauthorized: true } : 
-    { rejectUnauthorized: false }
+    { rejectUnauthorized: false },
+  keepAlive: true, // Enable keep-alive to prevent idle connections from being terminated
+  keepAliveInitialDelayMillis: 5000 // Start keep-alive probing after 5 seconds of inactivity
 });
 
 // Handle pool errors
