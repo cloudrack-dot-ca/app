@@ -668,7 +668,7 @@ var vite_config_default = defineConfig({
   },
   root: path.resolve(__dirname, "client"),
   build: {
-    outDir: path.resolve(__dirname, "dist/public"),
+    outDir: path.resolve(__dirname, "dist/server/public"),
     emptyOutDir: true
   }
 });
@@ -5080,8 +5080,10 @@ async function createTestData() {
     } else {
       serveStatic(app);
     }
-    const port = process.env.PORT || 5e3;
+    const port = process.env.PORT || 8080;
     console.log(`Starting server on port ${port}, NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`Platform: ${process.env.PLATFORM || "unknown"}`);
+    console.log(`Host: 0.0.0.0 (listening on all interfaces)`);
     server.listen({
       port,
       host: "0.0.0.0",
