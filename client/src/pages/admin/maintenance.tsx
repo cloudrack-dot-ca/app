@@ -146,8 +146,6 @@ export default function MaintenancePage() {
             </p>
           </div>
 
-            </div>
-
           <Button 
             onClick={handleSave}
             disabled={mutation.isPending}
