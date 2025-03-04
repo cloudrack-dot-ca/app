@@ -22,6 +22,14 @@ export function ComingSoon({
   const { user } = useAuth();
   const currentPath = window.location.pathname;
 
+  // Force component re-render when user changes
+  const [key, setKey] = React.useState(0);
+  React.useEffect(() => {
+    if (user) {
+      setKey(prev => prev + 1);
+    }
+  }, [user]);
+
   // Get maintenance settings
   const { data: maintenanceSettings } = useQuery({
     queryKey: ['/api/maintenance'],
@@ -36,12 +44,22 @@ export function ComingSoon({
     }
   });
 
+  // Log the current state for debugging
+  console.log('ComingSoon Component State:', {
+    user,
+    isAdmin: user?.isAdmin,
+    comingSoonEnabled: maintenanceSettings?.comingSoonEnabled,
+    currentPath,
+    bypassPaths
+  });
+
   // If user is admin, coming soon mode is disabled, or current path is in bypass list, return null
   if (
-    (user?.isAdmin) || 
+    (user && user.isAdmin === true) || 
     !maintenanceSettings?.comingSoonEnabled ||
     bypassPaths.some(path => currentPath.startsWith(path))
   ) {
+    console.log('ComingSoon: Bypassing coming soon page');
     return null;
   }
 
@@ -103,10 +121,53 @@ export function ComingSoon({
 // HOC to wrap features that are coming soon
 export function withComingSoon(Component: React.ComponentType, options: ComingSoonProps = {}) {
   return function ComingSoonWrapper(props: any) {
-    const comingSoon = <ComingSoon {...options} />;
-    if (comingSoon === null) {
+    const { user } = useAuth();
+    const currentPath = window.location.pathname;
+    
+    // Get maintenance settings directly in HOC for more reliable checking
+    const { data: maintenanceSettings } = useQuery({
+      queryKey: ['/api/maintenance'],
+      queryFn: async () => {
+        try {
+          const response = await fetch('/api/maintenance');
+          if (!response.ok) return undefined;
+          return response.json();
+        } catch (error) {
+          return undefined;
+        }
+      }
+    });
+    
+    // Log the current state for debugging
+    console.log('withComingSoon HOC State:', {
+      user,
+      isAdmin: user?.isAdmin,
+      comingSoonEnabled: maintenanceSettings?.comingSoonEnabled,
+      currentPath,
+      bypassPaths: options.bypassPaths || ['/auth', '/logout']
+    });
+    
+    // Early direct check for admin users
+    if (user && user.isAdmin === true) {
+      console.log('withComingSoon: Admin user detected, showing component');
       return <Component {...props} />;
     }
-    return comingSoon;
+    
+    // Direct check for bypass paths
+    const bypassPaths = options.bypassPaths || ['/auth', '/logout'];
+    if (bypassPaths.some(path => currentPath.startsWith(path))) {
+      console.log('withComingSoon: Path in bypass list, showing component');
+      return <Component {...props} />;
+    }
+    
+    // Check for coming soon mode
+    if (!maintenanceSettings?.comingSoonEnabled) {
+      console.log('withComingSoon: Coming soon mode disabled, showing component');
+      return <Component {...props} />;
+    }
+    
+    // If we get here, show the coming soon page
+    console.log('withComingSoon: Showing coming soon page');
+    return <ComingSoon {...options} />;
   };
 }
