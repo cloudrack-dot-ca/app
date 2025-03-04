@@ -9,7 +9,7 @@ import { digitalOcean } from "./digital-ocean";
 import * as schema from "@shared/schema";
 // CloudRack key manager has been removed
 // System key manager has been removed
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, asc } from "drizzle-orm";
 import crypto from "crypto";
 import { db } from "./db";
 import { 
@@ -2654,9 +2654,6 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
     }
   });
   
-  return httpServer;
-}
-
   // Documentation API Routes
   app.get("/api/docs/sections", async (_req, res) => {
     try {
@@ -2840,3 +2837,6 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       res.status(500).json({ message: "Failed to delete article" });
     }
   });
+
+  return httpServer;
+}
