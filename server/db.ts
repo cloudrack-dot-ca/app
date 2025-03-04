@@ -1,6 +1,6 @@
 
-import { Pool } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
 console.log("NODE_ENV:", process.env.NODE_ENV);
@@ -19,7 +19,6 @@ export const pool = new Pool({
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
   connectionTimeoutMillis: 5000, // How long to wait for a connection
-  maxUses: 7500, // Number of times a client can be used before being recycled
   ssl: process.env.NODE_ENV === 'production' ? 
     { rejectUnauthorized: true } : 
     { rejectUnauthorized: false }
@@ -40,4 +39,4 @@ pool.on('connect', () => {
   console.log('Successfully connected to database');
 });
 
-export const db = drizzle({ client: pool, schema });
+export const db = drizzle(pool, { schema });
