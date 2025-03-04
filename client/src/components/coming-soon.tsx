@@ -53,13 +53,18 @@ export function ComingSoon({
     bypassPaths
   });
 
-  // If user is admin, coming soon mode is disabled, or current path is in bypass list, return null
+  // Check if user is admin FIRST before other conditions
+  if (user?.isAdmin === true) {
+    console.log('ComingSoon: Admin detected, bypassing coming soon page');
+    return null;
+  }
+
+  // If coming soon mode is disabled or current path is in bypass list, return null
   if (
-    (user && user.isAdmin === true) || 
     !maintenanceSettings?.comingSoonEnabled ||
     bypassPaths.some(path => currentPath.startsWith(path))
   ) {
-    console.log('ComingSoon: Bypassing coming soon page');
+    console.log('ComingSoon: Bypassing coming soon page - disabled or bypass path');
     return null;
   }
 
@@ -147,8 +152,8 @@ export function withComingSoon(Component: React.ComponentType, options: ComingSo
       bypassPaths: options.bypassPaths || ['/auth', '/logout']
     });
     
-    // Early direct check for admin users
-    if (user && user.isAdmin === true) {
+    // Early direct check for admin users - this is the most important condition
+    if (user?.isAdmin === true) {
       console.log('withComingSoon: Admin user detected, showing component');
       return <Component {...props} />;
     }
