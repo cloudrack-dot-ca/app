@@ -244,7 +244,7 @@ export const maintenanceSettings = pgTable("maintenance_settings", {
   comingSoonEnabled: boolean("coming_soon_enabled").notNull().default(false),
   comingSoonMessage: text("coming_soon_message").default("This feature is coming soon. Stay tuned for updates!"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  updatedBy: integer("updated_by").notNull(),
+  updatedBy: integer("updated_by").notNull(), // Admin user ID who last updated settings
 });
 
 export const insertMaintenanceSettingsSchema = createInsertSchema(maintenanceSettings).pick({
@@ -266,25 +266,5 @@ export type DocSection = typeof docSections.$inferSelect;
 export type DocArticle = typeof docArticles.$inferSelect;
 export type InsertDocSection = z.infer<typeof insertDocSectionSchema>;
 export type InsertDocArticle = z.infer<typeof insertDocArticleSchema>;
-
-// Add maintenance mode settings table
-export const maintenanceSettings = pgTable("maintenance_settings", {
-  id: serial("id").primaryKey(),
-  enabled: boolean("enabled").notNull().default(false),
-  maintenanceMessage: text("maintenance_message").default("We're currently performing maintenance. Please check back soon."),
-  comingSoonEnabled: boolean("coming_soon_enabled").notNull().default(false),
-  comingSoonMessage: text("coming_soon_message").default("This feature is coming soon. Stay tuned for updates!"),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  updatedBy: integer("updated_by").notNull(), // Admin user ID who last updated settings
-});
-
-// Add insert schema for maintenance settings
-export const insertMaintenanceSettingsSchema = createInsertSchema(maintenanceSettings).pick({
-  enabled: true,
-  maintenanceMessage: true,
-  comingSoonEnabled: true,
-  comingSoonMessage: true,
-});
-
 export type MaintenanceSettings = typeof maintenanceSettings.$inferSelect;
 export type InsertMaintenanceSettings = z.infer<typeof insertMaintenanceSettingsSchema>;
