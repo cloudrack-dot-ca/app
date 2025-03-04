@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from 'drizzle-orm';
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -223,12 +224,26 @@ export const docSections = pgTable("doc_sections", {
 
 export const docArticles = pgTable("doc_articles", {
   id: serial("id").primaryKey(),
-  sectionId: integer("section_id").notNull(),
+  sectionId: integer("section_id")
+    .notNull()
+    .references(() => docSections.id, { onDelete: 'cascade' }),
   title: text("title").notNull(),
   content: text("content").notNull(),
   order: integer("order").notNull(),
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
 });
+
+// Add relations
+export const docSectionsRelations = relations(docSections, ({ many }) => ({
+  articles: many(docArticles),
+}));
+
+export const docArticlesRelations = relations(docArticles, ({ one }) => ({
+  section: one(docSections, {
+    fields: [docArticles.sectionId],
+    references: [docSections.id],
+  }),
+}));
 
 // Insert schemas for documentation
 export const insertDocSectionSchema = createInsertSchema(docSections).pick({
@@ -243,7 +258,20 @@ export const insertDocArticleSchema = createInsertSchema(docArticles).pick({
   order: true,
 });
 
+export const updateDocSectionOrderSchema = z.object({
+  id: z.number(),
+  order: z.number(),
+});
+
+export const updateDocArticleOrderSchema = z.object({
+  id: z.number(),
+  order: z.number(),
+  sectionId: z.number(),
+});
+
 export type DocSection = typeof docSections.$inferSelect;
 export type DocArticle = typeof docArticles.$inferSelect;
 export type InsertDocSection = z.infer<typeof insertDocSectionSchema>;
 export type InsertDocArticle = z.infer<typeof insertDocArticleSchema>;
+export type UpdateDocSectionOrder = z.infer<typeof updateDocSectionOrderSchema>;
+export type UpdateDocArticleOrder = z.infer<typeof updateDocArticleOrderSchema>;

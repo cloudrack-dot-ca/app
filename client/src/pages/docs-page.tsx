@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,13 +25,8 @@ import {
   Edit,
   Trash2,
   ExternalLink,
-  Server,
-  Shield,
-  HardDrive,
-  Terminal,
-  Cpu,
-  Wifi,
-  Save
+  Save,
+  GripVertical
 } from "lucide-react";
 
 // Documentation section types
@@ -114,11 +113,13 @@ const ArticleViewer = ({ article }: { article: DocArticle | null }) => {
 const DocSidebar = ({
   sections,
   activeArticleId,
-  setActiveArticleId
+  setActiveArticleId,
+  onReorder
 }: {
   sections: DocSection[],
   activeArticleId: number | null,
-  setActiveArticleId: (id: number) => void
+  setActiveArticleId: (id: number) => void,
+  onReorder?: (type: 'section' | 'article', items: any[]) => void
 }) => {
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,6 +151,57 @@ const DocSidebar = ({
       return { ...section, children: filteredChildren };
     }).filter(section => section.children.length > 0);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      const oldIndex = sections.findIndex(s => s.id === active.id);
+      const newIndex = sections.findIndex(s => s.id === over.id);
+
+      const newOrder = arrayMove(sections, oldIndex, newIndex);
+      onReorder?.('section', newOrder);
+    }
+  };
+
+  function SortableItem({ id, children, handle = false }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+    } = useSortable({ id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <div ref={setNodeRef} style={style} >
+        {handle ? (
+          <div className="flex items-center">
+            <button className="p-2 hover:bg-muted rounded-md cursor-grab" {...attributes} {...listeners}>
+              <GripVertical className="h-4 w-4" />
+            </button>
+            {children}
+          </div>
+        ) : (
+          <div {...attributes} {...listeners}>
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <div className="mb-4 relative">
@@ -162,43 +214,67 @@ const DocSidebar = ({
         />
       </div>
 
-      <div className="space-y-1">
-        {filteredSections.map((section: DocSection) => (
-          <div key={section.id} className="mb-2">
-            <button
-              onClick={() => toggleSection(section.id)}
-              className="w-full flex items-center justify-between px-2 py-1.5 text-sm font-medium hover:bg-muted rounded-md transition-colors text-foreground"
-            >
-              <span>{section.title}</span>
-              {expandedSections[section.id] ?
-                <ChevronDown className="h-4 w-4 text-muted-foreground" /> :
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              }
-            </button>
-
-            {expandedSections[section.id] && (
-              <div className="mt-1 ml-2 space-y-1 border-l-2 border-muted">
-                {section.children.map(article => (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sections.map(s => s.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-1">
+            {filteredSections.map((section: DocSection) => (
+              <SortableItem key={section.id} id={section.id} handle>
+                <div className="mb-2">
                   <button
-                    key={article.id}
-                    onClick={() => setActiveArticleId(article.id)}
-                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted rounded-md transition-colors ${
-                      activeArticleId === article.id ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'
-                    }`}
+                    onClick={() => toggleSection(section.id)}
+                    className="w-full flex items-center justify-between px-2 py-1.5 text-sm font-medium hover:bg-muted rounded-md transition-colors text-foreground"
                   >
-                    {article.title}
+                    <span>{section.title}</span>
+                    {expandedSections[section.id] ?
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" /> :
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    }
                   </button>
-                ))}
-              </div>
-            )}
+
+                  {expandedSections[section.id] && (
+                    <div className="mt-1 ml-2 space-y-1 border-l-2 border-muted">
+                      {section.children.map(article => (
+                        <button
+                          key={article.id}
+                          onClick={() => setActiveArticleId(article.id)}
+                          className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted rounded-md transition-colors ${
+                            activeArticleId === article.id ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {article.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </SortableItem>
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 };
 
 // Main Documentation Page Component
+interface UpdateDocSectionOrder {
+  id: number;
+  order: number;
+}
+
+interface UpdateDocArticleOrder {
+  id: number;
+  order: number;
+  sectionId: number;
+}
+
 export default function DocsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("documentation");
@@ -486,6 +562,77 @@ export default function DocsPage() {
     }
   };
 
+  // Add reordering mutations
+  const reorderSection = useMutation({
+    mutationFn: async (data: UpdateDocSectionOrder) => {
+      const response = await fetch(`/api/docs/sections/${data.id}/order`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update section order');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documentation'] });
+      toast({ title: "Order Updated", description: "Section order has been updated successfully." });
+    },
+    onError: (error) => {
+      toast({
+        title: "Order Update Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const reorderArticle = useMutation({
+    mutationFn: async (data: UpdateDocArticleOrder) => {
+      const response = await fetch(`/api/docs/articles/${data.id}/order`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update article order');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documentation'] });
+      toast({ title: "Order Updated", description: "Article order has been updated successfully." });
+    },
+    onError: (error) => {
+      toast({
+        title: "Order Update Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleReorder = (type: 'section' | 'article', items: any[]) => {
+    items.forEach((item, index) => {
+      if (type === 'section') {
+        reorderSection.mutate({ id: item.id, order: index + 1 });
+      } else {
+        reorderArticle.mutate({
+          id: item.id,
+          order: index + 1,
+          sectionId: item.sectionId
+        });
+      }
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-7xl py-8">
@@ -529,6 +676,7 @@ export default function DocsPage() {
                     sections={sections}
                     activeArticleId={activeArticleId}
                     setActiveArticleId={setActiveArticleId}
+                    onReorder={handleReorder}
                   />
                 </CardContent>
               </Card>
