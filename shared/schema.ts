@@ -236,6 +236,25 @@ export const insertDocSectionSchema = createInsertSchema(docSections).pick({
   order: true,
 });
 
+// Maintenance settings table
+export const maintenanceSettings = pgTable("maintenance_settings", {
+  id: serial("id").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  maintenanceMessage: text("maintenance_message").default("We're currently performing maintenance. Please check back soon."),
+  comingSoonEnabled: boolean("coming_soon_enabled").notNull().default(false),
+  comingSoonMessage: text("coming_soon_message").default("This feature is coming soon. Stay tuned for updates!"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: integer("updated_by").notNull(),
+});
+
+export const insertMaintenanceSettingsSchema = createInsertSchema(maintenanceSettings).pick({
+  enabled: true,
+  maintenanceMessage: true,
+  comingSoonEnabled: true,
+  comingSoonMessage: true,
+  updatedBy: true,
+});
+
 export const insertDocArticleSchema = createInsertSchema(docArticles).pick({
   sectionId: true,
   title: true,
