@@ -17,6 +17,10 @@
       "description": "Environment setting",
       "value": "production"
     },
+    "PORT": {
+      "description": "Port the app will run on",
+      "value": "8080"
+    },
     "SESSION_SECRET": {
       "description": "A secret key for session management",
       "generator": "secret"

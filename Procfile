@@ -1,2 +1,2 @@
 
-web: npm run build && npm start
+web: PORT=8080 NODE_ENV=production node dist/server/index.js
