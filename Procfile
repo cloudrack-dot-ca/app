@@ -1,2 +1,2 @@
 
-web: NODE_ENV=production PORT=5000 node dist/server/index.js
+web: NODE_ENV=production PORT=8080 node dist/server/index.js

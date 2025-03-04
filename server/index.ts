@@ -162,9 +162,12 @@ async function createTestData() {
       serveStatic(app);
     }
 
-    // Use environment port or fallback to 5000 for both local and production
-    const port = process.env.PORT || 5000;
+    // DigitalOcean App Platform requires PORT 8080
+    const port = process.env.PORT || 8080;
     console.log(`Starting server on port ${port}, NODE_ENV: ${process.env.NODE_ENV}`);
+    // Add debugging for deployment troubleshooting
+    console.log(`Platform: ${process.env.PLATFORM || 'unknown'}`);
+    console.log(`Host: 0.0.0.0 (listening on all interfaces)`);
     server.listen({
       port,
       host: "0.0.0.0", // Explicitly listen on all network interfaces
