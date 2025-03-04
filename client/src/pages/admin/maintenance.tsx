@@ -18,16 +18,16 @@ export default function MaintenanceSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch current maintenance settings
+  // Fetch current maintenance settings from public endpoint
   const { data: settings, isLoading } = useQuery<MaintenanceSettings>({
-    queryKey: ['/api/admin/maintenance'],
+    queryKey: ['/api/maintenance'],
   });
 
-  // Update maintenance settings
+  // Update maintenance settings using admin endpoint
   const updateSettings = useMutation({
     mutationFn: async (newSettings: MaintenanceSettings) => {
       const response = await fetch('/api/admin/maintenance', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSettings),
       });
@@ -35,7 +35,7 @@ export default function MaintenanceSettings() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/maintenance'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
       toast({
         title: "Settings Updated",
         description: "Maintenance mode settings have been updated successfully.",

@@ -21,10 +21,11 @@ import ApiKeyPage from "@/pages/api-key-page";
 import DocsPage from "@/pages/docs-page";
 import ApiDocsPage from "@/pages/api-docs-page";
 import AdminDashboard from "@/pages/admin/dashboard";
+import MaintenanceSettings from "@/pages/admin/maintenance";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
-import { Home, ShieldCheck, Settings, Book, Key } from "lucide-react";
+import { Home, ShieldCheck, Settings, Book, Key, Wrench } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useEffect } from "react";
 
@@ -81,12 +82,20 @@ function Nav() {
         </div>
         <div className="flex items-center gap-2">
           {user && user.isAdmin && (
-            <Link href="/admin">
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Admin
-              </Button>
-            </Link>
+            <>
+              <Link href="/admin">
+                <Button variant="ghost" size="sm">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Admin
+                </Button>
+              </Link>
+              <Link href="/admin/maintenance">
+                <Button variant="ghost" size="sm">
+                  <Wrench className="h-4 w-4 mr-2" />
+                  Maintenance
+                </Button>
+              </Link>
+            </>
           )}
           <ThemeToggle />
         </div>
@@ -98,13 +107,13 @@ function Nav() {
 function Router() {
   const { user } = useAuth();
 
-  // Query maintenance mode settings
+  // Query maintenance mode settings using public endpoint
   const { data: maintenanceSettings } = useQuery({
-    queryKey: ['/api/admin/maintenance'],
+    queryKey: ['/api/maintenance'],
     // Return undefined if the query fails
     queryFn: async () => {
       try {
-        const response = await fetch('/api/admin/maintenance');
+        const response = await fetch('/api/maintenance');
         if (!response.ok) return undefined;
         return response.json();
       } catch (error) {
@@ -133,6 +142,7 @@ function Router() {
         <ProtectedRoute path="/account" component={AccountPage} />
         <ProtectedRoute path="/my-api" component={ApiKeyPage} />
         <ProtectedRoute path="/admin" component={AdminDashboard} />
+        <ProtectedRoute path="/admin/maintenance" component={MaintenanceSettings} />
         {/* Server routes */}
         <ProtectedRoute path="/servers/:id" component={ServerDetailPage} />
         <ProtectedRoute path="/servers/:id/bandwidth-details" component={BandwidthDetailsPage} />

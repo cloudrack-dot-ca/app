@@ -361,8 +361,8 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
   
   // Admin API routes have been moved to server/admin/routes.ts
 
-  // Add maintenance mode routes after existing admin routes
-  app.get("/api/admin/maintenance", adminMiddleware, async (_req, res) => {
+  // Add public maintenance route before admin routes
+  app.get("/api/maintenance", async (_req, res) => {
     try {
       const [settings] = await db.select().from(schema.maintenanceSettings).limit(1);
       res.json(settings || {
@@ -375,7 +375,10 @@ export async function registerRoutes(app: Express): Promise<HttpServer> {
       res.status(500).json({ message: (error as Error).message });
     }
   });
+  
+  // Admin API routes have been moved to server/admin/routes.ts
 
+  // Add maintenance mode routes after existing admin routes 
   app.patch("/api/admin/maintenance", adminMiddleware, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     
