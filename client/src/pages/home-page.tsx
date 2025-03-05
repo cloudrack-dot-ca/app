@@ -242,7 +242,7 @@ export default function HomePage() {
           <PricingTable />
         </div>
       </section>
-
+      
       {/* CTA Section */}
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 text-center">
@@ -253,6 +253,8 @@ export default function HomePage() {
           <Button size="lg" variant="secondary" asChild>
             <Link href={user ? "/dashboard" : "/auth"}>Create Server Now</Link>
           </Button>
-          <div id="donate-button-container">
+        </div>
+      </section>
+    </div>
   );
 }
