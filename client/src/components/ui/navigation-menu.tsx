@@ -4,7 +4,7 @@
 import * as React from "react"
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
 import { cva } from "class-variance-authority"
-import { ChevronDown, Menu } from "lucide-react"
+import { ChevronDown, Menu, X } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import { Sheet, SheetContent, SheetTrigger } from "./sheet"
@@ -14,7 +14,12 @@ const NavigationMenu = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Root>
 >(({ className, children, ...props }, ref) => {
   return (
-    <div className="relative w-full flex items-center justify-between px-4 py-2">
+    <div className="relative w-full flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur-sm">
+      {/* Logo or Brand - Always visible */}
+      <div className="flex items-center">
+        {/* Add your logo or brand here if needed */}
+      </div>
+
       {/* Mobile Navigation */}
       <Sheet>
         <SheetTrigger asChild>
@@ -22,46 +27,62 @@ const NavigationMenu = React.forwardRef<
             <Menu className="h-6 w-6" />
           </button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[80vw] sm:w-[300px] p-4">
-          <div className="flex flex-col space-y-4 pt-6">
-            {React.Children.map(children, (child) => {
-              // Check if child is a NavigationMenuItem
-              if (React.isValidElement(child) && child.type === NavigationMenuItem) {
-                // For each menu item, we need to handle triggers and their content differently
-                const childContent = React.Children.toArray(child.props.children);
-                
-                return (
-                  <div className="py-2">
-                    {childContent.map((content, idx) => {
-                      if (React.isValidElement(content) && content.type === NavigationMenuTrigger) {
-                        // For triggers, render them as regular buttons or links in mobile
-                        return (
-                          <div key={idx} className="font-medium mb-2">
-                            {content.props.children[0]}
-                          </div>
-                        );
-                      } else if (React.isValidElement(content) && content.type === NavigationMenuContent) {
-                        // For content, render it directly in the sheet
-                        return (
-                          <div key={idx} className="pl-4 border-l border-border">
-                            {content.props.children}
-                          </div>
-                        );
-                      } else if (React.isValidElement(content) && content.type === NavigationMenuLink) {
-                        // For direct links, render them as-is
-                        return (
-                          <div key={idx} className="font-medium py-2">
-                            {content}
-                          </div>
-                        );
-                      }
-                      return content;
-                    })}
-                  </div>
-                );
-              }
-              return child;
-            })}
+        <SheetContent side="left" className="w-[85vw] sm:w-[350px] p-0">
+          <div className="flex flex-col h-full">
+            <div className="p-4 border-b">
+              <div className="font-semibold text-lg">Menu</div>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <nav className="flex flex-col space-y-4">
+                {React.Children.map(children, (child) => {
+                  if (React.isValidElement(child) && child.type === NavigationMenuItem) {
+                    const childContent = React.Children.toArray(child.props.children);
+                    
+                    return (
+                      <div className="py-2">
+                        {childContent.map((content, idx) => {
+                          if (React.isValidElement(content)) {
+                            if (content.type === NavigationMenuTrigger) {
+                              // For triggers, render them as section headers
+                              return (
+                                <div key={idx} className="font-medium text-base mb-3">
+                                  {content.props.children.split(' ')[0]}
+                                </div>
+                              );
+                            } else if (content.type === NavigationMenuContent) {
+                              // For content, render the children directly in the mobile menu
+                              return (
+                                <div key={idx} className="pl-3 space-y-2 border-l-2 border-muted">
+                                  {React.Children.map(content.props.children, (contentChild) => {
+                                    if (React.isValidElement(contentChild)) {
+                                      return (
+                                        <div className="py-1">
+                                          {contentChild}
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })}
+                                </div>
+                              );
+                            } else if (content.type === NavigationMenuLink) {
+                              // For links, render them directly
+                              return (
+                                <div key={idx} className="font-medium">
+                                  {content}
+                                </div>
+                              );
+                            }
+                          }
+                          return null;
+                        })}
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </nav>
+            </div>
           </div>
         </SheetContent>
       </Sheet>
