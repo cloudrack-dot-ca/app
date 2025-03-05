@@ -1,26 +1,45 @@
 import * as React from "react"
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
 import { cva } from "class-variance-authority"
-import { ChevronDown } from "lucide-react"
-
+import { ChevronDown, Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 const NavigationMenu = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Root>
->(({ className, children, ...props }, ref) => (
-  <NavigationMenuPrimitive.Root
-    ref={ref}
-    className={cn(
-      "relative z-10 flex max-w-max flex-1 items-center justify-center",
-      className
-    )}
-    {...props}
-  >
-    {children}
-    <NavigationMenuViewport />
-  </NavigationMenuPrimitive.Root>
-))
+>(({ className, children, ...props }, ref) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <>
+      {/* Mobile Navigation */}
+      <Sheet>
+        <SheetTrigger className="md:hidden p-2">
+          <Menu className="h-6 w-6" />
+        </SheetTrigger>
+        <SheetContent side="left" className="w-[80%] sm:w-[300px]">
+          <nav className="flex flex-col space-y-4">
+            {children}
+          </nav>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop Navigation */}
+      <NavigationMenuPrimitive.Root
+        ref={ref}
+        className={cn(
+          "relative z-10 hidden md:flex max-w-max flex-1 items-center justify-center",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <NavigationMenuViewport />
+      </NavigationMenuPrimitive.Root>
+    </>
+  )
+})
 NavigationMenu.displayName = NavigationMenuPrimitive.Root.displayName
 
 const NavigationMenuList = React.forwardRef<
@@ -30,7 +49,7 @@ const NavigationMenuList = React.forwardRef<
   <NavigationMenuPrimitive.List
     ref={ref}
     className={cn(
-      "group flex flex-1 list-none items-center justify-center space-x-1",
+      "group flex flex-col md:flex-row list-none items-start md:items-center justify-start md:justify-center space-y-2 md:space-y-0 md:space-x-1",
       className
     )}
     {...props}
