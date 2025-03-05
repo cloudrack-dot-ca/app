@@ -1,9 +1,13 @@
+
+"use client"
+
 import * as React from "react"
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
 import { cva } from "class-variance-authority"
 import { ChevronDown, Menu } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+
+import { cn } from "../../lib/utils"
+import { Sheet, SheetContent, SheetTrigger } from "./sheet"
 
 const NavigationMenu = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Root>,
@@ -14,17 +18,51 @@ const NavigationMenu = React.forwardRef<
       {/* Mobile Navigation */}
       <Sheet>
         <SheetTrigger asChild>
-          <button className="block md:hidden p-2 hover:bg-accent rounded-md">
+          <button className="block md:hidden p-2 hover:bg-accent rounded-md" aria-label="Menu">
             <Menu className="h-6 w-6" />
-            <span className="sr-only">Toggle Menu</span>
           </button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[300px] p-4">
-          <nav className="flex flex-col space-y-4">
-            <NavigationMenuPrimitive.List className="flex flex-col space-y-2">
-              {children}
-            </NavigationMenuPrimitive.List>
-          </nav>
+        <SheetContent side="left" className="w-[80vw] sm:w-[300px] p-4">
+          <div className="flex flex-col space-y-4 pt-6">
+            {React.Children.map(children, (child) => {
+              // Check if child is a NavigationMenuItem
+              if (React.isValidElement(child) && child.type === NavigationMenuItem) {
+                // For each menu item, we need to handle triggers and their content differently
+                const childContent = React.Children.toArray(child.props.children);
+                
+                return (
+                  <div className="py-2">
+                    {childContent.map((content, idx) => {
+                      if (React.isValidElement(content) && content.type === NavigationMenuTrigger) {
+                        // For triggers, render them as regular buttons or links in mobile
+                        return (
+                          <div key={idx} className="font-medium mb-2">
+                            {content.props.children[0]}
+                          </div>
+                        );
+                      } else if (React.isValidElement(content) && content.type === NavigationMenuContent) {
+                        // For content, render it directly in the sheet
+                        return (
+                          <div key={idx} className="pl-4 border-l border-border">
+                            {content.props.children}
+                          </div>
+                        );
+                      } else if (React.isValidElement(content) && content.type === NavigationMenuLink) {
+                        // For direct links, render them as-is
+                        return (
+                          <div key={idx} className="font-medium py-2">
+                            {content}
+                          </div>
+                        );
+                      }
+                      return content;
+                    })}
+                  </div>
+                );
+              }
+              return child;
+            })}
+          </div>
         </SheetContent>
       </Sheet>
 
@@ -37,7 +75,10 @@ const NavigationMenu = React.forwardRef<
         )}
         {...props}
       >
-        <NavigationMenuList>{children}</NavigationMenuList>
+        <NavigationMenuList>
+          {children}
+        </NavigationMenuList>
+        <NavigationMenuViewport />
       </NavigationMenuPrimitive.Root>
     </div>
   )
@@ -51,9 +92,7 @@ const NavigationMenuList = React.forwardRef<
   <NavigationMenuPrimitive.List
     ref={ref}
     className={cn(
-      "group flex list-none items-center justify-center space-x-1",
-      "md:flex-row md:space-x-1",
-      "flex-col space-y-2 md:space-y-0",
+      "group flex flex-1 list-none items-center justify-center space-x-1",
       className
     )}
     {...props}
@@ -64,7 +103,7 @@ NavigationMenuList.displayName = NavigationMenuPrimitive.List.displayName
 const NavigationMenuItem = NavigationMenuPrimitive.Item
 
 const navigationMenuTriggerStyle = cva(
-  "group inline-flex w-full items-center justify-start rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
+  "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
 )
 
 const NavigationMenuTrigger = React.forwardRef<
@@ -102,6 +141,23 @@ NavigationMenuContent.displayName = NavigationMenuPrimitive.Content.displayName
 
 const NavigationMenuLink = NavigationMenuPrimitive.Link
 
+const NavigationMenuViewport = React.forwardRef<
+  React.ElementRef<typeof NavigationMenuPrimitive.Viewport>,
+  React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Viewport>
+>(({ className, ...props }, ref) => (
+  <div className={cn("absolute left-0 top-full flex justify-center")}>
+    <NavigationMenuPrimitive.Viewport
+      className={cn(
+        "origin-top-center relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]",
+        className
+      )}
+      ref={ref}
+      {...props}
+    />
+  </div>
+))
+NavigationMenuViewport.displayName = NavigationMenuPrimitive.Viewport.displayName
+
 export {
   navigationMenuTriggerStyle,
   NavigationMenu,
@@ -110,4 +166,5 @@ export {
   NavigationMenuContent,
   NavigationMenuTrigger,
   NavigationMenuLink,
+  NavigationMenuViewport,
 }
