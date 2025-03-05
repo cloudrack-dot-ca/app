@@ -1,6 +1,6 @@
-# CloudRack VPS Hosting Platform
+# SkyVPS360 VPS Hosting Platform
 
-CloudRack is a comprehensive cloud VPS hosting provider platform with advanced server management, SSH terminal access, and intelligent billing systems. This platform allows users to quickly deploy virtual servers across multiple global regions with various configurations to suit different workloads and budgets.
+SkyVPS360 is a comprehensive cloud VPS hosting provider platform with advanced server management, SSH terminal access, and intelligent billing systems. This platform allows users to quickly deploy virtual servers across multiple global regions with various configurations to suit different workloads and budgets.
 
 ## 🚀 Core Features 
 
@@ -157,9 +157,9 @@ CloudRack is a comprehensive cloud VPS hosting provider platform with advanced s
 2. **Configure Database**
    ```bash
    # Create database and user
-   sudo -u postgres psql -c "CREATE USER cloudrack WITH PASSWORD 'your_secure_password';"
-   sudo -u postgres psql -c "CREATE DATABASE cloudrack OWNER cloudrack;"
-   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cloudrack TO cloudrack;"
+   sudo -u postgres psql -c "CREATE USER skyvps360_user WITH PASSWORD 'your_secure_password';"
+   sudo -u postgres psql -c "CREATE DATABASE skyvps360 OWNER skyvps360_user;"
+   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE skyvps360 TO skyvps360_user;"
    ```
 
 3. **Setup Environment Variables**
@@ -167,7 +167,7 @@ CloudRack is a comprehensive cloud VPS hosting provider platform with advanced s
    # Create .env file
    cat > .env << 'EOF'
    # Database Configuration
-   DATABASE_URL=postgresql://cloudrack:your_secure_password@localhost:5432/cloudrack
+   DATABASE_URL=postgresql://skyvps360:your_secure_password@localhost:5432/skyvps360
    NODE_ENV=production  # Use 'development' for local development
 
    # Session Configuration
@@ -204,13 +204,13 @@ CloudRack is a comprehensive cloud VPS hosting provider platform with advanced s
    node index.js
 
    # OR using PM2 (recommended for production)
-   pm2 start index.js --name "cloudrack"
+   pm2 start index.js --name "skyvps360"
    ```
 
 Note: Make sure to replace placeholder values (your_secure_password, your_session_secret, etc.) with your actual secure values.
 
 
-### Getting Started with CloudRack
+### Getting Started with SkyVPS360
 1. **Register an Account**: Create a new user account on the platform
 2. **Add Funds**: Use PayPal to add credits to your account balance
 3. **Create a Server**: 
@@ -255,8 +255,8 @@ Note: Make sure to replace placeholder values (your_secure_password, your_sessio
 ### One-Command Setup
 1. Clone the repository and run the setup script:
 ```bash
-git clone <your-repo-url> cloudrack
-cd cloudrack
+git clone https://github.com/skyvps360/app SkyVPS360
+cd SkyVPS360
 chmod +x setup-vps.sh
 ./setup-vps.sh
 ```
@@ -272,7 +272,7 @@ nano .env
 node index.js
 
 # Production mode (recommended)
-pm2 start index.js --name "cloudrack"
+pm2 start index.js --name "skyvps360"
 ```
 
 ### Manual Setup Steps
@@ -305,9 +305,9 @@ If you prefer to set up manually or the automatic script doesn't work for your e
 
    # Create database and user
    sudo -u postgres psql << EOF
-   CREATE USER cloudrack WITH PASSWORD 'your_secure_password';
-   CREATE DATABASE cloudrack OWNER cloudrack;
-   GRANT ALL PRIVILEGES ON DATABASE cloudrack TO cloudrack;
+   CREATE USER skyvps360_user WITH PASSWORD 'your_secure_password';
+   CREATE DATABASE skyvps360 OWNER skyvps360_user;
+   GRANT ALL PRIVILEGES ON DATABASE skyvps360 TO skyvps360_user;
    EOF
    ```
 
@@ -316,7 +316,7 @@ If you prefer to set up manually or the automatic script doesn't work for your e
    # Create and edit .env file
    cat > .env << 'EOF'
    NODE_ENV=production
-   DATABASE_URL=postgresql://cloudrack:your_secure_password@localhost:5432/cloudrack
+   DATABASE_URL=postgresql://skyvps360:your_secure_password@localhost:5432/skyvps360
    SESSION_SECRET=your_session_secret_here
    PAYPAL_CLIENT_ID=your_paypal_client_id
    PAYPAL_CLIENT_SECRET=your_paypal_client_secret
@@ -349,7 +349,7 @@ If you prefer to set up manually or the automatic script doesn't work for your e
    node index.js
 
    # Production mode (recommended)
-   pm2 start index.js --name "cloudrack"
+   pm2 start index.js --name "skyvps360"
    pm2 startup  # Enable PM2 on system startup
    pm2 save     # Save current process list
    ```
@@ -380,7 +380,7 @@ If you prefer to set up manually or the automatic script doesn't work for your e
 
 ## 📚 API Documentation
 
-CloudRack provides a comprehensive API for programmatic management of all platform resources.
+SkyVPS360 provides a comprehensive API for programmatic management of all platform resources.
 
 ### Authentication
 - API key-based authentication
@@ -403,7 +403,7 @@ CloudRack provides a comprehensive API for programmatic management of all platfo
 
 ## 🔄 Bandwidth Billing System
 
-CloudRack includes a sophisticated bandwidth tracking and billing system:
+SkyVPS360 includes a sophisticated bandwidth tracking and billing system:
 
 ### Bandwidth Monitoring
 - **Real-time Tracking**: Monitor bandwidth usage as it happens
@@ -465,9 +465,9 @@ The system can run in mock mode without actual DigitalOcean API calls:
 - No credit card data stored on platform
 - Secure WebHook validation
 
-## 🤝 Contributing to CloudRack
+## 🤝 Contributing to SkyVPS360
 
-We welcome contributions to improve CloudRack! To contribute:
+We welcome contributions to improve SkyVPS360! To contribute:
 
 1. Fork the repository
 2. Create a feature branch
@@ -478,4 +478,4 @@ Please follow our coding standards and include tests for new features.
 
 ## 📝 License
 
-CloudRack is licensed under the MIT License. See the LICENSE file for details.
+SkyVPS360 is licensed under the MIT License. See the LICENSE file for details.
