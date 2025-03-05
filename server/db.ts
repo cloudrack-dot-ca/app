@@ -20,7 +20,7 @@ export const pool = new Pool({
   max: 10, // Reduced number of clients to avoid overloading
   idleTimeoutMillis: 10000, // Shorter idle timeout
   connectionTimeoutMillis: 10000, // Longer connection timeout
-  ssl: process.env.NODE_ENV === 'production' ? 
+  ssl: process.env.NODE_ENV === 'development' ? 
     { rejectUnauthorized: true } : 
     { rejectUnauthorized: false },
   keepAlive: true, // Enable keep-alive to prevent idle connections from being terminated

@@ -12,7 +12,12 @@ var __export = (target, all) => {
 var schema_exports = {};
 __export(schema_exports, {
   billingTransactions: () => billingTransactions,
+  docArticles: () => docArticles,
+  docSections: () => docSections,
+  insertDocArticleSchema: () => insertDocArticleSchema,
+  insertDocSectionSchema: () => insertDocSectionSchema,
   insertIPBanSchema: () => insertIPBanSchema,
+  insertMaintenanceSettingsSchema: () => insertMaintenanceSettingsSchema,
   insertMessageSchema: () => insertMessageSchema,
   insertSSHKeySchema: () => insertSSHKeySchema,
   insertServerSchema: () => insertServerSchema,
@@ -22,6 +27,7 @@ __export(schema_exports, {
   insertUserSchema: () => insertUserSchema,
   insertVolumeSchema: () => insertVolumeSchema,
   ipBans: () => ipBans,
+  maintenanceSettings: () => maintenanceSettings,
   serverMetrics: () => serverMetrics,
   servers: () => servers,
   snapshots: () => snapshots,
@@ -34,7 +40,7 @@ __export(schema_exports, {
 import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var users, servers, serverMetrics, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, ipBans, snapshots, insertUserSchema, insertTransactionSchema, insertServerSchema, insertVolumeSchema, insertTicketSchema, insertMessageSchema, insertSSHKeySchema, insertIPBanSchema, insertSnapshotSchema;
+var users, servers, serverMetrics, volumes, billingTransactions, supportTickets, supportMessages, sshKeys, ipBans, snapshots, insertUserSchema, insertTransactionSchema, insertServerSchema, insertVolumeSchema, insertTicketSchema, insertMessageSchema, insertSSHKeySchema, insertIPBanSchema, insertSnapshotSchema, docSections, docArticles, insertDocSectionSchema, maintenanceSettings, insertMaintenanceSettingsSchema, insertDocArticleSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -234,6 +240,46 @@ var init_schema = __esm({
     }).extend({
       expiresAt: z.date().optional()
     });
+    docSections = pgTable("doc_sections", {
+      id: serial("id").primaryKey(),
+      title: text("title").notNull(),
+      order: integer("order").notNull()
+    });
+    docArticles = pgTable("doc_articles", {
+      id: serial("id").primaryKey(),
+      sectionId: integer("section_id").notNull().references(() => docSections.id, { onDelete: "cascade" }),
+      title: text("title").notNull(),
+      content: text("content").notNull(),
+      order: integer("order").notNull(),
+      lastUpdated: timestamp("last_updated").notNull().defaultNow()
+    });
+    insertDocSectionSchema = createInsertSchema(docSections).pick({
+      title: true,
+      order: true
+    });
+    maintenanceSettings = pgTable("maintenance_settings", {
+      id: serial("id").primaryKey(),
+      enabled: boolean("enabled").notNull().default(false),
+      maintenanceMessage: text("maintenance_message").default("We're currently performing maintenance. Please check back soon."),
+      comingSoonEnabled: boolean("coming_soon_enabled").notNull().default(false),
+      comingSoonMessage: text("coming_soon_message").default("This feature is coming soon. Stay tuned for updates!"),
+      updatedAt: timestamp("updated_at").notNull().defaultNow(),
+      updatedBy: integer("updated_by").notNull()
+      // Admin user ID who last updated settings
+    });
+    insertMaintenanceSettingsSchema = createInsertSchema(maintenanceSettings).pick({
+      enabled: true,
+      maintenanceMessage: true,
+      comingSoonEnabled: true,
+      comingSoonMessage: true,
+      updatedBy: true
+    });
+    insertDocArticleSchema = createInsertSchema(docArticles).pick({
+      sectionId: true,
+      title: true,
+      content: true,
+      order: true
+    });
   }
 });
 
@@ -396,33 +442,30 @@ var DatabaseStorage = class {
   }
   async getServersByUser(userId) {
     try {
-      return await db.select().from(servers).where(eq(servers.userId, userId));
+      const query = `SELECT id, user_id, name, droplet_id, region, size, status, ip_address, 
+        ipv6_address, specs, application, last_monitored, root_password, is_suspended, created_at
+        FROM servers WHERE user_id = $1`;
+      const result = await pool.query(query, [userId]);
+      return result.rows.map((row) => ({
+        id: Number(row.id),
+        userId: Number(row.user_id),
+        name: String(row.name),
+        dropletId: String(row.droplet_id),
+        region: String(row.region),
+        size: String(row.size),
+        status: String(row.status),
+        ipAddress: row.ip_address ? String(row.ip_address) : null,
+        ipv6Address: row.ipv6_address ? String(row.ipv6_address) : null,
+        specs: row.specs,
+        application: row.application ? String(row.application) : null,
+        lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
+        rootPassword: row.root_password ? String(row.root_password) : null,
+        isSuspended: Boolean(row.is_suspended),
+        createdAt: row.created_at ? new Date(row.created_at) : /* @__PURE__ */ new Date()
+      }));
     } catch (error) {
-      if (error.message && error.message.includes('column "created_at" does not exist')) {
-        const query = `SELECT id, user_id, name, droplet_id, region, size, status, ip_address, 
-          ipv6_address, specs, application, last_monitored, root_password
-          FROM servers WHERE user_id = $1`;
-        const result = await pool.query(query, [userId]);
-        return result.rows.map((row) => ({
-          id: Number(row.id),
-          userId: Number(row.user_id),
-          name: String(row.name),
-          dropletId: String(row.droplet_id),
-          region: String(row.region),
-          size: String(row.size),
-          status: String(row.status),
-          ipAddress: row.ip_address ? String(row.ip_address) : null,
-          ipv6Address: row.ipv6_address ? String(row.ipv6_address) : null,
-          specs: row.specs,
-          application: row.application ? String(row.application) : null,
-          lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
-          rootPassword: row.root_password ? String(row.root_password) : null,
-          isSuspended: Boolean(row.is_suspended),
-          createdAt: row.created_at ? new Date(row.created_at) : /* @__PURE__ */ new Date()
-          // Add null createdAt field
-        }));
-      }
-      throw error;
+      console.error("Error getting servers by user:", error);
+      return [];
     }
   }
   async createServer(server) {
@@ -431,33 +474,30 @@ var DatabaseStorage = class {
   }
   async getAllServers() {
     try {
-      return await db.select().from(servers);
+      const query = `SELECT id, user_id, name, droplet_id, region, size, status, ip_address, 
+        ipv6_address, specs, application, last_monitored, root_password, is_suspended, created_at
+        FROM servers`;
+      const result = await pool.query(query);
+      return result.rows.map((row) => ({
+        id: Number(row.id),
+        userId: Number(row.user_id),
+        name: String(row.name),
+        dropletId: String(row.droplet_id),
+        region: String(row.region),
+        size: String(row.size),
+        status: String(row.status),
+        ipAddress: row.ip_address ? String(row.ip_address) : null,
+        ipv6Address: row.ipv6_address ? String(row.ipv6_address) : null,
+        specs: row.specs,
+        application: row.application ? String(row.application) : null,
+        lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
+        rootPassword: row.root_password ? String(row.root_password) : null,
+        isSuspended: Boolean(row.is_suspended),
+        createdAt: row.created_at ? new Date(row.created_at) : /* @__PURE__ */ new Date()
+      }));
     } catch (error) {
-      if (error.message && error.message.includes('column "created_at" does not exist')) {
-        const query = `SELECT id, user_id, name, droplet_id, region, size, status, ip_address, 
-          ipv6_address, specs, application, last_monitored, root_password, is_suspended 
-          FROM servers`;
-        const result = await pool.query(query);
-        return result.rows.map((row) => ({
-          id: Number(row.id),
-          userId: Number(row.user_id),
-          name: String(row.name),
-          dropletId: String(row.droplet_id),
-          region: String(row.region),
-          size: String(row.size),
-          status: String(row.status),
-          ipAddress: row.ip_address ? String(row.ip_address) : null,
-          ipv6Address: row.ipv6_address ? String(row.ipv6_address) : null,
-          specs: row.specs,
-          application: row.application ? String(row.application) : null,
-          lastMonitored: row.last_monitored ? new Date(row.last_monitored) : null,
-          rootPassword: row.root_password ? String(row.root_password) : null,
-          isSuspended: Boolean(row.is_suspended),
-          createdAt: row.created_at ? new Date(row.created_at) : /* @__PURE__ */ new Date()
-          // Add null createdAt field
-        }));
-      }
-      throw error;
+      console.error("Error getting all servers:", error);
+      return [];
     }
   }
   async updateServer(id, updates) {
@@ -629,6 +669,46 @@ var DatabaseStorage = class {
   }
   async deleteSnapshot(id) {
     await db.delete(snapshots).where(eq(snapshots.id, id));
+  }
+  // Documentation methods implementation
+  async createDocSection(section) {
+    const [newSection] = await db.insert(docSections).values(section).returning();
+    return newSection;
+  }
+  async getDocSection(id) {
+    const [section] = await db.select().from(docSections).where(eq(docSections.id, id));
+    return section;
+  }
+  async getAllDocSections() {
+    return await db.select().from(docSections).orderBy(docSections.order);
+  }
+  async updateDocSection(id, updates) {
+    const [section] = await db.update(docSections).set(updates).where(eq(docSections.id, id)).returning();
+    return section;
+  }
+  async deleteDocSection(id) {
+    await db.delete(docSections).where(eq(docSections.id, id));
+  }
+  async createDocArticle(article) {
+    const [newArticle] = await db.insert(docArticles).values(article).returning();
+    return newArticle;
+  }
+  async getDocArticle(id) {
+    const [article] = await db.select().from(docArticles).where(eq(docArticles.id, id));
+    return article;
+  }
+  async getDocArticlesBySection(sectionId) {
+    return await db.select().from(docArticles).where(eq(docArticles.sectionId, sectionId)).orderBy(docArticles.order);
+  }
+  async getAllDocArticles() {
+    return await db.select().from(docArticles).orderBy(docArticles.order);
+  }
+  async updateDocArticle(id, updates) {
+    const [article] = await db.update(docArticles).set(updates).where(eq(docArticles.id, id)).returning();
+    return article;
+  }
+  async deleteDocArticle(id) {
+    await db.delete(docArticles).where(eq(docArticles.id, id));
   }
 };
 var storage = new DatabaseStorage();
@@ -1079,7 +1159,9 @@ var DigitalOceanClient = class {
     this.apiKey = process.env.DIGITAL_OCEAN_API_KEY || "";
     this.useMock = false;
     if (!this.apiKey) {
-      console.error("ERROR: DigitalOcean API key not found. API calls will fail.");
+      console.error(
+        "ERROR: DigitalOcean API key not found. API calls will fail."
+      );
     }
   }
   // Default mock data
@@ -1111,12 +1193,6 @@ var DigitalOceanClient = class {
     {
       slug: "lon1",
       name: "London 1",
-      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
-      available: true
-    },
-    {
-      slug: "fra1",
-      name: "Frankfurt 1",
       sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
       available: true
     },
@@ -1488,27 +1564,27 @@ var DigitalOceanClient = class {
     try {
       const marketplaceSlug = appSlug.includes("marketplace:") ? appSlug.replace("marketplace:", "") : appSlug;
       const marketplaceMap = {
-        "wordpress": "wordpress-20-04",
-        "lamp": "lamp-20-04",
-        "lemp": "lemp-20-04",
-        "mean": "mean-20-04",
-        "docker": "docker-20-04",
-        "mongodb": "mongodb-20-04",
-        "mysql": "mysql-20-04",
-        "postgresql": "postgresql-20-04",
-        "nodejs": "nodejs-20-04",
-        "ghost": "ghost-20-04",
-        "drupal": "drupal-20-04",
-        "jenkins": "jenkins-20-04",
-        "gitlab": "gitlab-20-04",
-        "discordjs": "nodejs-20-04",
+        wordpress: "wordpress-20-04",
+        lamp: "lamp-20-04",
+        lemp: "lemp-20-04",
+        mean: "mean-20-04",
+        docker: "docker-20-04",
+        mongodb: "mongodb-20-04",
+        mysql: "mysql-20-04",
+        postgresql: "postgresql-20-04",
+        nodejs: "nodejs-20-04",
+        ghost: "ghost-20-04",
+        drupal: "drupal-20-04",
+        jenkins: "jenkins-20-04",
+        gitlab: "gitlab-20-04",
+        discordjs: "nodejs-20-04",
         // Use Node.js image for Discord.js bots
-        "discordpy": "python-20-04",
+        discordpy: "python-20-04",
         // Use Python image for Discord.py bots
-        "minecraft": "docker-20-04",
+        minecraft: "docker-20-04",
         // Use Docker for game servers
-        "csgo": "docker-20-04",
-        "valheim": "docker-20-04"
+        csgo: "docker-20-04",
+        valheim: "docker-20-04"
       };
       const imageSlug = marketplaceMap[marketplaceSlug] || marketplaceSlug;
       console.log(`Using image slug: ${imageSlug} for application: ${appSlug}`);
@@ -1528,7 +1604,9 @@ var DigitalOceanClient = class {
       let actualData = data;
       if (method && method.startsWith("/")) {
         actualEndpoint = method;
-        if (["GET", "POST", "PUT", "DELETE"].includes(String(endpoint).toUpperCase())) {
+        if (["GET", "POST", "PUT", "DELETE"].includes(
+          String(endpoint).toUpperCase()
+        )) {
           actualMethod = endpoint;
         } else {
           actualMethod = "GET";
@@ -1536,7 +1614,9 @@ var DigitalOceanClient = class {
         }
       }
       if (actualEndpoint.includes("api.digitalocean.com")) {
-        actualEndpoint = actualEndpoint.substring(actualEndpoint.indexOf("/v2") + 3);
+        actualEndpoint = actualEndpoint.substring(
+          actualEndpoint.indexOf("/v2") + 3
+        );
       }
       if (!actualEndpoint.startsWith("/")) {
         actualEndpoint = "/" + actualEndpoint;
@@ -1547,7 +1627,7 @@ var DigitalOceanClient = class {
         method: actualMethod,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`
         },
         body: actualMethod !== "GET" && actualData ? JSON.stringify(actualData) : void 0
       });
@@ -1555,9 +1635,13 @@ var DigitalOceanClient = class {
         try {
           const errorText = await response.text();
           const errorJson = errorText ? JSON.parse(errorText) : {};
-          throw new Error(`DigitalOcean API Error: ${JSON.stringify(errorJson)}`);
+          throw new Error(
+            `DigitalOcean API Error: ${JSON.stringify(errorJson)}`
+          );
         } catch (parseError) {
-          throw new Error(`DigitalOcean API Error: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `DigitalOcean API Error: ${response.status} ${response.statusText}`
+          );
         }
       }
       if (actualMethod === "DELETE") {
@@ -1583,10 +1667,16 @@ var DigitalOceanClient = class {
       return this.mockRegions;
     }
     try {
-      const response = await this.apiRequest("GET", `${this.apiBaseUrl}/regions`);
+      const response = await this.apiRequest(
+        "GET",
+        `${this.apiBaseUrl}/regions`
+      );
       return response.regions.filter((region) => region.available);
     } catch (error) {
-      console.error("Error fetching regions, falling back to mock data:", error);
+      console.error(
+        "Error fetching regions, falling back to mock data:",
+        error
+      );
       return this.mockRegions;
     }
   }
@@ -1595,10 +1685,11 @@ var DigitalOceanClient = class {
       return this.mockSizes;
     }
     try {
-      const response = await this.apiRequest("GET", `${this.apiBaseUrl}/sizes`);
-      const filteredSizes = response.sizes.filter(
-        (size) => size.available && size.price_monthly > 0
-      ).map((size) => {
+      const response = await this.apiRequest(
+        "GET",
+        `${this.apiBaseUrl}/sizes`
+      );
+      const filteredSizes = response.sizes.filter((size) => size.available && size.price_monthly > 0).map((size) => {
         let processor_type = "regular";
         if (size.slug.includes("-intel")) {
           processor_type = "intel";
@@ -1618,9 +1709,14 @@ var DigitalOceanClient = class {
   }
   async getDistributions() {
     try {
-      const response = await this.apiRequest("GET", `${this.apiBaseUrl}/images?type=distribution&per_page=100`);
+      const response = await this.apiRequest(
+        "GET",
+        `${this.apiBaseUrl}/images?type=distribution&per_page=100`
+      );
       if (!response.images || response.images.length === 0) {
-        console.warn("No distributions returned from DigitalOcean API, using default distributions");
+        console.warn(
+          "No distributions returned from DigitalOcean API, using default distributions"
+        );
         return [
           {
             slug: "ubuntu-20-04-x64",
@@ -1645,7 +1741,10 @@ var DigitalOceanClient = class {
         description: image.description || `${image.name} distribution image`
       }));
     } catch (error) {
-      console.error("Error fetching distributions from DigitalOcean API:", error);
+      console.error(
+        "Error fetching distributions from DigitalOcean API:",
+        error
+      );
       return [
         {
           slug: "ubuntu-20-04-x64",
@@ -1662,9 +1761,14 @@ var DigitalOceanClient = class {
   }
   async getApplications() {
     try {
-      const response = await this.apiRequest("GET", `${this.apiBaseUrl}/images?type=application&per_page=100`);
+      const response = await this.apiRequest(
+        "GET",
+        `${this.apiBaseUrl}/images?type=application&per_page=100`
+      );
       if (!response.images || response.images.length === 0) {
-        console.warn("No application images returned from DigitalOcean API, using default applications");
+        console.warn(
+          "No application images returned from DigitalOcean API, using default applications"
+        );
         return [
           {
             slug: "wordpress",
@@ -1699,7 +1803,10 @@ var DigitalOceanClient = class {
         type: this.determineAppType(image.name)
       }));
     } catch (error) {
-      console.error("Error fetching applications from DigitalOcean API:", error);
+      console.error(
+        "Error fetching applications from DigitalOcean API:",
+        error
+      );
       return [
         {
           slug: "wordpress",
@@ -1781,7 +1888,11 @@ runcmd:
   - systemctl restart ssh
 `;
       }
-      const response = await this.apiRequest("/droplets", "POST", dropletData);
+      const response = await this.apiRequest(
+        "/droplets",
+        "POST",
+        dropletData
+      );
       let ipAddress = null;
       let ipv6Address = null;
       let attempts = 0;
@@ -1837,9 +1948,13 @@ runcmd:
     } catch (error) {
       console.error("Error creating volume:", error);
       if (error.message && error.message.includes("409 Conflict")) {
-        throw new Error(`A volume with name "${options.name}" already exists. Please use a different name.`);
+        throw new Error(
+          `A volume with name "${options.name}" already exists. Please use a different name.`
+        );
       }
-      throw new Error(`Failed to create volume: ${error.message || "Unknown error"}`);
+      throw new Error(
+        `Failed to create volume: ${error.message || "Unknown error"}`
+      );
     }
   }
   async deleteDroplet(id) {
@@ -1851,7 +1966,9 @@ runcmd:
       await this.apiRequest(`/droplets/${id}`, "DELETE");
     } catch (error) {
       if (error.message && error.message.includes("404 Not Found")) {
-        console.log(`Droplet ${id} not found on DigitalOcean, it may have been already deleted`);
+        console.log(
+          `Droplet ${id} not found on DigitalOcean, it may have been already deleted`
+        );
         return;
       }
       console.error(`Error deleting droplet ${id}:`, error);
@@ -1868,7 +1985,9 @@ runcmd:
     } catch (error) {
       console.error(`Error deleting volume ${id}:`, error);
       if (error.message && error.message.includes("409 Conflict")) {
-        console.warn(`Volume ${id} may still be attached to a droplet. Will proceed with local deletion.`);
+        console.warn(
+          `Volume ${id} may still be attached to a droplet. Will proceed with local deletion.`
+        );
       } else {
         throw error;
       }
@@ -1895,7 +2014,10 @@ runcmd:
       await this.apiRequest(endpoint, method, data);
       console.log(`Successfully performed ${action} on droplet ${dropletId}`);
     } catch (error) {
-      console.error(`Error performing ${action} on droplet ${dropletId}:`, error);
+      console.error(
+        `Error performing ${action} on droplet ${dropletId}:`,
+        error
+      );
       throw error;
     }
   }
@@ -1905,19 +2027,20 @@ runcmd:
       return;
     }
     try {
-      await this.apiRequest(
-        `/volumes/${volumeId}/actions`,
-        "POST",
-        {
-          type: "attach",
-          droplet_id: parseInt(dropletId),
-          region
-        }
-      );
+      await this.apiRequest(`/volumes/${volumeId}/actions`, "POST", {
+        type: "attach",
+        droplet_id: parseInt(dropletId),
+        region
+      });
       await new Promise((resolve) => setTimeout(resolve, 3e3));
-      console.log(`Successfully attached volume ${volumeId} to droplet ${dropletId}`);
+      console.log(
+        `Successfully attached volume ${volumeId} to droplet ${dropletId}`
+      );
     } catch (error) {
-      console.error(`Error attaching volume ${volumeId} to droplet ${dropletId}:`, error);
+      console.error(
+        `Error attaching volume ${volumeId} to droplet ${dropletId}:`,
+        error
+      );
       throw error;
     }
   }
@@ -1927,19 +2050,20 @@ runcmd:
       return;
     }
     try {
-      await this.apiRequest(
-        `/volumes/${volumeId}/actions`,
-        "POST",
-        {
-          type: "detach",
-          droplet_id: parseInt(dropletId),
-          region
-        }
-      );
+      await this.apiRequest(`/volumes/${volumeId}/actions`, "POST", {
+        type: "detach",
+        droplet_id: parseInt(dropletId),
+        region
+      });
       await new Promise((resolve) => setTimeout(resolve, 3e3));
-      console.log(`Successfully detached volume ${volumeId} from droplet ${dropletId}`);
+      console.log(
+        `Successfully detached volume ${volumeId} from droplet ${dropletId}`
+      );
     } catch (error) {
-      console.error(`Error detaching volume ${volumeId} from droplet ${dropletId}:`, error);
+      console.error(
+        `Error detaching volume ${volumeId} from droplet ${dropletId}:`,
+        error
+      );
       throw error;
     }
   }
@@ -1951,7 +2075,15 @@ runcmd:
       let url = `/monitoring/metrics?host_id=${dropletId}`;
       url += `&start=${encodeURIComponent(new Date(Date.now() - 18e5).toISOString())}`;
       url += `&end=${encodeURIComponent((/* @__PURE__ */ new Date()).toISOString())}`;
-      ["cpu", "memory", "disk", "network", "load_1", "load_5", "load_15"].forEach((metric) => {
+      [
+        "cpu",
+        "memory",
+        "disk",
+        "network",
+        "load_1",
+        "load_5",
+        "load_15"
+      ].forEach((metric) => {
         url += `&metrics[]=${metric}`;
       });
       const response = await this.apiRequest(url);
@@ -1984,7 +2116,9 @@ runcmd:
     if (!timeseries || !Array.isArray(timeseries) || timeseries.length === 0) {
       return null;
     }
-    return timeseries.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0].value;
+    return timeseries.sort(
+      (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+    )[0].value;
   }
   // Helper to generate consistent mock metrics
   generateMockMetrics() {
@@ -1999,11 +2133,7 @@ runcmd:
       // 0-10MB
       network_out: Math.floor(Math.random() * 5e6),
       // 0-5MB
-      load_average: [
-        Math.random() * 2,
-        Math.random() * 1.5,
-        Math.random() * 1
-      ],
+      load_average: [Math.random() * 2, Math.random() * 1.5, Math.random() * 1],
       uptime_seconds: 3600 * 24 * Math.floor(Math.random() * 30 + 1)
       // 1-30 days
     };
@@ -2030,16 +2160,22 @@ runcmd:
       outbound_rules: []
     };
     this.mockFirewalls[firewallId] = newFirewall;
-    console.log(`Created default firewall for droplet ${dropletId}: ${firewallId}`);
+    console.log(
+      `Created default firewall for droplet ${dropletId}: ${firewallId}`
+    );
     return newFirewall;
   }
   // Firewall methods
   async getFirewalls() {
     try {
       console.log("Fetching all firewalls from DigitalOcean API");
-      const response = await this.apiRequest("/firewalls");
+      const response = await this.apiRequest(
+        "/firewalls"
+      );
       if (response && response.firewalls) {
-        console.log(`Retrieved ${response.firewalls.length} real firewalls from DigitalOcean API`);
+        console.log(
+          `Retrieved ${response.firewalls.length} real firewalls from DigitalOcean API`
+        );
         return response.firewalls;
       } else {
         console.log("No firewalls returned from DigitalOcean API");
@@ -2053,8 +2189,12 @@ runcmd:
   async getFirewallByDropletId(dropletId) {
     const dropletIdNumber = parseInt(dropletId);
     try {
-      console.log(`Fetching firewalls for droplet ${dropletId} from DigitalOcean API`);
-      const response = await this.apiRequest("/firewalls");
+      console.log(
+        `Fetching firewalls for droplet ${dropletId} from DigitalOcean API`
+      );
+      const response = await this.apiRequest(
+        "/firewalls"
+      );
       if (!response.firewalls || response.firewalls.length === 0) {
         console.log(`No firewalls found on DigitalOcean account`);
         return null;
@@ -2063,23 +2203,32 @@ runcmd:
         (firewall2) => firewall2.droplet_ids && firewall2.droplet_ids.includes(dropletIdNumber)
       );
       if (firewall) {
-        console.log(`Found real DigitalOcean firewall ${firewall.id} for droplet ${dropletId}`);
+        console.log(
+          `Found real DigitalOcean firewall ${firewall.id} for droplet ${dropletId}`
+        );
         return firewall;
       } else {
         console.log(`No firewall found for server ${dropletId}`);
         return null;
       }
     } catch (error) {
-      console.error(`Error fetching firewall for droplet ${dropletId} from DigitalOcean API:`, error);
+      console.error(
+        `Error fetching firewall for droplet ${dropletId} from DigitalOcean API:`,
+        error
+      );
       console.log(`No firewall found for server ${dropletId}`);
       return null;
     }
   }
   async createFirewall(options) {
     try {
-      const existingFirewall = await this.getFirewallByDropletId(options.droplet_ids[0].toString());
+      const existingFirewall = await this.getFirewallByDropletId(
+        options.droplet_ids[0].toString()
+      );
       if (existingFirewall && existingFirewall.id && !existingFirewall.id.includes("firewall-")) {
-        console.log("Real DigitalOcean firewall already exists for droplet, updating instead of creating");
+        console.log(
+          "Real DigitalOcean firewall already exists for droplet, updating instead of creating"
+        );
         return await this.updateFirewall(existingFirewall.id, {
           inbound_rules: options.inbound_rules,
           outbound_rules: options.outbound_rules
@@ -2094,10 +2243,16 @@ runcmd:
         "POST",
         options
       );
-      console.log("Successfully created real DigitalOcean firewall:", response.firewall.id);
+      console.log(
+        "Successfully created real DigitalOcean firewall:",
+        response.firewall.id
+      );
       return response.firewall;
     } catch (error) {
-      console.error("ERROR: Failed to create real DigitalOcean firewall:", error);
+      console.error(
+        "ERROR: Failed to create real DigitalOcean firewall:",
+        error
+      );
       throw new Error(`Failed to create DigitalOcean firewall: ${error}`);
     }
   }
@@ -2110,7 +2265,9 @@ runcmd:
       droplet_count: updates.droplet_ids?.length || 0
     });
     if (firewallId.includes("firewall-")) {
-      console.log(`WARNING: Cannot update a mock firewall ID with real DigitalOcean API. Creating a real one instead.`);
+      console.log(
+        `WARNING: Cannot update a mock firewall ID with real DigitalOcean API. Creating a real one instead.`
+      );
       try {
         const dropletIds = this.mockFirewalls[firewallId]?.droplet_ids || [];
         if (dropletIds.length === 0) {
@@ -2136,25 +2293,31 @@ runcmd:
         "PUT",
         updates
       );
-      console.log(`Successfully updated real DigitalOcean firewall: ${firewallId}`);
+      console.log(
+        `Successfully updated real DigitalOcean firewall: ${firewallId}`
+      );
       return response.firewall;
     } catch (error) {
-      console.error(`ERROR: Failed to update real DigitalOcean firewall ${firewallId}:`, error);
+      console.error(
+        `ERROR: Failed to update real DigitalOcean firewall ${firewallId}:`,
+        error
+      );
       throw new Error(`Failed to update DigitalOcean firewall: ${error}`);
     }
   }
   async addDropletsToFirewall(firewallId, dropletIds) {
     if (firewallId.includes("firewall-")) {
-      console.log(`WARNING: Cannot add droplets to a mock firewall. Need to create a real firewall.`);
+      console.log(
+        `WARNING: Cannot add droplets to a mock firewall. Need to create a real firewall.`
+      );
       try {
         const mockFirewall = this.mockFirewalls[firewallId];
         if (!mockFirewall) {
           throw new Error(`Mock firewall ${firewallId} not found`);
         }
-        const allDropletIds = [.../* @__PURE__ */ new Set([
-          ...mockFirewall.droplet_ids,
-          ...dropletIds
-        ])];
+        const allDropletIds = [
+          .../* @__PURE__ */ new Set([...mockFirewall.droplet_ids, ...dropletIds])
+        ];
         await this.createFirewall({
           name: mockFirewall.name || `firewall-migrated`,
           droplet_ids: allDropletIds,
@@ -2164,32 +2327,43 @@ runcmd:
         delete this.mockFirewalls[firewallId];
         return;
       } catch (error) {
-        console.error(`Failed to migrate mock firewall ${firewallId} to real firewall:`, error);
-        throw new Error(`Cannot add droplets to mock firewall with real API: ${error}`);
+        console.error(
+          `Failed to migrate mock firewall ${firewallId} to real firewall:`,
+          error
+        );
+        throw new Error(
+          `Cannot add droplets to mock firewall with real API: ${error}`
+        );
       }
     }
     try {
-      console.log(`Adding droplets ${dropletIds.join(", ")} to real firewall ${firewallId}`);
-      await this.apiRequest(
-        `/firewalls/${firewallId}/droplets`,
-        "POST",
-        { droplet_ids: dropletIds }
+      console.log(
+        `Adding droplets ${dropletIds.join(", ")} to real firewall ${firewallId}`
       );
+      await this.apiRequest(`/firewalls/${firewallId}/droplets`, "POST", {
+        droplet_ids: dropletIds
+      });
       console.log(`Successfully added droplets to real firewall ${firewallId}`);
     } catch (error) {
       console.error(`Error adding droplets to firewall ${firewallId}:`, error);
-      throw new Error(`Failed to add droplets to DigitalOcean firewall: ${error}`);
+      throw new Error(
+        `Failed to add droplets to DigitalOcean firewall: ${error}`
+      );
     }
   }
   async removeDropletsFromFirewall(firewallId, dropletIds) {
     if (firewallId.includes("firewall-")) {
-      console.log(`WARNING: Cannot remove droplets from a mock firewall with real API calls`);
+      console.log(
+        `WARNING: Cannot remove droplets from a mock firewall with real API calls`
+      );
       try {
         const mockFirewall = this.mockFirewalls[firewallId];
         if (!mockFirewall) {
           throw new Error(`Mock firewall ${firewallId} not found`);
         }
-        const remainingDropletIds = mockFirewall.droplet_ids.filter((id) => !dropletIds.includes(id));
+        const remainingDropletIds = mockFirewall.droplet_ids.filter(
+          (id) => !dropletIds.includes(id)
+        );
         if (remainingDropletIds.length > 0) {
           await this.createFirewall({
             name: mockFirewall.name || `firewall-migrated`,
@@ -2201,33 +2375,53 @@ runcmd:
         delete this.mockFirewalls[firewallId];
         return;
       } catch (error) {
-        console.error(`Failed to migrate mock firewall ${firewallId} to real firewall:`, error);
-        throw new Error(`Cannot remove droplets from mock firewall with real API: ${error}`);
+        console.error(
+          `Failed to migrate mock firewall ${firewallId} to real firewall:`,
+          error
+        );
+        throw new Error(
+          `Cannot remove droplets from mock firewall with real API: ${error}`
+        );
       }
     }
     try {
-      console.log(`Removing droplets ${dropletIds.join(", ")} from real firewall ${firewallId}`);
-      await this.apiRequest(
-        `/firewalls/${firewallId}/droplets`,
-        "DELETE",
-        { droplet_ids: dropletIds }
+      console.log(
+        `Removing droplets ${dropletIds.join(", ")} from real firewall ${firewallId}`
       );
-      console.log(`Successfully removed droplets from real firewall ${firewallId}`);
+      await this.apiRequest(`/firewalls/${firewallId}/droplets`, "DELETE", {
+        droplet_ids: dropletIds
+      });
+      console.log(
+        `Successfully removed droplets from real firewall ${firewallId}`
+      );
     } catch (error) {
-      console.error(`Error removing droplets from firewall ${firewallId}:`, error);
-      throw new Error(`Failed to remove droplets from DigitalOcean firewall: ${error}`);
+      console.error(
+        `Error removing droplets from firewall ${firewallId}:`,
+        error
+      );
+      throw new Error(
+        `Failed to remove droplets from DigitalOcean firewall: ${error}`
+      );
     }
   }
   async addRulesToFirewall(firewallId, inboundRules = [], outboundRules = []) {
     if (firewallId.includes("firewall-")) {
-      console.log(`WARNING: Cannot add rules to a mock firewall with real API. Creating a real one.`);
+      console.log(
+        `WARNING: Cannot add rules to a mock firewall with real API. Creating a real one.`
+      );
       try {
         const mockFirewall = this.mockFirewalls[firewallId];
         if (!mockFirewall) {
           throw new Error(`Mock firewall ${firewallId} not found`);
         }
-        const combinedInboundRules = [...mockFirewall.inbound_rules || [], ...inboundRules];
-        const combinedOutboundRules = [...mockFirewall.outbound_rules || [], ...outboundRules];
+        const combinedInboundRules = [
+          ...mockFirewall.inbound_rules || [],
+          ...inboundRules
+        ];
+        const combinedOutboundRules = [
+          ...mockFirewall.outbound_rules || [],
+          ...outboundRules
+        ];
         if (mockFirewall.droplet_ids.length === 0) {
           throw new Error(`Mock firewall ${firewallId} has no droplet IDs`);
         }
@@ -2240,8 +2434,13 @@ runcmd:
         delete this.mockFirewalls[firewallId];
         return;
       } catch (error) {
-        console.error(`Failed to migrate mock firewall ${firewallId} to real firewall:`, error);
-        throw new Error(`Cannot add rules to mock firewall with real API: ${error}`);
+        console.error(
+          `Failed to migrate mock firewall ${firewallId} to real firewall:`,
+          error
+        );
+        throw new Error(
+          `Cannot add rules to mock firewall with real API: ${error}`
+        );
       }
     }
     try {
@@ -2249,14 +2448,10 @@ runcmd:
         inbound: inboundRules.length,
         outbound: outboundRules.length
       });
-      await this.apiRequest(
-        `/firewalls/${firewallId}/rules`,
-        "POST",
-        {
-          inbound_rules: inboundRules,
-          outbound_rules: outboundRules
-        }
-      );
+      await this.apiRequest(`/firewalls/${firewallId}/rules`, "POST", {
+        inbound_rules: inboundRules,
+        outbound_rules: outboundRules
+      });
       console.log(`Successfully added rules to real firewall ${firewallId}`);
     } catch (error) {
       console.error(`Error adding rules to firewall ${firewallId}:`, error);
@@ -2265,7 +2460,9 @@ runcmd:
   }
   async removeRulesFromFirewall(firewallId, inboundRules = [], outboundRules = []) {
     if (firewallId.includes("firewall-")) {
-      console.log(`WARNING: Cannot remove rules from a mock firewall with real API. Creating a real one.`);
+      console.log(
+        `WARNING: Cannot remove rules from a mock firewall with real API. Creating a real one.`
+      );
       try {
         const mockFirewall = this.mockFirewalls[firewallId];
         if (!mockFirewall) {
@@ -2276,9 +2473,7 @@ runcmd:
           (rule) => !inboundPorts.includes(rule.ports)
         );
         const outboundPorts = outboundRules.map((rule) => rule.ports);
-        const remainingOutboundRules = (mockFirewall.outbound_rules || []).filter(
-          (rule) => !outboundPorts.includes(rule.ports)
-        );
+        const remainingOutboundRules = (mockFirewall.outbound_rules || []).filter((rule) => !outboundPorts.includes(rule.ports));
         if (mockFirewall.droplet_ids.length === 0) {
           throw new Error(`Mock firewall ${firewallId} has no droplet IDs`);
         }
@@ -2291,8 +2486,13 @@ runcmd:
         delete this.mockFirewalls[firewallId];
         return;
       } catch (error) {
-        console.error(`Failed to migrate mock firewall ${firewallId} to real firewall:`, error);
-        throw new Error(`Cannot remove rules from mock firewall with real API: ${error}`);
+        console.error(
+          `Failed to migrate mock firewall ${firewallId} to real firewall:`,
+          error
+        );
+        throw new Error(
+          `Cannot remove rules from mock firewall with real API: ${error}`
+        );
       }
     }
     try {
@@ -2300,18 +2500,18 @@ runcmd:
         inbound: inboundRules.length,
         outbound: outboundRules.length
       });
-      await this.apiRequest(
-        `/firewalls/${firewallId}/rules`,
-        "DELETE",
-        {
-          inbound_rules: inboundRules,
-          outbound_rules: outboundRules
-        }
+      await this.apiRequest(`/firewalls/${firewallId}/rules`, "DELETE", {
+        inbound_rules: inboundRules,
+        outbound_rules: outboundRules
+      });
+      console.log(
+        `Successfully removed rules from real firewall ${firewallId}`
       );
-      console.log(`Successfully removed rules from real firewall ${firewallId}`);
     } catch (error) {
       console.error(`Error removing rules from firewall ${firewallId}:`, error);
-      throw new Error(`Failed to remove rules from DigitalOcean firewall: ${error}`);
+      throw new Error(
+        `Failed to remove rules from DigitalOcean firewall: ${error}`
+      );
     }
   }
   async deleteFirewall(firewallId) {
@@ -2321,16 +2521,23 @@ runcmd:
         delete this.mockFirewalls[firewallId];
         console.log(`Successfully deleted mock firewall: ${firewallId}`);
       } else {
-        console.log(`Mock firewall not found: ${firewallId}, but operation succeeded`);
+        console.log(
+          `Mock firewall not found: ${firewallId}, but operation succeeded`
+        );
       }
       return;
     }
     try {
       console.log(`Deleting real DigitalOcean firewall: ${firewallId}`);
       await this.apiRequest(`/firewalls/${firewallId}`, "DELETE");
-      console.log(`Successfully deleted real DigitalOcean firewall: ${firewallId}`);
+      console.log(
+        `Successfully deleted real DigitalOcean firewall: ${firewallId}`
+      );
     } catch (error) {
-      console.error(`Error deleting real DigitalOcean firewall ${firewallId}:`, error);
+      console.error(
+        `Error deleting real DigitalOcean firewall ${firewallId}:`,
+        error
+      );
       throw new Error(`Failed to delete DigitalOcean firewall: ${error}`);
     }
   }
@@ -2347,7 +2554,9 @@ runcmd:
       return snapshotId;
     }
     try {
-      console.log(`Creating real snapshot for DigitalOcean droplet ${dropletId}`);
+      console.log(
+        `Creating real snapshot for DigitalOcean droplet ${dropletId}`
+      );
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
       const response = await this.apiRequest("POST", url, {
         type: "snapshot",
@@ -2371,19 +2580,25 @@ runcmd:
         {
           id: `snapshot-mock-1-${dropletId}`,
           name: `Snapshot 1 for droplet ${dropletId}`,
-          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1e3).toISOString(),
+          created_at: new Date(
+            Date.now() - 7 * 24 * 60 * 60 * 1e3
+          ).toISOString(),
           size_gigabytes: 20
         },
         {
           id: `snapshot-mock-2-${dropletId}`,
           name: `Snapshot 2 for droplet ${dropletId}`,
-          created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1e3).toISOString(),
+          created_at: new Date(
+            Date.now() - 3 * 24 * 60 * 60 * 1e3
+          ).toISOString(),
           size_gigabytes: 25
         }
       ];
     }
     try {
-      console.log(`Getting real snapshots for DigitalOcean droplet ${dropletId}`);
+      console.log(
+        `Getting real snapshots for DigitalOcean droplet ${dropletId}`
+      );
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/snapshots`;
       const response = await this.apiRequest("GET", url);
       return response.snapshots.map((snapshot) => ({
@@ -2403,7 +2618,9 @@ runcmd:
    */
   async deleteSnapshot(snapshotId) {
     if (this.useMock || snapshotId.includes("snapshot-")) {
-      console.log(`[MOCK] Deleting mock snapshot ${snapshotId} - mock mode: ${this.useMock}`);
+      console.log(
+        `[MOCK] Deleting mock snapshot ${snapshotId} - mock mode: ${this.useMock}`
+      );
       return;
     }
     try {
@@ -2414,7 +2631,9 @@ runcmd:
     } catch (error) {
       const errorMessage = error?.toString() || "";
       if (errorMessage.includes("404") || errorMessage.includes("Not Found")) {
-        console.log(`Snapshot ${snapshotId} not found on DigitalOcean, may already be deleted`);
+        console.log(
+          `Snapshot ${snapshotId} not found on DigitalOcean, may already be deleted`
+        );
         return;
       }
       console.error(`Error deleting snapshot ${snapshotId}:`, error);
@@ -2429,15 +2648,21 @@ runcmd:
   async createDropletBackup(dropletId) {
     if (this.useMock || dropletId.includes("droplet-")) {
       const mockBackupId = `backup-${Math.floor(Math.random() * 1e10)}`;
-      console.log(`[MOCK] Creating mock backup ${mockBackupId} for droplet ${dropletId}`);
+      console.log(
+        `[MOCK] Creating mock backup ${mockBackupId} for droplet ${dropletId}`
+      );
       return mockBackupId;
     }
     try {
       console.log(`Creating real backup for DigitalOcean droplet ${dropletId}`);
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
-      const response = await this.apiRequest("POST", url, {
-        type: "backup"
-      });
+      const response = await this.apiRequest(
+        "POST",
+        url,
+        {
+          type: "backup"
+        }
+      );
       const backupId = `backup-${response.action.id}`;
       console.log(`Creating real backup ${backupId} for droplet ${dropletId}`);
       return backupId;
@@ -2457,7 +2682,9 @@ runcmd:
       return Array(2).fill(0).map((_, i) => ({
         id: `backup-${Math.floor(Math.random() * 1e10)}`,
         name: `Auto Backup ${i + 1}`,
-        created_at: new Date(Date.now() - i * 24 * 60 * 60 * 1e3).toISOString(),
+        created_at: new Date(
+          Date.now() - i * 24 * 60 * 60 * 1e3
+        ).toISOString(),
         size_gigabytes: 25,
         status: "completed"
       }));
@@ -2487,7 +2714,9 @@ runcmd:
    */
   async deleteBackup(backupId) {
     if (this.useMock || backupId.includes("backup-")) {
-      console.log(`[MOCK] Deleting mock backup ${backupId} - mock mode: ${this.useMock}`);
+      console.log(
+        `[MOCK] Deleting mock backup ${backupId} - mock mode: ${this.useMock}`
+      );
       return;
     }
     const cleanBackupId = backupId.startsWith("backup-") ? backupId.substring(7) : backupId;
@@ -2508,30 +2737,45 @@ runcmd:
    */
   async restoreDropletFromBackup(dropletId, backupId) {
     if (this.useMock || dropletId.includes("droplet-")) {
-      console.log(`[MOCK] Restoring mock droplet ${dropletId} from backup ${backupId}`);
+      console.log(
+        `[MOCK] Restoring mock droplet ${dropletId} from backup ${backupId}`
+      );
       return;
     }
     const cleanBackupId = backupId.startsWith("backup-") ? backupId.substring(7) : backupId;
     try {
-      console.log(`Restoring real DigitalOcean droplet ${dropletId} from backup ${cleanBackupId}`);
+      console.log(
+        `Restoring real DigitalOcean droplet ${dropletId} from backup ${cleanBackupId}`
+      );
       const url = `${this.apiBaseUrl}/droplets/${dropletId}/actions`;
       await this.apiRequest("POST", url, {
         type: "restore",
         image: cleanBackupId
         // Use the ID directly for DigitalOcean API
       });
-      console.log(`Successfully initiated restore of droplet ${dropletId} from backup ${cleanBackupId}`);
+      console.log(
+        `Successfully initiated restore of droplet ${dropletId} from backup ${cleanBackupId}`
+      );
     } catch (error) {
       const errorMessage = error?.toString() || "";
       if (errorMessage.includes("422") || errorMessage.includes("Unprocessable Entity")) {
-        console.error(`DigitalOcean rejected the restore request: ${cleanBackupId} may not be a valid backup ID or the droplet architecture is incompatible`);
-        throw new Error(`Backup restore rejected by DigitalOcean. The backup may be incompatible with this server.`);
+        console.error(
+          `DigitalOcean rejected the restore request: ${cleanBackupId} may not be a valid backup ID or the droplet architecture is incompatible`
+        );
+        throw new Error(
+          `Backup restore rejected by DigitalOcean. The backup may be incompatible with this server.`
+        );
       }
       if (process.env.NODE_ENV !== "production") {
-        console.log(`[DEV] Allowing backup restore to proceed despite API error: ${error}`);
+        console.log(
+          `[DEV] Allowing backup restore to proceed despite API error: ${error}`
+        );
         return;
       }
-      console.error(`Error restoring droplet ${dropletId} from backup ${cleanBackupId}:`, error);
+      console.error(
+        `Error restoring droplet ${dropletId} from backup ${cleanBackupId}:`,
+        error
+      );
       throw new Error(`Failed to restore from backup: ${error}`);
     }
   }
@@ -2546,14 +2790,18 @@ runcmd:
       return {
         id: backupId,
         name: `Backup ${backupId.replace("backup-", "")}`,
-        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1e3).toISOString(),
+        created_at: new Date(
+          Date.now() - 5 * 24 * 60 * 60 * 1e3
+        ).toISOString(),
         size_gigabytes: 25,
         status: "completed"
       };
     }
     const cleanBackupId = backupId.startsWith("backup-") ? backupId.substring(7) : backupId;
     try {
-      console.log(`Getting details for real DigitalOcean backup ${cleanBackupId}`);
+      console.log(
+        `Getting details for real DigitalOcean backup ${cleanBackupId}`
+      );
       const url = `${this.apiBaseUrl}/images/${cleanBackupId}`;
       const response = await this.apiRequest("GET", url);
       if (!response || !response.image) {
@@ -2567,7 +2815,10 @@ runcmd:
         status: response.image.status || "completed"
       };
     } catch (error) {
-      console.error(`Error getting details for backup ${cleanBackupId}:`, error);
+      console.error(
+        `Error getting details for backup ${cleanBackupId}:`,
+        error
+      );
       throw new Error(`Failed to get backup details: ${error}`);
     }
   }
@@ -2578,7 +2829,9 @@ runcmd:
    * @deprecated Use restoreDropletFromBackup instead
    */
   async restoreDropletFromSnapshot(dropletId, snapshotId) {
-    console.log(`[DEPRECATED] Using backup restore instead of snapshot for droplet ${dropletId}`);
+    console.log(
+      `[DEPRECATED] Using backup restore instead of snapshot for droplet ${dropletId}`
+    );
     return this.restoreDropletFromBackup(dropletId, snapshotId);
   }
   /**
@@ -2592,12 +2845,16 @@ runcmd:
       return {
         id: snapshotId,
         name: `Snapshot ${snapshotId}`,
-        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1e3).toISOString(),
+        created_at: new Date(
+          Date.now() - 5 * 24 * 60 * 60 * 1e3
+        ).toISOString(),
         size_gigabytes: 25
       };
     }
     try {
-      console.log(`Getting details for real DigitalOcean snapshot ${snapshotId}`);
+      console.log(
+        `Getting details for real DigitalOcean snapshot ${snapshotId}`
+      );
       const url = `${this.apiBaseUrl}/snapshots/${snapshotId}`;
       const response = await this.apiRequest("GET", url);
       if (!response || !response.snapshot) {
@@ -2621,7 +2878,7 @@ var digitalOcean = new DigitalOceanClient();
 init_schema();
 init_db();
 init_schema();
-import { eq as eq4, sql as sql3 } from "drizzle-orm";
+import { eq as eq4, sql as sql3, asc } from "drizzle-orm";
 
 // server/paypal.ts
 import paypal from "@paypal/checkout-server-sdk";
@@ -2996,6 +3253,15 @@ async function checkBalance(userId, costInDollars) {
     throw new Error("Insufficient balance. Please add funds to your account.");
   }
 }
+function adminMiddleware(req, res, next) {
+  if (!req.user) {
+    return res.status(401).send();
+  }
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: "Access denied. Admin privileges required." });
+  }
+  next();
+}
 async function registerRoutes(app2) {
   app2.post("/api/admin/reset-storm-password", async (req, res) => {
     try {
@@ -3036,6 +3302,45 @@ async function registerRoutes(app2) {
   app2.get("/api/distributions", async (_req, res) => {
     const distributions = await digitalOcean.getDistributions();
     res.json(distributions);
+  });
+  app2.get("/api/maintenance", async (_req, res) => {
+    try {
+      const [settings] = await db.select().from(maintenanceSettings).limit(1);
+      res.json(settings || {
+        enabled: false,
+        maintenanceMessage: "We're currently performing maintenance. Please check back soon.",
+        comingSoonEnabled: false,
+        comingSoonMessage: "This feature is coming soon. Stay tuned for updates!"
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.patch("/api/admin/maintenance", adminMiddleware, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    try {
+      const parsed = insertMaintenanceSettingsSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
+      const [existing] = await db.select().from(maintenanceSettings).limit(1);
+      if (existing) {
+        const [updated] = await db.update(maintenanceSettings).set({
+          ...parsed.data,
+          updatedAt: /* @__PURE__ */ new Date(),
+          updatedBy: req.user.id
+        }).where(eq4(maintenanceSettings.id, existing.id)).returning();
+        res.json(updated);
+      } else {
+        const [settings] = await db.insert(maintenanceSettings).values({
+          ...parsed.data,
+          updatedBy: req.user.id
+        }).returning();
+        res.json(settings);
+      }
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   });
   app2.get("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
@@ -3447,6 +3752,58 @@ async function registerRoutes(app2) {
         hasPrevPage: page > 1
       }
     });
+  });
+  app2.patch("/api/docs/sections/:id/reorder", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      const sectionId = parseInt(req.params.id);
+      const { order } = req.body;
+      if (typeof order !== "number" || order < 1) {
+        return res.status(400).json({ message: "Invalid order number" });
+      }
+      const sections = await storage.getAllDocSections();
+      const targetSection = sections.find((s) => s.id === sectionId);
+      if (!targetSection) {
+        return res.status(404).json({ message: "Section not found" });
+      }
+      if (sections.some((s) => s.order === order && s.id !== sectionId)) {
+        for (const section2 of sections) {
+          if (section2.order >= order && section2.id !== sectionId) {
+            await storage.updateDocSection(section2.id, { order: section2.order + 1 });
+          }
+        }
+      }
+      const section = await storage.updateDocSection(sectionId, { order });
+      res.json(section);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.patch("/api/docs/articles/:id/reorder", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      const articleId = parseInt(req.params.id);
+      const { order } = req.body;
+      if (typeof order !== "number" || order < 1) {
+        return res.status(400).json({ message: "Invalid order number" });
+      }
+      const article = await storage.getDocArticle(articleId);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      const sectionArticles = await storage.getDocArticlesBySection(article.sectionId);
+      if (sectionArticles.some((a) => a.order === order && a.id !== articleId)) {
+        for (const existingArticle of sectionArticles) {
+          if (existingArticle.order >= order && existingArticle.id !== articleId) {
+            await storage.updateDocArticle(existingArticle.id, { order: existingArticle.order + 1 });
+          }
+        }
+      }
+      const updatedArticle = await storage.updateDocArticle(articleId, { order });
+      res.json(updatedArticle);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   });
   app2.get("/api/billing/transactions/:id/invoice", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
@@ -4623,6 +4980,159 @@ async function registerRoutes(app2) {
       });
     }
   });
+  app2.get("/api/docs/sections", async (_req, res) => {
+    try {
+      const sections = await db.query.docSections.findMany({
+        orderBy: [asc(docSections.order)]
+      });
+      const articles = await db.query.docArticles.findMany({
+        orderBy: [asc(docArticles.order)]
+      });
+      const sectionsWithArticles = sections.map((section) => {
+        const sectionArticles = articles.filter((article) => article.sectionId === section.id);
+        return {
+          ...section,
+          children: sectionArticles
+        };
+      });
+      res.json(sectionsWithArticles);
+    } catch (error) {
+      console.error("Error fetching documentation:", error);
+      res.status(500).json({ message: "Failed to fetch documentation" });
+    }
+  });
+  app2.post("/api/docs/sections", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const { title, order } = req.body;
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+      const section = await db.insert(docSections).values({
+        title,
+        order: order || 0
+      }).returning();
+      res.status(201).json(section[0]);
+    } catch (error) {
+      console.error("Error creating section:", error);
+      res.status(500).json({ message: "Failed to create section" });
+    }
+  });
+  app2.patch("/api/docs/sections/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const sectionId = parseInt(req.params.id);
+      const { title } = req.body;
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+      const section = await db.update(docSections).set({ title }).where(eq4(docSections.id, sectionId)).returning();
+      if (section.length === 0) {
+        return res.status(404).json({ message: "Section not found" });
+      }
+      res.json(section[0]);
+    } catch (error) {
+      console.error("Error updating section:", error);
+      res.status(500).json({ message: "Failed to update section" });
+    }
+  });
+  app2.delete("/api/docs/sections/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const sectionId = parseInt(req.params.id);
+      await db.delete(docArticles).where(eq4(docArticles.sectionId, sectionId));
+      await db.delete(docSections).where(eq4(docSections.id, sectionId));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting section:", error);
+      res.status(500).json({ message: "Failed to delete section" });
+    }
+  });
+  app2.post("/api/docs/articles", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const { sectionId, title, content, order } = req.body;
+      if (!sectionId || !title || !content) {
+        return res.status(400).json({ message: "SectionId, title, and content are required" });
+      }
+      const article = await db.insert(docArticles).values({
+        sectionId: parseInt(sectionId),
+        title,
+        content,
+        order: order || 0,
+        lastUpdated: /* @__PURE__ */ new Date()
+      }).returning();
+      res.status(201).json(article[0]);
+    } catch (error) {
+      console.error("Error creating article:", error);
+      res.status(500).json({ message: "Failed to create article" });
+    }
+  });
+  app2.patch("/api/docs/articles/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const articleId = parseInt(req.params.id);
+      const { sectionId, title, content } = req.body;
+      if (!title || !content) {
+        return res.status(400).json({ message: "Title and content are required" });
+      }
+      const updateData = {
+        title,
+        content,
+        lastUpdated: /* @__PURE__ */ new Date()
+      };
+      if (sectionId) {
+        updateData.sectionId = parseInt(sectionId);
+      }
+      const article = await db.update(docArticles).set(updateData).where(eq4(docArticles.id, articleId)).returning();
+      if (article.length === 0) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      res.json(article[0]);
+    } catch (error) {
+      console.error("Error updating article:", error);
+      res.status(500).json({ message: "Failed to update article" });
+    }
+  });
+  app2.delete("/api/docs/articles/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const articleId = parseInt(req.params.id);
+      await db.delete(docArticles).where(eq4(docArticles.id, articleId));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting article:", error);
+      res.status(500).json({ message: "Failed to delete article" });
+    }
+  });
+  app2.patch("/api/docs/sections/:id/reorder", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      const sectionId = parseInt(req.params.id);
+      const { order } = req.body;
+      if (typeof order !== "number" || order < 1) {
+        return res.status(400).json({ message: "Invalid order number" });
+      }
+      const section = await storage.updateDocSection(sectionId, { order });
+      res.json(section);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.patch("/api/docs/articles/:id/reorder", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      const articleId = parseInt(req.params.id);
+      const { order } = req.body;
+      if (typeof order !== "number" || order < 1) {
+        return res.status(400).json({ message: "Invalid order number" });
+      }
+      const article = await storage.updateDocArticle(articleId, { order });
+      res.json(article);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   return httpServer;
 }
 
@@ -4633,7 +5143,7 @@ import { eq as eq5 } from "drizzle-orm";
 
 // server/admin/routes.ts
 import * as crypto from "crypto";
-function adminMiddleware(req, res, next) {
+function adminMiddleware2(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ message: "Authentication required" });
   }
@@ -4643,7 +5153,7 @@ function adminMiddleware(req, res, next) {
   next();
 }
 function registerAdminRoutes(app2) {
-  app2.use("/api/admin", adminMiddleware);
+  app2.use("/api/admin", adminMiddleware2);
   app2.get("/api/admin/stats", async (req, res) => {
     try {
       const users3 = await storage.getAllUsers();
@@ -5080,10 +5590,8 @@ async function createTestData() {
     } else {
       serveStatic(app);
     }
-    const port = process.env.PORT || 8080;
+    const port = process.env.NODE_ENV === "development" ? 5e3 : process.env.PORT || 8080;
     console.log(`Starting server on port ${port}, NODE_ENV: ${process.env.NODE_ENV}`);
-    console.log(`Platform: ${process.env.PLATFORM || "unknown"}`);
-    console.log(`Host: 0.0.0.0 (listening on all interfaces)`);
     server.listen({
       port,
       host: "0.0.0.0",

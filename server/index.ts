@@ -73,7 +73,7 @@ async function createTestData() {
       const server = await storage.createServer({
         userId: user.id,
         name: "Test Server",
-        region: "nyc1",
+        region: "tor1",
         size: "s-1vcpu-1gb",
         dropletId: "12345",
         status: "active",
