@@ -25,18 +25,19 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          {/* Branding */}
-          <div className="flex items-center space-x-4">
-            <iframe 
-              src="https://status.skyvps360.com/badge?theme=dark" 
-              width="250" 
-              height="30" 
-              frameBorder="0" 
-              scrolling="no" 
-              className="h-[30px]"
-            ></iframe>
-            <h1 className="text-2xl font-bold">SkyVPS360</h1>
+          <div className="space-x-4">
+            {user ? (
+              <Button asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+            ) : (
+              <Button asChild>
+                <Link href="/auth">Login</Link>
+              </Button>
+            )}
           </div>
+        </div>
+      </nav>
 
       {/* Hero Section */}
       <section className="py-20 bg-primary/5">
@@ -256,5 +257,4 @@ export default function HomePage() {
     </div>
   );
 }
-
 
