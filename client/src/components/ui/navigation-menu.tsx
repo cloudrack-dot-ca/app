@@ -9,19 +9,24 @@ const NavigationMenu = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Root>
 >(({ className, children, ...props }, ref) => {
-  const [isOpen, setIsOpen] = React.useState(false);
-
   return (
-    <>
+    <div className="relative w-full">
       {/* Mobile Navigation */}
       <Sheet>
-        <SheetTrigger className="md:hidden p-2">
-          <Menu className="h-6 w-6" />
+        <SheetTrigger asChild>
+          <button className="md:hidden absolute left-4 top-1/2 -translate-y-1/2 p-2 hover:bg-accent rounded-md">
+            <Menu className="h-6 w-6" />
+            <span className="sr-only">Toggle Menu</span>
+          </button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[80%] sm:w-[300px]">
-          <nav className="flex flex-col space-y-4">
-            {children}
-          </nav>
+        <SheetContent side="left" className="w-[300px] p-0">
+          <div className="px-2 py-6">
+            <NavigationMenuPrimitive.List
+              className="flex flex-col space-y-2"
+            >
+              {children}
+            </NavigationMenuPrimitive.List>
+          </div>
         </SheetContent>
       </Sheet>
 
@@ -37,7 +42,7 @@ const NavigationMenu = React.forwardRef<
         {children}
         <NavigationMenuViewport />
       </NavigationMenuPrimitive.Root>
-    </>
+    </div>
   )
 })
 NavigationMenu.displayName = NavigationMenuPrimitive.Root.displayName
@@ -49,7 +54,7 @@ const NavigationMenuList = React.forwardRef<
   <NavigationMenuPrimitive.List
     ref={ref}
     className={cn(
-      "group flex flex-col md:flex-row list-none items-start md:items-center justify-start md:justify-center space-y-2 md:space-y-0 md:space-x-1",
+      "group flex flex-1 list-none items-center justify-center space-x-1",
       className
     )}
     {...props}
