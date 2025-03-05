@@ -56,7 +56,7 @@ export default function VolumeManager({ serverId }: VolumeManagerProps) {
       )
     })),
     defaultValues: {
-      name: "SkyVPS360-SSD-0",
+      name: "",
       size: 10,
     },
   });
