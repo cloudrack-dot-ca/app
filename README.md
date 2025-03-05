@@ -2,7 +2,7 @@
 
 SkyVPS360 is a comprehensive cloud VPS hosting provider platform with advanced server management, SSH terminal access, and intelligent billing systems. This platform allows users to quickly deploy virtual servers across multiple global regions with various configurations to suit different workloads and budgets.
 
-## 🚀 Core Features 
+## 🚀 Core Features
 
 ### Server Management
 - **Instant Provisioning**: Deploy servers in seconds with pre-configured applications or clean OS distributions
