@@ -253,7 +253,10 @@ export default function HomePage() {
           <Button size="lg" variant="secondary" asChild>
             <Link href={user ? "/dashboard" : "/auth"}>Create Server Now</Link>
           </Button>
-          <div id="donate-button-container">
+        </div>
+      </section>
+    </div>
   );
 }
+
 
