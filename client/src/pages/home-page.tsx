@@ -25,7 +25,7 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">SkyVPS360<iframe src="https://status.skyvps360.com/badge?theme=dark" width="250" height="30" frameborder="0" scrolling="no" style="color-scheme: normal"></iframe></h1>
+         <iframe src="https://status.skyvps360.com/badge?theme=dark" width="250" height="30" frameborder="0" scrolling="no" style="color-scheme: normal"></iframe> <h1 className="text-2xl font-bold">SkyVPS360</h1>
           <div className="space-x-4">
             {user ? (
               <Button asChild>
