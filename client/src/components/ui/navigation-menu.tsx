@@ -10,23 +10,21 @@ const NavigationMenu = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Root>
 >(({ className, children, ...props }, ref) => {
   return (
-    <div className="relative w-full">
+    <div className="relative w-full flex items-center justify-between px-4 py-2">
       {/* Mobile Navigation */}
       <Sheet>
         <SheetTrigger asChild>
-          <button className="md:hidden absolute left-4 top-1/2 -translate-y-1/2 p-2 hover:bg-accent rounded-md">
+          <button className="block md:hidden p-2 hover:bg-accent rounded-md">
             <Menu className="h-6 w-6" />
             <span className="sr-only">Toggle Menu</span>
           </button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[300px] p-0">
-          <div className="px-2 py-6">
-            <NavigationMenuPrimitive.List
-              className="flex flex-col space-y-2"
-            >
+        <SheetContent side="left" className="w-[300px] p-4">
+          <nav className="flex flex-col space-y-4">
+            <NavigationMenuPrimitive.List className="flex flex-col space-y-2">
               {children}
             </NavigationMenuPrimitive.List>
-          </div>
+          </nav>
         </SheetContent>
       </Sheet>
 
@@ -39,7 +37,7 @@ const NavigationMenu = React.forwardRef<
         )}
         {...props}
       >
-        {children}
+        <NavigationMenuList>{children}</NavigationMenuList>
         <NavigationMenuViewport />
       </NavigationMenuPrimitive.Root>
     </div>
