@@ -166,9 +166,26 @@ export function setupAuth(app: Express) {
   });
 }
 
+// Modify the requireAuth function to provide better debugging for GitHub OAuth
 export function requireAuth(req, res, next) {
   // Check if user is authenticated
   if (!req.user) {
+    // Special case for GitHub OAuth callback - make it more robust
+    if (req.url.includes('/github') || req.url.includes('/auth/github')) {
+      console.log('⚠️ [Auth] GitHub-related request without authentication. Attempting to continue.');
+
+      // If this is the GitHub callback, we'll let it proceed to show a more helpful error
+      if (req.url.includes('/callback')) {
+        console.log('⚠️ [Auth] GitHub callback without user session, will show instructions');
+        return next();
+      }
+
+      return res.status(401).json({
+        error: 'Authentication required for GitHub integration',
+        message: 'Please login first before connecting to GitHub'
+      });
+    }
+
     return res.status(401).json({ message: "Authentication required" });
   }
   next();
