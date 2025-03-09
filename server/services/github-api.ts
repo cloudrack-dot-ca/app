@@ -1,113 +1,117 @@
-import fetch from "node-fetch";
-import { logger } from "../utils/logger";
+import fetch from 'node-fetch';
+import { logger } from '../utils/logger';
 
-const GITHUB_API_URL = "https://api.github.com";
+// Base GitHub API URL
+const GITHUB_API_BASE = 'https://api.github.com';
 
-/**
- * Make a request to the GitHub API with proper authorization
- */
-export async function githubApiRequest(
-  path: string,
-  token: string,
-  options: {
-    method?: string;
-    body?: any;
-    headers?: Record<string, string>;
-  } = {}
-) {
+// Helper function to make authenticated GitHub API requests
+async function githubRequest(endpoint: string, token: string, options = {}) {
   try {
-    const url = path.startsWith("http") ? path : `${GITHUB_API_URL}${path}`;
-    const method = options.method || "GET";
+    const url = `${GITHUB_API_BASE}${endpoint}`;
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Authorization': `token ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        ...options.headers
+      }
+    });
 
-    const headers = {
-      "Authorization": `token ${token}`,
-      "Accept": "application/vnd.github.v3+json",
-      "User-Agent": "SkyVPS360-Platform",
-      ...options.headers
-    };
-
-    // Add Content-Type if body is present
-    if (options.body && !headers["Content-Type"]) {
-      headers["Content-Type"] = "application/json";
-    }
-
-    const requestOptions: any = {
-      method,
-      headers
-    };
-
-    // Add body if present
-    if (options.body) {
-      requestOptions.body = typeof options.body === "string"
-        ? options.body
-        : JSON.stringify(options.body);
-    }
-
-    const response = await fetch(url, requestOptions);
-
-    // If response is not ok, throw error
     if (!response.ok) {
-      const errorText = await response.text();
-      logger.error(`GitHub API error: ${response.status} ${errorText}`);
-      throw new Error(`GitHub API returned status ${response.status}: ${errorText}`);
-    }
-
-    // If response is 204 No Content, return empty object
-    if (response.status === 204) {
-      return {};
+      const errorBody = await response.text();
+      logger.error(`GitHub API error: ${response.status} ${response.statusText}`, errorBody);
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
     }
 
     return await response.json();
   } catch (error) {
-    logger.error(`Error in githubApiRequest to ${path}:`, error);
+    logger.error(`Error making GitHub request to ${endpoint}:`, error);
     throw error;
   }
 }
 
-/**
- * Get user information from GitHub
- */
+// Get GitHub user information
 export async function getGitHubUser(token: string) {
-  return await githubApiRequest("/user", token);
+  return await githubRequest('/user', token);
 }
 
-/**
- * Get user repositories from GitHub
- */
-export async function getGitHubRepos(token: string) {
-  return await githubApiRequest("/user/repos?sort=updated&per_page=100", token);
+// Get user's repositories
+export async function getUserRepositories(token: string) {
+  return await githubRequest('/user/repos?sort=updated&per_page=100', token);
 }
 
-/**
- * Get branches for a repository
- */
-export async function getGitHubBranches(token: string, owner: string, repo: string) {
-  return await githubApiRequest(`/repos/${owner}/${repo}/branches`, token);
+// Get repository branches
+export async function getRepositoryBranches(token: string, owner: string, repo: string) {
+  return await githubRequest(`/repos/${owner}/${repo}/branches`, token);
 }
 
-/**
- * Create a repository webhook
- */
-export async function createGitHubWebhook(token: string, owner: string, repo: string, webhookUrl: string, secret: string) {
-  return await githubApiRequest(`/repos/${owner}/${repo}/hooks`, token, {
-    method: "POST",
-    body: {
-      name: "web",
-      active: true,
-      events: ["push", "pull_request"],
-      config: {
-        url: webhookUrl,
-        content_type: "json",
-        insecure_ssl: "0",
-        secret
-      }
-    }
+// Create a deployment
+export async function createDeployment(token: string, owner: string, repo: string, ref: string, environment = 'production') {
+  return await githubRequest(`/repos/${owner}/${repo}/deployments`, token, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ref,
+      environment,
+      auto_merge: false,
+      required_contexts: []
+    })
   });
 }
 
-/**
- * Check if a repository webhook exists
- */
-export async function getGitHubWebhooks(token: string, owner: string, repo: string) {
-  return await githubApiRequest(`/repos/${owner}/${repo}/hooks`, token);
+// Get deployment status
+export async function getDeploymentStatus(token: string, owner: string, repo: string, deploymentId: number) {
+  return await githubRequest(`/repos/${owner}/${repo}/deployments/${deploymentId}/statuses`, token);
+}
+
+// Get repository content
+export async function getRepositoryContent(token: string, owner: string, repo: string, path: string) {
+  return await githubRequest(`/repos/${owner}/${repo}/contents/${path}`, token);
+}
+
+// Create or update a file in the repository
+export async function createOrUpdateFile(
+  token: string,
+  owner: string,
+  repo: string,
+  path: string,
+  content: string,
+  message: string,
+  branch: string,
+  sha?: string
+) {
+  const endpoint = `/repos/${owner}/${repo}/contents/${path}`;
+  const body: any = {
+    message,
+    content: Buffer.from(content).toString('base64'),
+    branch
+  };
+
+  if (sha) {
+    body.sha = sha;
+  }
+
+  return await githubRequest(endpoint, token, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+// Create a repository webhook
+export async function createWebhook(token: string, owner: string, repo: string, webhookUrl: string, secret: string) {
+  return await githubRequest(`/repos/${owner}/${repo}/hooks`, token, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'web',
+      active: true,
+      events: ['push', 'pull_request'],
+      config: {
+        url: webhookUrl,
+        content_type: 'json',
+        secret
+      }
+    })
+  });
 }

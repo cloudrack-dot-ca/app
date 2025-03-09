@@ -18,9 +18,11 @@ router.get("/", async (req, res) => {
   try {
     logger.info(`Retrieving deployments for user ${req.user.id}`);
 
-    const userDeployments = await db.query.deployments.findMany({
-      where: eq(deployments.userId, req.user.id)
-    });
+    // Use a direct query to the database instead of the query builder
+    // since there seems to be an issue with the deployments query
+    const userDeployments = await db.select()
+      .from(deployments)
+      .where(eq(deployments.userId, req.user.id));
 
     logger.info(`Retrieved ${userDeployments.length} deployments for user ${req.user.id}`);
     res.json(userDeployments);
@@ -33,9 +35,11 @@ router.get("/", async (req, res) => {
 // Get deployment details by ID
 router.get("/:id", async (req, res) => {
   try {
-    const deployment = await db.query.deployments.findFirst({
-      where: eq(deployments.id, parseInt(req.params.id))
-    });
+    // Use direct query instead of the query builder
+    const [deployment] = await db.select()
+      .from(deployments)
+      .where(eq(deployments.id, parseInt(req.params.id, 10)))
+      .limit(1);
 
     if (!deployment || deployment.userId !== req.user.id) {
       return res.status(404).json({ error: "Deployment not found" });
@@ -51,20 +55,24 @@ router.get("/:id", async (req, res) => {
 // Redeploy an existing deployment
 router.post("/:id/redeploy", async (req, res) => {
   try {
-    const deployment = await db.query.deployments.findFirst({
-      where: eq(deployments.id, parseInt(req.params.id))
-    });
+    // Use direct query instead of the query builder
+    const [deployment] = await db.select()
+      .from(deployments)
+      .where(eq(deployments.id, parseInt(req.params.id, 10)))
+      .limit(1);
 
     if (!deployment || deployment.userId !== req.user.id) {
       return res.status(404).json({ error: "Deployment not found" });
     }
 
+    logger.info(`Redeploying deployment ${deployment.id}`);
+
     // Trigger redeployment using app platform service
     await appPlatform.redeployApp(deployment);
 
-    res.json({ success: true });
+    res.json({ message: "Deployment is redeploying" });
   } catch (error) {
-    logger.error("Error redeploying application:", error);
+    logger.error(`Error redeploying application: ${error}`);
     res.status(500).json({ error: "Failed to redeploy application" });
   }
 });
@@ -72,21 +80,25 @@ router.post("/:id/redeploy", async (req, res) => {
 // Restart an existing deployment
 router.post("/:id/restart", async (req, res) => {
   try {
-    const deployment = await db.query.deployments.findFirst({
-      where: eq(deployments.id, parseInt(req.params.id))
-    });
+    // Use direct query instead of the query builder
+    const [deployment] = await db.select()
+      .from(deployments)
+      .where(eq(deployments.id, parseInt(req.params.id, 10)))
+      .limit(1);
 
     if (!deployment || deployment.userId !== req.user.id) {
       return res.status(404).json({ error: "Deployment not found" });
     }
 
+    logger.info(`Restarting deployment ${deployment.id}`);
+
     // Trigger restart using app platform service
     await appPlatform.restartApp(deployment);
 
-    res.json({ success: true });
+    res.json({ message: "Deployment is restarting" });
   } catch (error) {
-    logger.error("Error restarting application:", error);
-    res.status(500).json({ error: "Failed to restart application" });
+    logger.error(`Error restarting deployment ${req.params.id}:`, error);
+    res.status(500).json({ error: "Failed to restart deployment" });
   }
 });
 
