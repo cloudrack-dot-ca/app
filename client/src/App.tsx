@@ -22,6 +22,7 @@ import DocsPage from "@/pages/docs-page";
 import ApiDocsPage from "@/pages/api-docs-page";
 import AdminDashboard from "@/pages/admin/dashboard";
 import MaintenanceSettings from "@/pages/admin/maintenance";
+import GitHubSetupPage from "@/pages/github-setup";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
@@ -150,6 +151,7 @@ function Router() {
         <ProtectedRoute path="/support/:id" component={SupportPage} />
         <ProtectedRoute path="/account" component={AccountPage} />
         <ProtectedRoute path="/my-api" component={ApiKeyPage} />
+        <ProtectedRoute path="/github-setup" component={GitHubSetupPage} />
         <ProtectedRoute path="/admin" component={AdminDashboard} />
         <ProtectedRoute path="/admin/maintenance" component={MaintenanceSettings} />
         {/* Server routes */}

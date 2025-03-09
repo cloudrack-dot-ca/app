@@ -7,6 +7,7 @@ import { users } from "@shared/schema";
 import { setupAuth, hashPassword } from "./auth";
 import { eq } from "drizzle-orm";
 import { registerAdminRoutes } from "./admin/routes";
+import githubRoutes from "./routes/github";
 
 const app = express();
 app.use(express.json());
@@ -47,7 +48,7 @@ async function createTestData() {
   try {
     // Check if any admin users exist
     const admins = await db.select().from(users).where(eq(users.isAdmin, true));
-    
+
     if (admins.length === 0) {
       // Create default admin user
       const admin = await storage.createUser({
@@ -58,7 +59,7 @@ async function createTestData() {
         apiKey: null
       });
       log("Created default admin user: admin / admin123");
-      
+
       // Create a regular user
       const user = await storage.createUser({
         username: "user",
@@ -68,7 +69,7 @@ async function createTestData() {
         apiKey: null
       });
       log("Created default regular user: user / user123");
-      
+
       // Create a test server for the regular user
       const server = await storage.createServer({
         userId: user.id,
@@ -88,7 +89,7 @@ async function createTestData() {
         lastMonitored: new Date(),
         rootPassword: "Test123!" // Add default root password for test server
       });
-      
+
       // Create a test support ticket
       const ticket = await storage.createTicket({
         userId: user.id,
@@ -98,14 +99,14 @@ async function createTestData() {
         status: "open",
         originalDropletId: server.dropletId
       });
-      
+
       // Add a message to the ticket
       await storage.createMessage({
         ticketId: ticket.id,
         userId: user.id,
         message: "I need help configuring my server. Can you assist?"
       });
-      
+
       log("Created test data (server and support ticket)");
     }
   } catch (error) {
@@ -121,27 +122,39 @@ async function createTestData() {
 
     // Run necessary migrations
     try {
-      const { runMigration } = await import('../migrations/add-snapshots-table.js');
-      const result = await runMigration();
-      if (result) {
+      // Run snapshots table migration
+      const { runMigration: runSnapshotsMigration } = await import('../migrations/add-snapshots-table.js');
+      const snapshotsResult = await runSnapshotsMigration();
+      if (snapshotsResult) {
         console.log("Snapshots table migration completed successfully");
       } else {
         console.warn("Snapshots table migration failed or was already applied");
       }
+
+      // Run GitHub token migration
+      const { runMigration: runGitHubTokenMigration } = await import('../migrations/add-github-token.js');
+      const githubTokenResult = await runGitHubTokenMigration();
+      if (githubTokenResult) {
+        console.log("GitHub token migration completed successfully");
+      } else {
+        console.warn("GitHub token migration failed or was already applied");
+      }
     } catch (migrationError) {
-      console.error("Error running snapshots migration:", migrationError);
+      console.error("Error running migrations:", migrationError);
     }
 
     // Create test data including admin user
     await createTestData();
-    
+
     // Set up authentication before routes
     setupAuth(app);
-    
+
     // Register admin routes before regular routes
     registerAdminRoutes(app);
-    
+
     const server = await registerRoutes(app);
+
+    app.use("/api/github", githubRoutes);
 
     // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

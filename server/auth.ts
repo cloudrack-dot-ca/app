@@ -9,7 +9,7 @@ import { User as SelectUser } from "@shared/schema";
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface User extends SelectUser { }
   }
 }
 
@@ -29,15 +29,15 @@ export async function comparePasswords(supplied: string, stored: string) {
     console.log("WARNING: Plaintext password detected, comparing directly");
     // If the password is stored in plaintext, check if it matches directly
     const match = supplied === stored;
-    
+
     // Automatically upgrade to secure hash if plaintext password matches
     if (match) {
       console.log("Password matches plaintext - password should be upgraded");
     }
-    
+
     return match;
   }
-  
+
   // Normal case - password is stored with proper hash format
   try {
     const [hashed, salt] = stored.split(".");
@@ -45,7 +45,7 @@ export async function comparePasswords(supplied: string, stored: string) {
       console.error("Invalid password hash or salt format");
       return false;
     }
-    
+
     const hashedBuf = Buffer.from(hashed, "hex");
     const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
     return timingSafeEqual(hashedBuf, suppliedBuf);
@@ -79,25 +79,25 @@ export function setupAuth(app: Express) {
       if (!user) {
         return done(null, false);
       }
-      
+
       // Check if account is suspended
       if (user.isSuspended) {
         return done(null, false, { message: 'Account is suspended. Please contact support.' });
       }
-      
+
       const passwordMatches = await comparePasswords(password, user.password);
-      
+
       if (!passwordMatches) {
         return done(null, false);
       }
-      
+
       // Automatic password upgrade if plain text password was detected
       if (!user.password.includes(".")) {
         try {
           console.log(`Upgrading password hash for user ${user.id}`);
           const hashedPassword = await hashPassword(password);
           await storage.updateUser(user.id, { password: hashedPassword });
-          
+
           // Get the updated user
           const updatedUser = await storage.getUser(user.id);
           if (updatedUser) {
@@ -108,7 +108,7 @@ export function setupAuth(app: Express) {
           // Continue login even if upgrade fails
         }
       }
-      
+
       return done(null, user);
     }),
   );
@@ -120,12 +120,12 @@ export function setupAuth(app: Express) {
       if (!user) {
         return done(null, false);
       }
-      
+
       // Check if account has been suspended since last login
       if (user.isSuspended) {
         return done(null, false);
       }
-      
+
       done(null, user);
     } catch (error) {
       done(error, null);
@@ -164,4 +164,12 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });
+}
+
+export function requireAuth(req, res, next) {
+  // Check if user is authenticated
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
 }

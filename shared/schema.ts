@@ -7,9 +7,12 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   apiKey: text("api_key"),
+  githubToken: text("github_token"), // Added GitHub token field
   balance: integer("balance").notNull().default(0), // Balance in cents
   isAdmin: boolean("is_admin").notNull().default(false), // Admin flag
   isSuspended: boolean("is_suspended").notNull().default(false), // Account suspension flag
+  created: timestamp("created").notNull().defaultNow(),
+  updated: timestamp("updated").notNull().defaultNow(),
 });
 
 export const servers = pgTable("servers", {
