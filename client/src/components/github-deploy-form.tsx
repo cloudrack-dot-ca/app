@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Github, GitBranch, Info } from "lucide-react"; // Ensure this import exists
+import { Loader2, Github, GitBranch, Info } from "lucide-react";
 import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "wouter";
+import { Label } from "@/components/ui/label"; // This import was missing or incorrect
 
 // Add a new interface for app platform regions
 interface AppPlatformRegion {
@@ -99,53 +100,53 @@ export default function GitHubDeployForm() {
     queryKey: ["/api/app-platform/regions"],
     // This is a temporary mock implementation until the API endpoint exists
     queryFn: async () => [
-      { 
-        id: "ams", 
-        slug: "ams", 
-        name: "Amsterdam, Netherlands", 
-        available: true, 
-        data_centers: ["ams3"], 
-        default: false 
+      {
+        id: "ams",
+        slug: "ams",
+        name: "Amsterdam, Netherlands",
+        available: true,
+        data_centers: ["ams3"],
+        default: false
       },
-      { 
-        id: "nyc", 
-        slug: "nyc", 
-        name: "New York, United States", 
-        available: true, 
-        data_centers: ["nyc1", "nyc3"], 
-        default: true 
+      {
+        id: "nyc",
+        slug: "nyc",
+        name: "New York, United States",
+        available: true,
+        data_centers: ["nyc1", "nyc3"],
+        default: true
       },
-      { 
-        id: "fra", 
-        slug: "fra", 
-        name: "Frankfurt, Germany", 
-        available: true, 
-        data_centers: ["fra1"], 
-        default: false 
+      {
+        id: "fra",
+        slug: "fra",
+        name: "Frankfurt, Germany",
+        available: true,
+        data_centers: ["fra1"],
+        default: false
       },
-      { 
-        id: "lon", 
-        slug: "lon", 
-        name: "London, United Kingdom", 
-        available: true, 
-        data_centers: ["lon1"], 
-        default: false 
+      {
+        id: "lon",
+        slug: "lon",
+        name: "London, United Kingdom",
+        available: true,
+        data_centers: ["lon1"],
+        default: false
       },
-      { 
-        id: "sfo", 
-        slug: "sfo", 
-        name: "San Francisco, United States", 
-        available: true, 
-        data_centers: ["sfo3"], 
-        default: false 
+      {
+        id: "sfo",
+        slug: "sfo",
+        name: "San Francisco, United States",
+        available: true,
+        data_centers: ["sfo3"],
+        default: false
       },
-      { 
-        id: "sgp", 
-        slug: "sgp", 
-        name: "Singapore", 
-        available: true, 
-        data_centers: ["sgp1"], 
-        default: false 
+      {
+        id: "sgp",
+        slug: "sgp",
+        name: "Singapore",
+        available: true,
+        data_centers: ["sgp1"],
+        default: false
       }
     ],
   });
@@ -390,8 +391,8 @@ export default function GitHubDeployForm() {
         <div className="space-y-1">
           <Label className="text-sm font-medium">Deployment Type</Label>
           <div className="grid grid-cols-3 gap-2">
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               variant={deploymentType === 'auto' ? 'default' : 'outline'}
               onClick={() => setDeploymentType('auto')}
               className="h-auto py-2 px-3"
@@ -403,8 +404,8 @@ export default function GitHubDeployForm() {
                 </div>
               </div>
             </Button>
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               variant={deploymentType === 'static' ? 'default' : 'outline'}
               onClick={() => setDeploymentType('static')}
               className="h-auto py-2 px-3"
@@ -416,8 +417,8 @@ export default function GitHubDeployForm() {
                 </div>
               </div>
             </Button>
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               variant={deploymentType === 'container' ? 'default' : 'outline'}
               onClick={() => setDeploymentType('container')}
               className="h-auto py-2 px-3"

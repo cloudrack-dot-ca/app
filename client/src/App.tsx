@@ -23,11 +23,12 @@ import ApiDocsPage from "@/pages/api-docs-page";
 import AdminDashboard from "@/pages/admin/dashboard";
 import MaintenanceSettings from "@/pages/admin/maintenance";
 import GitHubSetupPage from "@/pages/github-setup";
-import DeploymentsPage from "@/pages/deployments"; // Add this import
+import DeploymentsPage from "@/pages/deployments";
+import GitHubDebugPage from "@/pages/github-debug";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
-import { Home, ShieldCheck, Settings, Book, Key, Wrench } from "lucide-react";
+import { Home, ShieldCheck, Settings, Book, Key, Wrench, Github } from "lucide-react"; // Fixed import
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useEffect } from "react";
 
@@ -146,6 +147,7 @@ function Router() {
         <Route path="/auth" component={AuthPage} />
         <Route path="/docs" component={DocsPage} />
         <Route path="/deployments" component={DeploymentsPage} />
+        <Route path="/github-debug" component={GitHubDebugPage} />
         <ProtectedRoute path="/api-docs" component={ApiDocsPage} />
         <ProtectedRoute path="/dashboard" component={Dashboard} />
         <ProtectedRoute path="/billing" component={BillingPage} />

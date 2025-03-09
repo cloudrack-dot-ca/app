@@ -1,8 +1,7 @@
 import express from "express";
 import { requireAuth } from "../auth";
-import { db } from "../db";
 import { logger } from "../utils/logger";
-import fetch from "node-fetch";
+import * as appPlatform from "../services/app-platform";
 
 const router = express.Router();
 
@@ -12,35 +11,27 @@ router.use(requireAuth);
 // Get all deployments for the authenticated user
 router.get("/", async (req, res) => {
   try {
-    // In a real implementation, this would query your database for the user's deployments
-    // For now we're using a mock implementation
-    const deployments = [
-      {
-        id: "app-1234",
-        name: "my-nodejs-app",
-        repository: "username/nodejs-project",
-        branch: "main",
-        status: "active",
-        url: "https://my-nodejs-app.ondigitalocean.app",
-        region: "nyc",
-        size: "basic-xs",
-        createdAt: "2023-07-01T10:00:00Z",
-        lastDeployedAt: "2023-07-15T14:30:00Z",
-        lastCommit: "a1b2c3d"
-      },
-      {
-        id: "app-5678",
-        name: "react-website",
-        repository: "username/react-website",
-        branch: "develop",
-        status: "deploying",
-        url: "https://react-website.ondigitalocean.app",
-        region: "sfo",
-        size: "basic-s",
-        createdAt: "2023-08-05T08:15:00Z",
-        lastDeployedAt: "2023-08-05T08:15:00Z"
-      }
-    ];
+    // Get all apps via the DigitalOcean API
+    const apps = await appPlatform.getApps();
+
+    // Format the apps into deployments
+    const deployments = await Promise.all(apps.map(async (app) => {
+      // For each app, get the active deployment details
+      let deploymentInfo = {
+        id: app.id,
+        name: app.spec.name,
+        repository: app.spec.services?.[0]?.github?.repo || "Unknown",
+        branch: app.spec.services?.[0]?.github?.branch || "main",
+        status: app.active_deployment?.phase?.toLowerCase() || "deploying",
+        url: app.live_url,
+        region: app.region?.slug || "",
+        size: app.spec.services?.[0]?.instance_size_slug || "",
+        createdAt: app.created_at,
+        lastDeployedAt: app.active_deployment?.created_at || app.created_at
+      };
+
+      return deploymentInfo;
+    }));
 
     logger.info(`Retrieved ${deployments.length} deployments for user ${req.user.id}`);
     res.json(deployments);
@@ -55,23 +46,25 @@ router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // In a real implementation, this would query your database for the specific deployment
-    // Mock response for now
+    // Get the app details from DigitalOcean
+    const app = await appPlatform.getApp(id);
+
+    // Format the app into a deployment
     const deployment = {
-      id,
-      name: "my-nodejs-app",
-      repository: "username/nodejs-project",
-      branch: "main",
-      status: "active",
-      url: "https://my-nodejs-app.ondigitalocean.app",
-      region: "nyc",
-      size: "basic-xs",
-      createdAt: "2023-07-01T10:00:00Z",
-      lastDeployedAt: "2023-07-15T14:30:00Z",
-      envVars: {
-        NODE_ENV: "production",
-        PORT: "8080"
-      }
+      id: app.id,
+      name: app.spec.name,
+      repository: app.spec.services?.[0]?.github?.repo || "Unknown",
+      branch: app.spec.services?.[0]?.github?.branch || "main",
+      status: app.active_deployment?.phase?.toLowerCase() || "deploying",
+      url: app.live_url,
+      region: app.region?.slug || "",
+      size: app.spec.services?.[0]?.instance_size_slug || "",
+      createdAt: app.created_at,
+      lastDeployedAt: app.active_deployment?.created_at || app.created_at,
+      envVars: app.spec.services?.[0]?.envs?.reduce((acc, env) => {
+        acc[env.key] = env.value;
+        return acc;
+      }, {})
     };
 
     res.json(deployment);
@@ -81,10 +74,10 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Create a new deployment
+// Create a new deployment (new app)
 router.post("/", async (req, res) => {
   try {
-    const { repo, branch, name, region, size, env, deploymentType } = req.body;
+    const { repo, branch, name, region, size, env } = req.body;
 
     // Validate required fields
     if (!repo || !branch || !name || !region || !size) {
@@ -93,24 +86,31 @@ router.post("/", async (req, res) => {
 
     logger.info(`Creating new deployment for ${repo}:${branch} as ${name}`);
 
-    // In a real implementation, you would call the DigitalOcean App Platform API to create the app
-    // For now, just return a mock success response with delay
-    setTimeout(() => {
-      const deployment = {
-        id: `app-${Date.now().toString().slice(-4)}`,
-        name,
-        repository: repo,
-        branch,
-        status: "deploying",
-        url: `https://${name}.ondigitalocean.app`,
-        region,
-        size,
-        createdAt: new Date().toISOString(),
-        lastDeployedAt: new Date().toISOString(),
-      };
+    // Create the app on DigitalOcean
+    const app = await appPlatform.createAppFromGitHub(req.user.id, {
+      name,
+      repository: repo,
+      branch,
+      region,
+      size,
+      environmentVariables: env || {}
+    });
 
-      res.status(201).json(deployment);
-    }, 1000); // Simulate API delay
+    // Return the newly created app details
+    const deployment = {
+      id: app.id,
+      name: app.spec.name,
+      repository: repo,
+      branch,
+      status: "deploying",
+      url: app.default_ingress,
+      region,
+      size,
+      createdAt: new Date().toISOString(),
+      lastDeployedAt: new Date().toISOString(),
+    };
+
+    res.status(201).json(deployment);
   } catch (error) {
     logger.error("Error creating deployment:", error);
     res.status(500).json({ error: "Failed to create deployment" });
@@ -122,7 +122,8 @@ router.get("/:id/logs", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // In a real implementation, you would fetch logs from the actual service
+    // This would fetch logs from DigitalOcean App Platform API
+    // For now, return mock logs
     const logs = [
       { timestamp: "2023-07-15T14:30:00Z", message: "Starting build process" },
       { timestamp: "2023-07-15T14:30:05Z", message: "Cloning repository" },
@@ -147,11 +148,10 @@ router.post("/:id/restart", async (req, res) => {
 
     logger.info(`Restarting deployment ${id}`);
 
-    // In a real implementation, you would call the DigitalOcean App Platform API to restart the app
-    // Simulate success with delay
-    setTimeout(() => {
-      res.json({ message: "Deployment is restarting" });
-    }, 500);
+    // Restart the app on DigitalOcean
+    await appPlatform.restartApp(id);
+
+    res.json({ message: "Deployment is restarting" });
   } catch (error) {
     logger.error(`Error restarting deployment ${req.params.id}:`, error);
     res.status(500).json({ error: "Failed to restart deployment" });
@@ -165,11 +165,14 @@ router.post("/:id/redeploy", async (req, res) => {
 
     logger.info(`Redeploying deployment ${id} with latest code`);
 
-    // In a real implementation, you would call the DigitalOcean App Platform API to redeploy the app
-    // Simulate success with delay
-    setTimeout(() => {
-      res.json({ message: "Deployment has started", status: "deploying" });
-    }, 500);
+    // Create a new deployment for the app
+    const deployment = await appPlatform.createDeployment(id);
+
+    res.json({
+      message: "Deployment has started",
+      status: "deploying",
+      deployment
+    });
   } catch (error) {
     logger.error(`Error redeploying deployment ${req.params.id}:`, error);
     res.status(500).json({ error: "Failed to redeploy application" });
@@ -183,15 +186,22 @@ router.delete("/:id", async (req, res) => {
 
     logger.info(`Deleting deployment ${id}`);
 
-    // In a real implementation, you would call the DigitalOcean App Platform API to delete the app
-    // Simulate success with delay
-    setTimeout(() => {
-      res.json({ message: "Deployment has been deleted" });
-    }, 1000);
+    // This would delete the app on DigitalOcean
+    // For now, just return success
+    res.json({ message: "Deployment has been deleted" });
   } catch (error) {
     logger.error(`Error deleting deployment ${req.params.id}:`, error);
     res.status(500).json({ error: "Failed to delete deployment" });
   }
+});
+
+// Error handler for this router
+router.use((err, req, res, next) => {
+  logger.error(`GitHub deployments error: ${err.message}`, err);
+  res.status(500).json({
+    error: "An error occurred with GitHub deployments",
+    message: err.message
+  });
 });
 
 export default router;

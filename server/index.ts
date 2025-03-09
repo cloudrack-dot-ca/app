@@ -11,6 +11,7 @@ import githubRoutes from "./routes/github";
 import { logger } from "./utils/logger";
 import githubDeploymentsRoutes from "./routes/github-deployments";
 import appPlatformRoutes from "./routes/app-platform";
+import apiDebugRoutes from './routes/api-debug';
 
 const app = express();
 app.use(express.json());
@@ -166,6 +167,7 @@ async function createTestData() {
     app.use("/api/github", githubRoutes);
     app.use("/api/github/deployments", githubDeploymentsRoutes);
     app.use("/api/app-platform", appPlatformRoutes);
+    app.use('/api/debug', apiDebugRoutes);
 
     // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

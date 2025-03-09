@@ -23,9 +23,14 @@ import * as z from 'zod';
 import { GitHubBanner } from "@/components/github-banner";
 import GitHubDeployForm from "@/components/github-deploy-form";
 
+// Fix the duplicate interface declaration - only define it once
+interface Region {
+  slug: string;
+  name: string;
+}
+
 interface Size {
   slug: string;
-  memory: number;
   vcpus: number;
   price_monthly: number;
   processor_type?: 'regular' | 'intel' | 'amd';
@@ -143,7 +148,9 @@ export default function Dashboard() {
           },
           "Password must be at least 8 characters and not end with a special character"
         ),
-        application: z.string().optional(),
+        application: z.string().optional().nullable(),
+        region: z.string().min(1, "Region is required"),
+        size: z.string().min(1, "Size is required"),
       })
     ),
     defaultValues: {
@@ -154,6 +161,7 @@ export default function Dashboard() {
       application: "",
       githubRepo: "",
     },
+    mode: "onChange" // Add this to validate on change
   });
 
   const filteredServers = servers.filter((server) => {
@@ -182,11 +190,30 @@ export default function Dashboard() {
       if (installMode === "github") {
         await createDigitalOceanApp(values);
       } else {
+        // Validate required fields before submitting
+        if (!values.name || !values.region || !values.size || !values.auth) {
+          toast({
+            title: "Missing required fields",
+            description: "Please fill out all required fields to create a server",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Log the server data being sent for debugging
+        console.log("Creating server with:", {
+          name: values.name,
+          region: values.region,
+          size: values.size,
+          application: values.application || null,
+          authType: "password"
+        });
+
         const serverData = {
           name: values.name,
           region: values.region,
           size: values.size,
-          application: values.application,
+          application: values.application || null,
           auth: {
             type: "password",
             value: values.auth,
@@ -546,7 +573,7 @@ export default function Dashboard() {
                     Deploy GitHub App
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Deploy from GitHub</DialogTitle>
                     <DialogDescription>
@@ -567,6 +594,8 @@ export default function Dashboard() {
               className="pl-10"
             />
           </div>
+
+          {/* Pagination UI */}
           {totalPages > 1 && (
             <div className="flex justify-center mt-6">
               <div className="flex space-x-2">
@@ -602,6 +631,8 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Server display section */}
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -624,6 +655,7 @@ export default function Dashboard() {
               ))}
             </div>
 
+            {/* Bottom pagination */}
             {totalPages > 1 && (
               <div className="flex justify-center mt-6">
                 <div className="flex space-x-2">
