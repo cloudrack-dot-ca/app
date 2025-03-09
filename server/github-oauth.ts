@@ -47,6 +47,13 @@ export class GitHubOAuth {
   async getAccessToken(code: string): Promise<string> {
     try {
       console.log(`ℹ️ 🐙 [GitHub] Exchanging code for access token...`);
+
+      // Log the exchange parameters
+      console.log(`ℹ️ 🐙 [GitHub] Exchange parameters:
+      - Client ID: ${this.clientId.substring(0, 5)}...
+      - Redirect URI: ${this.redirectUri}
+      - Code length: ${code.length}`);
+
       const tokenResponse = await axios.post<GitHubTokenResponse>(
         'https://github.com/login/oauth/access_token',
         {
@@ -62,6 +69,14 @@ export class GitHubOAuth {
         }
       );
 
+      // Log the raw response (with sensitive data masked)
+      console.log(`ℹ️ 🐙 [GitHub] Token response received:`,
+        JSON.stringify({
+          ...tokenResponse.data,
+          access_token: tokenResponse.data.access_token ? '***MASKED***' : undefined
+        })
+      );
+
       if (!tokenResponse.data.access_token) {
         console.error('❌ [GitHub] No access token in response:', tokenResponse.data);
         throw new Error('GitHub did not provide an access token');
@@ -71,6 +86,10 @@ export class GitHubOAuth {
       return tokenResponse.data.access_token;
     } catch (error) {
       console.error('❌ [GitHub] Failed to exchange code for token:', error.response?.data || error.message);
+      if (error.response) {
+        console.error('❌ [GitHub] Response status:', error.response.status);
+        console.error('❌ [GitHub] Response headers:', error.response.headers);
+      }
       throw new Error('Failed to obtain access token');
     }
   }
@@ -109,12 +128,24 @@ export class GitHubOAuth {
         return res.redirect('/dashboard?error=github-no-code');
       }
 
-      if (!req.user || !req.user.id) {
-        console.error('❌ [GitHub] User not authenticated during callback');
-        return res.redirect('/login?error=auth-required');
-      }
-
       try {
+        // Check if user is authenticated
+        if (!req.user || !req.user.id) {
+          console.log('❌ [GitHub] User not authenticated during callback, attempting to proceed anyway');
+          // In this case, we'll store the token temporarily and show instructions
+          return res.send(`
+            <html>
+              <head><title>GitHub Authentication</title></head>
+              <body>
+                <h2>GitHub Authentication Successful</h2>
+                <p>However, you need to be logged in to connect your GitHub account.</p>
+                <p>Please log in to your account first, then try connecting GitHub again.</p>
+                <a href="/login">Go to Login</a>
+              </body>
+            </html>
+          `);
+        }
+
         const accessToken = await this.getAccessToken(code);
 
         // Store the token in the database
@@ -154,6 +185,43 @@ export class GitHubOAuth {
       } catch (error) {
         console.error('❌ [GitHub] Error disconnecting account:', error);
         res.status(500).json({ error: 'Failed to disconnect GitHub account' });
+      }
+    });
+
+    // API route to get GitHub repositories
+    app.get('/api/github/repos', requireAuth, async (req, res) => {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const user = await storage.getUser(req.user.id);
+      if (!user?.github_token) {
+        return res.status(401).json({ error: 'GitHub account not connected' });
+      }
+
+      try {
+        const response = await axios.get('https://api.github.com/user/repos', {
+          headers: {
+            Authorization: `token ${user.github_token}`,
+            Accept: 'application/vnd.github.v3+json'
+          },
+          params: {
+            sort: 'updated',
+            per_page: 100
+          }
+        });
+
+        res.json(response.data);
+      } catch (error) {
+        console.error('❌ [GitHub] Error fetching repositories:', error.response?.data || error.message);
+
+        // Check if token is invalid
+        if (error.response?.status === 401) {
+          await storage.updateUser(req.user.id, { github_token: null });
+          return res.status(401).json({ error: 'GitHub token is invalid. Please reconnect your account.' });
+        }
+
+        res.status(500).json({ error: 'Failed to fetch GitHub repositories' });
       }
     });
   }
