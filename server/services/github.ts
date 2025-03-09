@@ -47,10 +47,13 @@ function loadEnvCredentials() {
 // Load credentials from env files directly
 const envCredentials = loadEnvCredentials();
 
-// GitHub OAuth configuration
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || envCredentials.CLIENT_ID || "";
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || envCredentials.CLIENT_SECRET || "";
-const GITHUB_REDIRECT_URI = process.env.GITHUB_REDIRECT_URI || envCredentials.REDIRECT_URI || "http://localhost:5000/api/github/callback";
+// Fix GitHub OAuth configuration - explicitly remove any "+" character in addition to trimming
+const GITHUB_CLIENT_ID = (process.env.GITHUB_CLIENT_ID || envCredentials.CLIENT_ID || "")
+  .trim()
+  .replace(/^\+/, ""); // Remove leading + character if present
+
+const GITHUB_CLIENT_SECRET = (process.env.GITHUB_CLIENT_SECRET || envCredentials.CLIENT_SECRET || "").trim();
+const GITHUB_REDIRECT_URI = (process.env.GITHUB_REDIRECT_URI || envCredentials.REDIRECT_URI || "http://localhost:5000/api/github/callback").trim();
 
 console.log("GitHub OAuth Configuration:");
 console.log(`- Client ID: ${GITHUB_CLIENT_ID ? "Set" : "Not set"} (${GITHUB_CLIENT_ID.substring(0, 4)}...)`);

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GitBranch, Github, LinkIcon, Unlink, ExternalLink, Star, Copy, Check } from "lucide-react";
+import { GitBranch, Github, LinkIcon, Unlink, ExternalLink, Star } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -50,11 +50,6 @@ export default function GitHubConnect({ className }: GitHubConnectProps) {
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepo | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string>("");
 
-  const { data: githubAuthUrl } = useQuery<{ url: string }>({
-    queryKey: ["/api/github/auth-url"],
-    enabled: false,
-  });
-
   const { data: repos = [], isLoading: isLoadingRepos } = useQuery<GitHubRepo[]>({
     queryKey: ["/api/github/repos"],
     onError: () => {
@@ -68,7 +63,7 @@ export default function GitHubConnect({ className }: GitHubConnectProps) {
     try {
       setIsConnecting(true);
 
-      // Get GitHub auth URL
+      // Get GitHub auth URL from the server where environment variables are properly handled
       const response = await apiRequest("GET", "/api/github/auth-url");
 
       // Redirect to GitHub for authorization

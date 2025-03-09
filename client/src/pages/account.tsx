@@ -232,6 +232,9 @@ export default function AccountPage() {
             <div className="grid grid-cols-1 gap-6">
               <GitHubConnect className="w-full" />
 
+              {/* Uncomment this for debugging if needed */}
+              {/* <GitHubDebug /> */}
+
               <Card>
                 <CardHeader>
                   <CardTitle>Using GitHub Integration</CardTitle>
