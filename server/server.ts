@@ -10,6 +10,7 @@ import bodyParser from 'body-parser';
 import { setupAuth } from './auth';
 import { storage } from './storage';
 import { githubOAuth } from './github-oauth';
+import { setupDebugRoutes } from './debug-routes';
 
 // Create Express server
 const app = express();
@@ -117,6 +118,9 @@ setupAuth(app);
 
 // Set up GitHub OAuth routes
 githubOAuth.setupRoutes(app);
+
+// Setup debug routes (only in development)
+setupDebugRoutes(app);
 
 // API Routes
 // Maintenance mode
