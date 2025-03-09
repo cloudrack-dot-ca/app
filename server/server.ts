@@ -1,76 +1,117 @@
-import express from 'express';
-import path from 'path';
-import cors from 'cors';
-import { createServer } from 'http';
-import compression from 'compression';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import cookieParser from 'cookie-parser';
-import bodyParser from 'body-parser';
-import { setupAuth } from './auth';
-import { storage } from './storage';
-import { githubOAuth } from './github-oauth';
-import { setupDebugRoutes } from './debug-routes';
+import express, { Express } from "express";
+import path from "path";
+import cors from "cors";
+import { createServer } from "http";
+import compression from "compression";
+import helmet from "helmet";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import bodyParser from "body-parser";
+import { setupAuth } from "./auth";
+import { storage } from "./storage";
+import { githubOAuth } from "./github-oauth";
+import { setupDebugRoutes } from "./debug-routes";
 
-// Create Express server
-const app = express();
-const httpServer = createServer(app);
+export async function setupServer(app: Express) {
+  const httpServer = createServer(app);
 
-// Configure basic middleware
-app.use(cors());
-app.use(compression());
-app.use(helmet({
-  contentSecurityPolicy: false, // Disable for development
-}));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
+  // Configure basic middleware
+  app.use(cors());
+  app.use(compression());
+  app.use(helmet({
+    contentSecurityPolicy: false, // Disable for development
+  }));
+  app.use(bodyParser.json());
+  app.use(bodyParser.urlencoded({ extended: true }));
+  app.use(cookieParser());
 
-// Logging
-app.use(morgan((tokens, req, res) => {
-  const timestamp = new Date().toLocaleTimeString();
-  const method = tokens.method(req, res);
-  const url = tokens.url(req, res);
-  const status = tokens.status(req, res);
-  const responseTime = tokens['response-time'](req, res);
+  // Logging
+  app.use(morgan((tokens, req, res) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const method = tokens.method(req, res);
+    const url = tokens.url(req, res);
+    const status = tokens.status(req, res);
+    const responseTime = tokens['response-time'](req, res);
 
-  console.log(`[${timestamp}] 🌐 ${method} ${url} ${status} ${responseTime}ms`);
+    console.log(`[${timestamp}] 🌐 ${method} ${url} ${status} ${responseTime}ms`);
 
-  // Log response body for debugging
-  if (req.url.startsWith('/api/')) {
-    const resBody = res.locals.responseBody;
-    if (resBody) {
-      const truncatedBody = JSON.stringify(resBody).substring(0, 100) + '...';
-      console.log(`[${timestamp}] 🔍 Response: ${truncatedBody}`);
+    // Log response body for debugging
+    if (req.url.startsWith('/api/')) {
+      const resBody = res.locals.responseBody;
+      if (resBody) {
+        const truncatedBody = JSON.stringify(resBody).substring(0, 100) + '...';
+        console.log(`[${timestamp}] 🔍 Response: ${truncatedBody}`);
+      }
     }
-  }
 
-  return null;
-}));
+    return null;
+  }));
 
-// Store response body for logging
-app.use((req, res, next) => {
-  const originalJson = res.json;
-  res.json = function (body) {
-    res.locals.responseBody = body;
-    return originalJson.call(this, body);
-  };
-  next();
-});
+  // Store response body for logging
+  app.use((req, res, next) => {
+    const originalJson = res.json;
+    res.json = function (body) {
+      res.locals.responseBody = body;
+      return originalJson.call(this, body);
+    };
+    next();
+  });
 
-// Initialize database connection
-(async () => {
+  // Initialize database connection
   try {
     await storage.initialize();
     console.log('Successfully connected to database');
-    console.log('[1:16:56 AM] 🗄️ [DB] Database connection successful');
+    console.log('[DB] Database connection successful');
 
     // Run migrations
     await runMigrations();
   } catch (error) {
     console.error('Failed to connect to database:', error);
   }
-})();
+
+  // Set up authentication
+  setupAuth(app);
+
+  // Set up GitHub OAuth routes
+  githubOAuth.setupRoutes(app);
+
+  // Setup debug routes (only in development)
+  setupDebugRoutes(app);
+
+  // API Routes
+  // Add your API routes here
+
+  // Serve static assets in production
+  if (process.env.NODE_ENV === 'production') {
+    const staticPath = path.join(process.cwd(), 'dist', 'server', 'public');
+    console.log(`Serving static files from: ${staticPath}`);
+
+    app.use(express.static(staticPath));
+
+    app.get('*', (req, res) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) {
+        return;
+      }
+      const indexPath = path.join(staticPath, 'index.html');
+      res.sendFile(indexPath);
+    });
+  }
+
+  // Error handler
+  app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Internal Server Error' });
+  });
+
+  // Start the server
+  const PORT = process.env.PORT || 5000;
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`[SERVER] Starting server on port ${PORT}, NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`✅ Server running on port ${PORT} and accessible from all network interfaces`);
+  });
+
+  return httpServer;
+}
 
 async function runMigrations() {
   try {
@@ -113,14 +154,9 @@ async function runMigrations() {
   }
 }
 
-// Set up authentication
-setupAuth(app);
-
-// Set up GitHub OAuth routes
-githubOAuth.setupRoutes(app);
-
-// Setup debug routes (only in development)
-setupDebugRoutes(app);
+// Create Express server
+const app = express();
+setupServer(app);
 
 // API Routes
 // Maintenance mode
@@ -138,28 +174,6 @@ app.get('/api/maintenance', async (req, res) => {
 const adminRouter = express.Router();
 app.use('/admin', adminRouter);
 console.log('1:16:57 AM [admin] Admin routes registered');
-
-// Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-  });
-}
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Internal Server Error' });
-});
-
-// Start the server
-const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`[1:16:57 AM] 🚀 [SERVER] Starting server on port ${PORT}, NODE_ENV: ${process.env.NODE_ENV}`);
-  console.log(`[1:16:57 AM] ✅ Server running on port ${PORT} and accessible from all network interfaces`);
-});
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {

@@ -17,23 +17,6 @@ import apiDebugRoutes from './routes/api-debug';
 import githubConnectionsRoutes from "./routes/github-connections";
 import { loadGitHubCredentials } from './utils/env';
 
-// Import server modules
-import './server';
-
-// Log startup information
-console.log(`Server starting in ${process.env.NODE_ENV || 'development'} mode`);
-console.log(`Database: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}`);
-
-// Check if we should skip drizzle operations
-import { existsSync } from 'fs';
-const skipDrizzle = existsSync('.drizzle-unavailable');
-
-if (skipDrizzle) {
-  console.log('⚠️ Skipping drizzle migrations - drizzle-kit not available in this environment');
-}
-
-// Additional startup code here if needed
-
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
