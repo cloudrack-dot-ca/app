@@ -1,0 +1,14 @@
+{
+  "watch": [
+    "server",
+    "shared",
+    ".env",
+    "index.js"
+  ],
+  "ext": "ts,js,json",
+  "ignore": [
+    "node_modules",
+    "dist"
+  ],
+  "exec": "node index.js"
+}

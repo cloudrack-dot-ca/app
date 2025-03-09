@@ -1,5 +1,10 @@
-
+// Development entry point for nodemon
 import 'dotenv/config';
+
+console.log("Starting development server...");
+console.log(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+
+// Import the ts-node register
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 require('ts-node').register({
@@ -7,22 +12,8 @@ require('ts-node').register({
   esm: true
 });
 
-// Add environment validation
-const requiredEnvVars = [
-  'DATABASE_URL',
-  'NODE_ENV'
-];
-
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-
-if (missingEnvVars.length > 0) {
-  console.error('Error: Missing required environment variables:');
-  missingEnvVars.forEach(envVar => {
-    console.error(`- ${envVar}`);
-  });
-  console.error('\nPlease set these variables in your .env file or environment');
+// Import the server
+import('./server/index.ts').catch(err => {
+  console.error('Failed to start server:', err);
   process.exit(1);
-}
-
-console.log("Starting application with database:", process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] || 'unknown');
-import('./server/index.ts');
+});
