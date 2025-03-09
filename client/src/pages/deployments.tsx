@@ -312,23 +312,23 @@ export default function DeploymentsPage() {
           </DialogHeader>
           <div className="bg-black text-green-400 p-4 rounded font-mono text-sm h-[400px] overflow-y-auto">
             {isLoadingLogs ? (
-              <div className="flex justify-center items-center h-full"></div>
+              <div className="flex justify-center items-center h-full">
                 <RefreshCw className="h-5 w-5 animate-spin" />
               </div>
-          ) : logs.length === 0 ? (
-          <div className="text-center h-full flex items-center justify-center">
-            <p>No logs available for this deployment</p>
-          </div>
-          ) : (
+            ) : logs.length === 0 ? (
+              <div className="text-center h-full flex items-center justify-center">
+                <p>No logs available for this deployment</p>
+              </div>
+            ) : (
               logs.map((log, i) => (
-          <p key={i} className="whitespace-pre-wrap">
-            <span className="text-gray-400">[{log.timestamp}]</span> {log.message}
-          </p>
-          ))
+                <p key={i} className="whitespace-pre-wrap">
+                  <span className="text-gray-400">[{log.timestamp}]</span> {log.message}
+                </p>
+              ))
             )}
-        </div>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 }
