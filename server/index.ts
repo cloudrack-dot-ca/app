@@ -8,10 +8,13 @@ import { setupAuth, hashPassword } from "./auth";
 import { eq } from "drizzle-orm";
 import { registerAdminRoutes } from "./admin/routes";
 import githubRoutes from "./routes/github";
+import githubWebhookRoutes from "./routes/github-webhooks";
+import githubDebugRoutes from "./routes/github-debug";
 import { logger } from "./utils/logger";
 import githubDeploymentsRoutes from "./routes/github-deployments";
 import appPlatformRoutes from "./routes/app-platform";
 import apiDebugRoutes from './routes/api-debug';
+import githubConnectionsRoutes from "./routes/github-connections";
 
 const app = express();
 app.use(express.json());
@@ -166,6 +169,9 @@ async function createTestData() {
 
     app.use("/api/github", githubRoutes);
     app.use("/api/github/deployments", githubDeploymentsRoutes);
+    app.use("/api/github/webhooks", githubWebhookRoutes); // Register GitHub webhook routes
+    app.use("/api/github/debug", githubDebugRoutes); // Register GitHub debug routes
+    app.use("/api/github/connections", githubConnectionsRoutes); // Add this new route
     app.use("/api/app-platform", appPlatformRoutes);
     app.use('/api/debug', apiDebugRoutes);
 

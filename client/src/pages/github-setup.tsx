@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import GitHubOAuthLink from "@/components/github-oauth-link";
 
 export default function GitHubSetupPage() {
   const { toast } = useToast();
@@ -51,7 +52,18 @@ export default function GitHubSetupPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Connect GitHub Account</CardTitle>
+          <CardDescription>
+            Connect your GitHub account to deploy repositories directly to your servers
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GitHubOAuthLink className="w-full" />
+        </CardContent>
+      </Card>
       <h1 className="text-3xl font-bold mb-2">GitHub Integration Setup</h1>
       <p className="text-muted-foreground mb-8">
         Connect your GitHub account to deploy applications directly from your repositories

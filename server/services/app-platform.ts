@@ -7,6 +7,16 @@ import { eq } from "drizzle-orm";
 // Load DigitalOcean token from environment variable
 const DO_TOKEN = process.env.DIGITAL_OCEAN_API_KEY || "";
 const BASE_URL = "https://api.digitalocean.com/v2";
+const APP_PLATFORM_BASE = `${BASE_URL}/apps`;
+
+interface DeploymentInput {
+  name: string;
+  repository: string;
+  branch: string;
+  region: string;
+  size: string;
+  envVars?: Record<string, string>;
+}
 
 /**
  * Creates a new app on DigitalOcean App Platform from a GitHub repository
@@ -82,6 +92,65 @@ export async function createAppFromGitHub(userId: number, options: {
     return data.app;
   } catch (error) {
     logger.error(`Error in createAppFromGitHub: ${(error as Error).message}`);
+    throw error;
+  }
+}
+
+/**
+ * Redeploy an existing application
+ */
+export async function redeployApp(deployment: any) {
+  try {
+    logger.info(`Redeploying app: ${deployment.id}`);
+
+    // Make API call to trigger new deployment
+    const response = await fetch(`${APP_PLATFORM_BASE}/${deployment.appId}/deployments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${DO_TOKEN}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to redeploy app: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    logger.success(`Redeployment triggered: ${data.deployment.id}`);
+
+    return data.deployment;
+  } catch (error) {
+    logger.error(`Error redeploying app:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Restart an existing application
+ */
+export async function restartApp(deployment: any) {
+  try {
+    logger.info(`Restarting app: ${deployment.id}`);
+
+    // Make API call to restart the app
+    const response = await fetch(`${APP_PLATFORM_BASE}/${deployment.appId}/restart`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${DO_TOKEN}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to restart app: ${response.status} ${errorText}`);
+    }
+
+    logger.success(`App restart triggered: ${deployment.id}`);
+    return true;
+  } catch (error) {
+    logger.error(`Error restarting app:`, error);
     throw error;
   }
 }
@@ -230,27 +299,49 @@ export async function getRegions() {
 }
 
 /**
- * Restart an app
+ * Get deployment details
  */
-export async function restartApp(appId: string, components?: string[]) {
+export async function getDeployment(deploymentId: string) {
   try {
-    const response = await fetch(`${BASE_URL}/apps/${appId}/restart`, {
-      method: "POST",
+    const response = await fetch(`${APP_PLATFORM_BASE}/deployments/${deploymentId}`, {
       headers: {
-        "Authorization": `Bearer ${DO_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(components ? { components } : {})
+        "Authorization": `Bearer ${DO_TOKEN}`
+      }
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to restart app: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to get deployment: ${response.status} ${errorText}`);
     }
 
     const data = await response.json();
-    return data;
+    return data.deployment;
   } catch (error) {
-    logger.error(`Error in restartApp: ${(error as Error).message}`);
+    logger.error(`Error getting deployment:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get app logs
+ */
+export async function getAppLogs(appId: string, type = "run") {
+  try {
+    const response = await fetch(`${APP_PLATFORM_BASE}/${appId}/logs?type=${type}&follow=false&pod_connection_timeout=30`, {
+      headers: {
+        "Authorization": `Bearer ${DO_TOKEN}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get logs: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.logs;
+  } catch (error) {
+    logger.error(`Error getting logs:`, error);
     throw error;
   }
 }
