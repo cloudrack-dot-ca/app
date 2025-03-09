@@ -8,6 +8,7 @@ import { setupAuth, hashPassword } from "./auth";
 import { eq } from "drizzle-orm";
 import { registerAdminRoutes } from "./admin/routes";
 import githubRoutes from "./routes/github";
+import { logger } from "./utils/logger";
 
 const app = express();
 app.use(express.json());
@@ -27,16 +28,22 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
+      logger.api(
+        "Request completed",
+        req.method,
+        path,
+        res.statusCode,
+        duration
+      );
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      // Optional: log response body for debugging in development
+      if (process.env.NODE_ENV === "development" && capturedJsonResponse) {
+        const responsePreview =
+          JSON.stringify(capturedJsonResponse).length > 100
+            ? JSON.stringify(capturedJsonResponse).substring(0, 97) + "..."
+            : JSON.stringify(capturedJsonResponse);
+        logger.debug(`Response: ${responsePreview}`);
       }
-
-      log(logLine);
     }
   });
 
@@ -58,7 +65,7 @@ async function createTestData() {
         balance: 10000, // $100.00 starting balance
         apiKey: null
       });
-      log("Created default admin user: admin / admin123");
+      logger.success("Created default admin user: admin / admin123");
 
       // Create a regular user
       const user = await storage.createUser({
@@ -68,7 +75,7 @@ async function createTestData() {
         balance: 5000, // $50.00 starting balance
         apiKey: null
       });
-      log("Created default regular user: user / user123");
+      logger.success("Created default regular user: user / user123");
 
       // Create a test server for the regular user
       const server = await storage.createServer({
@@ -107,10 +114,10 @@ async function createTestData() {
         message: "I need help configuring my server. Can you assist?"
       });
 
-      log("Created test data (server and support ticket)");
+      logger.success("Created test data (server and support ticket)");
     }
   } catch (error) {
-    console.error("Error creating test data:", error);
+    logger.error("Error creating test data:", error);
   }
 }
 
@@ -118,7 +125,7 @@ async function createTestData() {
   try {
     // Test database connection first
     await pool.query('SELECT 1');
-    console.log("Database connection successful");
+    logger.database("Database connection successful");
 
     // Run necessary migrations
     try {
@@ -126,21 +133,21 @@ async function createTestData() {
       const { runMigration: runSnapshotsMigration } = await import('../migrations/add-snapshots-table.js');
       const snapshotsResult = await runSnapshotsMigration();
       if (snapshotsResult) {
-        console.log("Snapshots table migration completed successfully");
+        logger.success("Snapshots table migration completed successfully");
       } else {
-        console.warn("Snapshots table migration failed or was already applied");
+        logger.warning("Snapshots table migration failed or was already applied");
       }
 
       // Run GitHub token migration
       const { runMigration: runGitHubTokenMigration } = await import('../migrations/add-github-token.js');
       const githubTokenResult = await runGitHubTokenMigration();
       if (githubTokenResult) {
-        console.log("GitHub token migration completed successfully");
+        logger.success("GitHub token migration completed successfully");
       } else {
-        console.warn("GitHub token migration failed or was already applied");
+        logger.warning("GitHub token migration failed or was already applied");
       }
     } catch (migrationError) {
-      console.error("Error running migrations:", migrationError);
+      logger.error("Error running migrations:", migrationError);
     }
 
     // Create test data including admin user
@@ -158,7 +165,7 @@ async function createTestData() {
 
     // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      console.error("Express error handler:", err);
+      logger.error("Express error handler:", err);
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
 
@@ -176,17 +183,17 @@ async function createTestData() {
 
     // Use port 5000 for development
     const port = process.env.NODE_ENV === 'development' ? 5000 : (process.env.PORT || 8080);
-    console.log(`Starting server on port ${port}, NODE_ENV: ${process.env.NODE_ENV}`);
+    logger.server(`Starting server on port ${port}, NODE_ENV: ${process.env.NODE_ENV}`);
 
     server.listen({
       port,
       host: "0.0.0.0", // Explicitly listen on all network interfaces
       reusePort: true,
     }, () => {
-      log(`serving on port ${port} and accessible from all network interfaces`);
+      logger.success(`Server running on port ${port} and accessible from all network interfaces`);
     });
   } catch (error) {
-    console.error("Application startup error:", error);
+    logger.error("Application startup error:", error);
     process.exit(1);
   }
 })();

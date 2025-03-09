@@ -4,6 +4,7 @@ import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
+import { logger } from "../utils/logger";
 
 // Try to load GitHub credentials from .env.local first, then fall back to .env
 function loadEnvCredentials() {
@@ -15,7 +16,7 @@ function loadEnvCredentials() {
 
     // Try .env.local first
     if (fs.existsSync(localEnvPath)) {
-      console.log("Loading GitHub credentials from .env.local");
+      logger.info("Loading GitHub credentials from .env.local");
       const localEnvFile = fs.readFileSync(localEnvPath, 'utf8');
       localEnvFile.split('\n').forEach(line => {
         const match = line.match(/^GITHUB_([A-Z_]+)=(.*)$/);
@@ -27,7 +28,7 @@ function loadEnvCredentials() {
 
     // If not found in .env.local, try .env
     if (Object.keys(credentials).length === 0 && fs.existsSync(envPath)) {
-      console.log("Loading GitHub credentials from .env");
+      logger.info("Loading GitHub credentials from .env");
       const envFile = fs.readFileSync(envPath, 'utf8');
       envFile.split('\n').forEach(line => {
         const match = line.match(/^GITHUB_([A-Z_]+)=(.*)$/);
@@ -39,7 +40,7 @@ function loadEnvCredentials() {
 
     return credentials;
   } catch (error) {
-    console.error("Error loading env credentials:", error);
+    logger.error("Error loading env credentials:", error);
     return {};
   }
 }
@@ -55,15 +56,15 @@ const GITHUB_CLIENT_ID = (process.env.GITHUB_CLIENT_ID || envCredentials.CLIENT_
 const GITHUB_CLIENT_SECRET = (process.env.GITHUB_CLIENT_SECRET || envCredentials.CLIENT_SECRET || "").trim();
 const GITHUB_REDIRECT_URI = (process.env.GITHUB_REDIRECT_URI || envCredentials.REDIRECT_URI || "http://localhost:5000/api/github/callback").trim();
 
-console.log("GitHub OAuth Configuration:");
-console.log(`- Client ID: ${GITHUB_CLIENT_ID ? "Set" : "Not set"} (${GITHUB_CLIENT_ID.substring(0, 4)}...)`);
-console.log(`- Client Secret: ${GITHUB_CLIENT_SECRET ? "Set" : "Not set"}`);
-console.log(`- Redirect URI: ${GITHUB_REDIRECT_URI}`);
+logger.github("GitHub OAuth Configuration:");
+logger.github(`- Client ID: ${GITHUB_CLIENT_ID ? "Set" : "Not set"} (${GITHUB_CLIENT_ID.substring(0, 4)}...)`);
+logger.github(`- Client Secret: ${GITHUB_CLIENT_SECRET ? "Set" : "Not set"}`);
+logger.github(`- Redirect URI: ${GITHUB_REDIRECT_URI}`);
 
 if (!GITHUB_CLIENT_ID || !GITHUB_CLIENT_SECRET) {
-  console.warn("GitHub OAuth credentials not set. GitHub integration will not work.");
+  logger.warning("GitHub OAuth credentials not set. GitHub integration will not work.");
 } else {
-  console.log("GitHub OAuth credentials successfully loaded. GitHub integration is available.");
+  logger.success("GitHub OAuth credentials successfully loaded. GitHub integration is available.");
 }
 
 export async function getGitHubOAuthURL() {
@@ -80,7 +81,7 @@ export async function getGitHubOAuthURL() {
   });
 
   const url = `https://github.com/login/oauth/authorize?${params.toString()}`;
-  console.log(`Generated GitHub OAuth URL: ${url}`);
+  logger.github(`Generated OAuth URL: ${url}`);
   return url;
 }
 
