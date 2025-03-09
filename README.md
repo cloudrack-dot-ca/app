@@ -1,3 +1,6 @@
+# I will not be providing support for this, but this can be used as a easy starting point for others i am allowing others to use my code freely 🎉ENJOY🎉
+
+
 # SkyVPS360 VPS Hosting Platform
 
 SkyVPS360 is a comprehensive cloud VPS hosting provider platform with advanced server management, SSH terminal access, and intelligent billing systems. This platform allows users to quickly deploy virtual servers across multiple global regions with various configurations to suit different workloads and budgets.
