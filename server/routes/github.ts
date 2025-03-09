@@ -31,7 +31,7 @@ router.get("/repos", async (req, res) => {
   }
 });
 
-// Get GitHub OAuth URL
+// Get GitHub OAuth URL - Updated to redirect directly instead of returning JSON
 router.get("/auth-url", async (req, res) => {
   try {
     const clientId = process.env.GITHUB_CLIENT_ID?.trim();
@@ -41,13 +41,14 @@ router.get("/auth-url", async (req, res) => {
       return res.status(500).json({ error: "GitHub OAuth configuration is missing" });
     }
 
-    // Fixed: proper URL generation with trimmed clientId
+    // Generate the GitHub OAuth URL
     const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user:email`;
 
     // Log the URL for debugging
-    logger.info(`🐙 [GitHub] Generated OAuth URL: ${authUrl}`);
+    logger.info(`🐙 [GitHub] Redirecting to GitHub OAuth URL: ${authUrl}`);
 
-    res.json({ url: authUrl });
+    // Redirect the browser directly to GitHub instead of returning JSON
+    return res.redirect(authUrl);
   } catch (error) {
     logger.error("Error generating GitHub auth URL:", error);
     res.status(500).json({ error: "Failed to generate GitHub auth URL" });

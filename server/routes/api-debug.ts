@@ -1,92 +1,64 @@
-import express from "express";
-import { requireAuth } from "../auth";
-import { logger } from "../utils/logger";
+import express from 'express';
+import { requireAdmin } from '../auth';
+import os from 'os';
+import { logger } from '../utils/logger';
 
 const router = express.Router();
 
-// Require auth for these endpoints
-router.use(requireAuth);
+// Require admin authorization for all routes
+router.use(requireAdmin);
 
-// Debug info endpoint - only accessible to admins
-router.get("/", async (req, res) => {
+// GET environment variables and system info for debugging
+router.get('/', async (req, res) => {
   try {
-    if (!req.user?.isAdmin) {
-      return res.status(403).json({
-        error: "Admin access required"
-      });
-    }
-
-    // Get environment variables (sanitized)
-    const envVars = {
+    // Get relevant environment variables (redact sensitive values)
+    const env = {
       NODE_ENV: process.env.NODE_ENV,
-      GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID ? 'Set' : 'Not Set',
-      GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET ? 'Set' : 'Not Set',
+      PORT: process.env.PORT,
+      GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
       GITHUB_REDIRECT_URI: process.env.GITHUB_REDIRECT_URI,
-      DIGITAL_OCEAN_API_KEY: process.env.DIGITAL_OCEAN_API_KEY ? 'Set (first chars: ' +
-        (process.env.DIGITAL_OCEAN_API_KEY.substring(0, 5) + '...)') : 'Not Set',
+      // Redact secret
+      GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET ? '***REDACTED***' : undefined,
+      DATABASE_URL: process.env.DATABASE_URL ? '***REDACTED***' : undefined,
     };
 
-    // System info
-    const systemInfo = {
-      nodeVersion: process.version,
+    // Get system info
+    const system = {
       platform: process.platform,
       arch: process.arch,
-      uptime: process.uptime()
+      nodeVersion: process.version,
+      memory: {
+        total: `${Math.round(os.totalmem() / (1024 * 1024 * 1024))}GB`,
+        free: `${Math.round(os.freemem() / (1024 * 1024 * 1024))}GB`,
+      },
+      cpus: os.cpus().length,
+      hostname: os.hostname(),
+      uptime: `${Math.round(os.uptime() / 60 / 60)} hours`,
     };
 
-    // Return debug info
-    res.json({
-      env: envVars,
-      system: systemInfo,
-      time: new Date().toISOString()
-    });
+    res.json({ env, system });
   } catch (error) {
-    logger.error(`Error in debug endpoint: ${(error as Error).message}`);
-    res.status(500).json({
-      error: "Internal server error",
-      message: (error as Error).message
-    });
+    logger.error('Error in API debug route:', error);
+    res.status(500).json({ error: 'Failed to get debug information' });
   }
 });
 
-// Test server creation endpoint
-router.post("/test-server", async (req, res) => {
+// Add a route to test GitHub OAuth URL
+router.get('/github-oauth-url', (req, res) => {
   try {
-    if (!req.user?.isAdmin) {
-      return res.status(403).json({
-        error: "Admin access required"
-      });
+    const clientId = process.env.GITHUB_CLIENT_ID?.trim();
+    const redirectUri = process.env.GITHUB_REDIRECT_URI?.trim();
+
+    if (!clientId || !redirectUri) {
+      return res.status(500).json({ error: 'GitHub OAuth configuration is missing' });
     }
 
-    // Log the server creation params but don't actually create anything
-    const { name, region, size, application, auth } = req.body;
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user:email`;
 
-    logger.info(`[DEBUG] Test server creation with params: 
-      name: ${name || 'Not Set'},
-      region: ${region || 'Not Set'},
-      size: ${size || 'Not Set'},
-      application: ${application || 'Not Set'},
-      auth type: ${auth?.type || 'Not Set'}
-    `);
-
-    // Return success with parameters received
-    res.json({
-      success: true,
-      message: "Server parameters validated",
-      params: {
-        name,
-        region,
-        size,
-        application,
-        authType: auth?.type
-      }
-    });
+    res.json({ url: authUrl, components: { clientId, redirectUri } });
   } catch (error) {
-    logger.error(`Error in test server creation: ${(error as Error).message}`);
-    res.status(500).json({
-      error: "Internal server error",
-      message: (error as Error).message
-    });
+    logger.error('Error generating debug GitHub URL:', error);
+    res.status(500).json({ error: 'Failed to generate GitHub auth URL' });
   }
 });
 

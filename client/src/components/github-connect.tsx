@@ -297,23 +297,40 @@ export default function GitHubConnect({ className }: GitHubConnectProps) {
             <p className="text-sm text-muted-foreground mb-6">
               Link your GitHub account to deploy your repositories directly to your servers.
             </p>
-            <Button
-              onClick={handleConnect}
-              disabled={isConnecting}
-              className="w-full"
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Github className="h-4 w-4 mr-2" />
-                  Connect GitHub Account
-                </>
-              )}
-            </Button>
+            <div className="space-y-2">
+              {/* Original button that uses the server-side redirect */}
+              <Button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="w-full"
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Github className="h-4 w-4 mr-2" />
+                    Connect GitHub Account
+                  </>
+                )}
+              </Button>
+
+              {/* Direct link fallback button */}
+              <div className="text-xs text-muted-foreground mt-2">
+                Having trouble connecting?
+                <Button variant="link" size="sm" className="px-1 h-auto" onClick={() => {
+                  // Direct GitHub OAuth link
+                  const clientId = "Ov23lis2zEGGv7CCm9SG";
+                  const redirectUri = encodeURIComponent("http://localhost:5000/api/github/callback");
+                  const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,user:email`;
+                  window.open(authUrl, "_blank");
+                }}>
+                  Try direct link
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>
