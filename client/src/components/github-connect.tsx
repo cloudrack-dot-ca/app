@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GitBranch, Github, LinkIcon, Unlink, ExternalLink, Star } from "lucide-react";
+import { GitBranch, Github, LinkIcon, Unlink, ExternalLink, Star, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -78,9 +78,9 @@ export default function GitHubConnect({ className }: GitHubConnectProps) {
         description: (error as Error).message,
         variant: "destructive",
       });
-    } finally {
       setIsConnecting(false);
     }
+    // Note: No finally block because we're redirecting away from the page
   };
 
   const handleDisconnect = async () => {
@@ -281,7 +281,11 @@ export default function GitHubConnect({ className }: GitHubConnectProps) {
                 onClick={handleDisconnect}
                 disabled={isConnecting}
               >
-                <Unlink className="h-4 w-4 mr-2" />
+                {isConnecting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Unlink className="h-4 w-4 mr-2" />
+                )}
                 Disconnect
               </Button>
             </div>
@@ -298,8 +302,17 @@ export default function GitHubConnect({ className }: GitHubConnectProps) {
               disabled={isConnecting}
               className="w-full"
             >
-              <Github className="h-4 w-4 mr-2" />
-              {isConnecting ? "Connecting..." : "Connect GitHub Account"}
+              {isConnecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Github className="h-4 w-4 mr-2" />
+                  Connect GitHub Account
+                </>
+              )}
             </Button>
           </div>
         )}
