@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -173,3 +173,42 @@ export function requireAuth(req, res, next) {
   }
   next();
 }
+
+interface AuthenticatedRequest extends Request {
+  user?: {
+    isAdmin: boolean;
+    [key: string]: any;
+  };
+}
+
+/**
+ * Middleware to check if the user has admin privileges
+ */
+export const requireAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  // Check if user is authenticated
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  // Check if user is an admin
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin privileges required' });
+  }
+
+  // User is an admin, proceed to the next middleware/route handler
+  next();
+};
+
+// You might also want to add a general authentication middleware
+export const authenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  // This is a placeholder. Implement your actual authentication logic here.
+  // For example, verify JWT token, session, etc.
+
+  // If authentication fails
+  // return res.status(401).json({ error: 'Authentication failed' });
+
+  // If authentication succeeds, set the user object and proceed
+  // req.user = { id: 'user_id', isAdmin: true };
+
+  next();
+};
