@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // Simple script to check if drizzle-kit is available and log if not
-const { execSync } = require('child_process');
-const fs = require('fs');
+import { execSync } from 'child_process';
+import fs from 'fs';
 
 try {
   console.log('Checking for drizzle-kit...');
