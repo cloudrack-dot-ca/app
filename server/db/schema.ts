@@ -1,9 +1,10 @@
-import { pgTable, serial, text, integer, timestamp, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, text, timestamp, varchar } from 'drizzle-orm/pg-core';
 
+// Define the deployments table schema
 export const deployments = pgTable('deployments', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull(),
-  appId: text('app_id').notNull(),
+  appId: text('app_id'),
   name: text('name').notNull(),
   repository: text('repository').notNull(),
   branch: text('branch').notNull(),
@@ -11,11 +12,12 @@ export const deployments = pgTable('deployments', {
   url: text('url'),
   region: text('region').notNull(),
   size: text('size').notNull(),
+  envVars: text('env_vars'),
   createdAt: timestamp('created_at').defaultNow(),
   lastDeployedAt: timestamp('last_deployed_at').defaultNow()
 });
 
-// If you want to also create a schema for GitHub connections
+// Define GitHub connections table
 export const githubConnections = pgTable('github_connections', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().unique(),

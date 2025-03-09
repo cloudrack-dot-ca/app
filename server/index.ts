@@ -15,6 +15,7 @@ import githubDeploymentsRoutes from "./routes/github-deployments";
 import appPlatformRoutes from "./routes/app-platform";
 import apiDebugRoutes from './routes/api-debug';
 import githubConnectionsRoutes from "./routes/github-connections";
+import { loadGitHubCredentials } from './utils/env';
 
 const app = express();
 app.use(express.json());
@@ -155,6 +156,9 @@ async function createTestData() {
     } catch (migrationError) {
       logger.error("Error running migrations:", migrationError);
     }
+
+    // Load GitHub credentials from .env
+    loadGitHubCredentials();
 
     // Create test data including admin user
     await createTestData();

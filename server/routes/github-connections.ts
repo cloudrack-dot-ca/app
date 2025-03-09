@@ -11,6 +11,44 @@ const router = express.Router();
 // Require authentication for all routes
 router.use(requireAuth);
 
+// Get GitHub connection status for the current user
+router.get("/status", async (req, res) => {
+  try {
+    const user = req.user;
+
+    // Return connection status
+    res.json({
+      connected: !!user.githubToken,
+      githubUsername: user.githubUsername || null,
+      githubUserId: user.githubUserId || null,
+      connectedAt: user.githubConnectedAt || null
+    });
+  } catch (error) {
+    logger.error("Error getting GitHub connection status:", error);
+    res.status(500).json({ error: "Failed to get connection status" });
+  }
+});
+
+// Disconnect GitHub
+router.post("/disconnect", async (req, res) => {
+  try {
+    // Update the user's GitHub token to null
+    await db.update(users)
+      .set({
+        githubToken: null,
+        githubUsername: null,
+        githubUserId: null,
+        githubConnectedAt: null
+      })
+      .where(eq(users.id, req.user.id));
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("Error disconnecting GitHub account:", error);
+    res.status(500).json({ error: "Failed to disconnect GitHub account" });
+  }
+});
+
 // Get connection details
 router.get("/connection-details", async (req, res) => {
   try {
@@ -47,25 +85,6 @@ router.get("/connection-details", async (req, res) => {
   } catch (error) {
     logger.error("Error in GitHub connection details:", error);
     res.status(500).json({ error: "Failed to get connection details" });
-  }
-});
-
-// Disconnect GitHub
-router.post("/disconnect", async (req, res) => {
-  try {
-    // Update user record to remove GitHub token
-    await db.update(users)
-      .set({
-        githubToken: null,
-        githubConnectedAt: null
-      })
-      .where(eq(users.id, req.user.id));
-
-    logger.info(`User ${req.user.id} disconnected GitHub account`);
-    res.json({ success: true });
-  } catch (error) {
-    logger.error("Error disconnecting GitHub:", error);
-    res.status(500).json({ error: "Failed to disconnect GitHub" });
   }
 });
 

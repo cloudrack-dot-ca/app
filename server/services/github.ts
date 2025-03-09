@@ -2,133 +2,165 @@ import fetch from "node-fetch";
 import { db } from "../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
-import fs from "fs";
-import path from "path";
 import { logger } from "../utils/logger";
 
-// Try to load GitHub credentials from .env.local first, then fall back to .env
-function loadEnvCredentials() {
-  try {
-    const localEnvPath = path.resolve(process.cwd(), '.env.local');
-    const envPath = path.resolve(process.cwd(), '.env');
-
-    let credentials = {};
-
-    // Try .env.local first
-    if (fs.existsSync(localEnvPath)) {
-      logger.info("Loading GitHub credentials from .env.local");
-      const localEnvFile = fs.readFileSync(localEnvPath, 'utf8');
-      localEnvFile.split('\n').forEach(line => {
-        const match = line.match(/^GITHUB_([A-Z_]+)=(.*)$/);
-        if (match) {
-          credentials[match[1]] = match[2].replace(/^["']|["']$/g, ''); // Remove quotes if present
-        }
-      });
-    }
-
-    // If not found in .env.local, try .env
-    if (Object.keys(credentials).length === 0 && fs.existsSync(envPath)) {
-      logger.info("Loading GitHub credentials from .env");
-      const envFile = fs.readFileSync(envPath, 'utf8');
-      envFile.split('\n').forEach(line => {
-        const match = line.match(/^GITHUB_([A-Z_]+)=(.*)$/);
-        if (match) {
-          credentials[match[1]] = match[2].replace(/^["']|["']$/g, '');
-        }
-      });
-    }
-
-    return credentials;
-  } catch (error) {
-    logger.error("Error loading env credentials:", error);
-    return {};
-  }
-}
-
-// Load credentials from env files directly
-const envCredentials = loadEnvCredentials();
-
-// Fix GitHub OAuth configuration - explicitly remove any "+" character in addition to trimming
-const GITHUB_CLIENT_ID = (process.env.GITHUB_CLIENT_ID || envCredentials.CLIENT_ID || "")
-  .trim()
-  .replace(/^\+/, ""); // Remove leading + character if present
-
-const GITHUB_CLIENT_SECRET = (process.env.GITHUB_CLIENT_SECRET || envCredentials.CLIENT_SECRET || "").trim();
-const GITHUB_REDIRECT_URI = (process.env.GITHUB_REDIRECT_URI || envCredentials.REDIRECT_URI || "http://localhost:5000/api/github/callback").trim();
-
-logger.github("GitHub OAuth Configuration:");
-logger.github(`- Client ID: ${GITHUB_CLIENT_ID ? "Set" : "Not set"} (${GITHUB_CLIENT_ID.substring(0, 4)}...)`);
-logger.github(`- Client Secret: ${GITHUB_CLIENT_SECRET ? "Set" : "Not set"}`);
-logger.github(`- Redirect URI: ${GITHUB_REDIRECT_URI}`);
-
-if (!GITHUB_CLIENT_ID || !GITHUB_CLIENT_SECRET) {
-  logger.warning("GitHub OAuth credentials not set. GitHub integration will not work.");
-} else {
-  logger.success("GitHub OAuth credentials successfully loaded. GitHub integration is available.");
-}
-
+// Get OAuth URL for GitHub authentication
 export async function getGitHubOAuthURL() {
-  const state = Math.random().toString(36).substring(7);
+  try {
+    // Make sure to trim the client ID to avoid spaces
+    const clientId = process.env.GITHUB_CLIENT_ID?.trim();
+    const redirectUri = process.env.GITHUB_REDIRECT_URI?.trim();
 
-  // Store state in server session for security (prevents CSRF attacks)
-  // This is optional but recommended
+    if (!clientId || !redirectUri) {
+      throw new Error("GitHub OAuth configuration is missing");
+    }
 
-  const params = new URLSearchParams({
-    client_id: GITHUB_CLIENT_ID,
-    redirect_uri: GITHUB_REDIRECT_URI,
-    scope: "repo", // Only request repo access
-    state
-  });
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user:email`;
 
-  const url = `https://github.com/login/oauth/authorize?${params.toString()}`;
-  logger.github(`Generated OAuth URL: ${url}`);
-  return url;
-}
+    // Log the URL for debugging
+    logger.info(`🐙 [GitHub] Generated OAuth URL: ${authUrl}`);
+    console.log(`Generated GitHub OAuth URL: ${authUrl}`);
 
-export async function exchangeCodeForToken(code: string) {
-  const response = await fetch("https://github.com/login/oauth/access_token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      client_id: GITHUB_CLIENT_ID,
-      client_secret: GITHUB_CLIENT_SECRET,
-      code,
-      redirect_uri: GITHUB_REDIRECT_URI,
-    }),
-  });
-
-  const data = await response.json();
-  return data.access_token;
-}
-
-export async function saveGitHubToken(userId: number, token: string) {
-  await db.update(users)
-    .set({ githubToken: token })
-    .where(eq(users.id, userId));
-
-  return { success: true };
-}
-
-export async function getUserRepositories(token: string) {
-  const response = await fetch("https://api.github.com/user/repos?sort=updated&per_page=100", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github.v3+json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`GitHub API error: ${response.status} ${await response.text()}`);
+    return authUrl;
+  } catch (error) {
+    logger.error("Error generating GitHub auth URL:", error);
+    throw error;
   }
+}
 
-  return await response.json();
+// Exchange code for access token
+export async function exchangeCodeForToken(code: string) {
+  try {
+    // Make sure to trim the client ID and secret to avoid spaces
+    const clientId = process.env.GITHUB_CLIENT_ID?.trim();
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
+    const redirectUri = process.env.GITHUB_REDIRECT_URI?.trim();
+
+    if (!clientId || !clientSecret || !redirectUri) {
+      throw new Error("GitHub OAuth configuration is missing");
+    }
+
+    const response = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: redirectUri
+      })
+    });
+
+    const data = await response.json();
+
+    if (!data.access_token) {
+      logger.error(`GitHub token exchange returned no token: ${JSON.stringify(data)}`);
+      throw new Error("No access token in response");
+    }
+
+    return data.access_token;
+  } catch (error) {
+    logger.error("Error exchanging code for token:", error);
+    throw error;
+  }
+}
+
+// Save GitHub token to user
+export async function saveGitHubToken(userId: number, token: string | null, userData?: any) {
+  try {
+    await db.update(users)
+      .set({
+        githubToken: token,
+        githubUsername: userData?.login || null,
+        githubUserId: userData?.id || null,
+        githubConnectedAt: token ? new Date().toISOString() : null
+      })
+      .where(eq(users.id, userId));
+
+    return true;
+  } catch (error) {
+    logger.error("Error saving GitHub token:", error);
+    throw error;
+  }
+}
+
+// Get user's GitHub repositories
+export async function getUserRepositories(token: string) {
+  try {
+    const response = await fetch("https://api.github.com/user/repos?sort=updated&per_page=100", {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`GitHub API error: ${response.status} ${errorText}`);
+      throw new Error(`Failed to fetch repositories: ${response.status}`);
+    }
+
+    const repos = await response.json();
+    return repos;
+  } catch (error) {
+    logger.error("Error fetching GitHub repositories:", error);
+    throw error;
+  }
+}
+
+// Get branches for a GitHub repository
+export async function getRepositoryBranches(token: string, owner: string, repo: string) {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`, {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`GitHub API error: ${response.status} ${errorText}`);
+      throw new Error(`Failed to fetch branches: ${response.status}`);
+    }
+
+    const branches = await response.json();
+    return branches;
+  } catch (error) {
+    logger.error("Error fetching GitHub branches:", error);
+    throw error;
+  }
 }
 
 export async function createGitHubDeployment(token: string, repo: string, values: any) {
   // This would integrate with GitHub Actions or Deployments
   // For now, we'll just return a success message
   return { success: true, message: "Deployment initialized" };
+}
+
+// Get GitHub user information to verify connection
+export async function getGitHubUser(token: string) {
+  try {
+    const response = await fetch("https://api.github.com/user", {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`GitHub API error: ${response.status} ${errorText}`);
+      throw new Error(`Failed to fetch user: ${response.status}`);
+    }
+
+    const user = await response.json();
+    return user;
+  } catch (error) {
+    logger.error("Error fetching GitHub user:", error);
+    throw error;
+  }
 }

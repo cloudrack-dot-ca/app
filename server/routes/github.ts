@@ -34,14 +34,18 @@ router.get("/repos", async (req, res) => {
 // Get GitHub OAuth URL
 router.get("/auth-url", async (req, res) => {
   try {
-    const clientId = process.env.GITHUB_CLIENT_ID;
-    const redirectUri = process.env.GITHUB_REDIRECT_URI;
+    const clientId = process.env.GITHUB_CLIENT_ID?.trim();
+    const redirectUri = process.env.GITHUB_REDIRECT_URI?.trim();
 
     if (!clientId || !redirectUri) {
       return res.status(500).json({ error: "GitHub OAuth configuration is missing" });
     }
 
+    // Fixed: proper URL generation with trimmed clientId
     const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user:email`;
+
+    // Log the URL for debugging
+    logger.info(`🐙 [GitHub] Generated OAuth URL: ${authUrl}`);
 
     res.json({ url: authUrl });
   } catch (error) {
