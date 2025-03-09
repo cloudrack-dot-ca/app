@@ -49,12 +49,16 @@ var init_schema = __esm({
       username: text("username").notNull().unique(),
       password: text("password").notNull(),
       apiKey: text("api_key"),
+      githubToken: text("github_token"),
+      // Added GitHub token field
       balance: integer("balance").notNull().default(0),
       // Balance in cents
       isAdmin: boolean("is_admin").notNull().default(false),
       // Admin flag
-      isSuspended: boolean("is_suspended").notNull().default(false)
+      isSuspended: boolean("is_suspended").notNull().default(false),
       // Account suspension flag
+      created: timestamp("created").notNull().defaultNow(),
+      updated: timestamp("updated").notNull().defaultNow()
     });
     servers = pgTable("servers", {
       id: serial("id").primaryKey(),
@@ -307,7 +311,7 @@ var init_db = __esm({
       // Shorter idle timeout
       connectionTimeoutMillis: 1e4,
       // Longer connection timeout
-      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : { rejectUnauthorized: false },
+      ssl: process.env.NODE_ENV === "development" ? { rejectUnauthorized: true } : { rejectUnauthorized: false },
       keepAlive: true,
       // Enable keep-alive to prevent idle connections from being terminated
       keepAliveInitialDelayMillis: 5e3
@@ -374,8 +378,53 @@ var init_add_snapshots_table = __esm({
   }
 });
 
+// migrations/add-github-token.js
+var add_github_token_exports = {};
+__export(add_github_token_exports, {
+  runMigration: () => runMigration2
+});
+import { fileURLToPath as fileURLToPath2 } from "url";
+async function runMigration2() {
+  console.log("Running migration: add-github-token");
+  try {
+    const checkColumnResult = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'github_token'
+    `);
+    if (checkColumnResult.rowCount === 0) {
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN github_token TEXT
+      `);
+      console.log("Successfully added github_token column to users table");
+      return true;
+    } else {
+      console.log("github_token column already exists in users table");
+      return false;
+    }
+  } catch (error) {
+    console.error("Error adding github_token column:", error);
+    throw error;
+  }
+}
+var init_add_github_token = __esm({
+  async "migrations/add-github-token.js"() {
+    "use strict";
+    init_db();
+    if (process.argv[1] === fileURLToPath2(import.meta.url)) {
+      try {
+        await runMigration2();
+        process.exit(0);
+      } catch (error) {
+        process.exit(1);
+      }
+    }
+  }
+});
+
 // server/index.ts
-import express2 from "express";
+import express10 from "express";
 
 // server/routes.ts
 import { createServer } from "http";
@@ -716,47 +765,11 @@ var storage = new DatabaseStorage();
 // server/vite.ts
 import express from "express";
 import fs from "fs";
-import path2, { dirname as dirname2 } from "path";
-import { fileURLToPath as fileURLToPath2 } from "url";
-import { createServer as createViteServer, createLogger } from "vite";
-
-// vite.config.ts
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import themePlugin from "@replit/vite-plugin-shadcn-theme-json";
 import path, { dirname } from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { fileURLToPath } from "url";
+import { createServer as createViteServer, createLogger } from "vite";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = dirname(__filename);
-var vite_config_default = defineConfig({
-  plugins: [
-    react(),
-    runtimeErrorOverlay(),
-    themePlugin(),
-    ...process.env.NODE_ENV !== "production" && process.env.REPL_ID !== void 0 ? [
-      await import("@replit/vite-plugin-cartographer").then(
-        (m) => m.cartographer()
-      )
-    ] : []
-  ],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "client", "src"),
-      "@shared": path.resolve(__dirname, "shared")
-    }
-  },
-  root: path.resolve(__dirname, "client"),
-  build: {
-    outDir: path.resolve(__dirname, "dist/server/public"),
-    emptyOutDir: true
-  }
-});
-
-// server/vite.ts
-import { nanoid } from "nanoid";
-var __filename2 = fileURLToPath2(import.meta.url);
-var __dirname2 = dirname2(__filename2);
+var __dirname2 = dirname(__filename);
 var viteLogger = createLogger();
 function log(message, source = "express") {
   const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
@@ -767,58 +780,38 @@ function log(message, source = "express") {
   });
   console.log(`${formattedTime} [${source}] ${message}`);
 }
-async function setupVite(app2, server) {
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true
-  };
+async function setupVite(app3, server) {
   const vite = await createViteServer({
-    ...vite_config_default,
-    configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
-        process.exit(1);
-      }
-    },
-    server: serverOptions,
-    appType: "custom"
+    server: { middlewareMode: true },
+    appType: "spa",
+    root: "client"
   });
-  app2.use(vite.middlewares);
-  app2.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-    try {
-      const clientTemplate = path2.resolve(
-        __dirname2,
-        "..",
-        "client",
-        "index.html"
-      );
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
-      );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e);
-      next(e);
-    }
-  });
+  app3.use(vite.middlewares);
+  console.log("Vite middleware configured in development mode");
+  return server;
 }
-function serveStatic(app2) {
-  const distPath = path2.resolve(__dirname2, "public");
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
+function serveStatic(app3) {
+  const publicDir = path.join(process.cwd(), "dist", "server", "public");
+  console.log(`Serving static files from: ${publicDir}`);
+  if (!fs.existsSync(publicDir)) {
+    console.error(`Static directory does not exist: ${publicDir}`);
+    console.error("Did you run npm run build?");
+    app3.get("*", (_req, res) => {
+      res.status(500).send("Application not built correctly. Please run npm run build.");
+    });
+    return;
   }
-  app2.use(express.static(distPath));
-  app2.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
+  app3.use(express.static(publicDir));
+  app3.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
+      return next();
+    }
+    const indexHtml = path.join(publicDir, "index.html");
+    if (fs.existsSync(indexHtml)) {
+      res.sendFile(indexHtml);
+    } else {
+      res.status(404).send("Application not built correctly. index.html not found.");
+    }
   });
 }
 
@@ -1059,7 +1052,7 @@ async function comparePasswords(supplied, stored) {
     return false;
   }
 }
-function setupAuth(app2) {
+function setupAuth(app3) {
   const sessionSettings = {
     secret: "development-secret-key",
     resave: false,
@@ -1072,10 +1065,10 @@ function setupAuth(app2) {
       sameSite: "lax"
     }
   };
-  app2.set("trust proxy", 1);
-  app2.use(session2(sessionSettings));
-  app2.use(passport.initialize());
-  app2.use(passport.session());
+  app3.set("trust proxy", 1);
+  app3.use(session2(sessionSettings));
+  app3.use(passport.initialize());
+  app3.use(passport.session());
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       const user = await storage.getUserByUsername(username);
@@ -1120,7 +1113,7 @@ function setupAuth(app2) {
       done(error, null);
     }
   });
-  app2.post("/api/register", async (req, res, next) => {
+  app3.post("/api/register", async (req, res, next) => {
     const existingUser = await storage.getUserByUsername(req.body.username);
     if (existingUser) {
       return res.status(400).send("Username already exists");
@@ -1134,20 +1127,46 @@ function setupAuth(app2) {
       res.status(201).json(user);
     });
   });
-  app2.post("/api/login", passport.authenticate("local"), (req, res) => {
+  app3.post("/api/login", passport.authenticate("local"), (req, res) => {
     res.status(200).json(req.user);
   });
-  app2.post("/api/logout", (req, res, next) => {
+  app3.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
       res.sendStatus(200);
     });
   });
-  app2.get("/api/user", (req, res) => {
+  app3.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });
 }
+function requireAuth(req, res, next) {
+  if (!req.user) {
+    if (req.url.includes("/github") || req.url.includes("/auth/github")) {
+      console.log("\u26A0\uFE0F [Auth] GitHub-related request without authentication. Attempting to continue.");
+      if (req.url.includes("/callback")) {
+        console.log("\u26A0\uFE0F [Auth] GitHub callback without user session, will show instructions");
+        return next();
+      }
+      return res.status(401).json({
+        error: "Authentication required for GitHub integration",
+        message: "Please login first before connecting to GitHub"
+      });
+    }
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
+var requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: "Admin privileges required" });
+  }
+  next();
+};
 
 // server/digital-ocean.ts
 import fetch from "node-fetch";
@@ -1169,6 +1188,12 @@ var DigitalOceanClient = class {
     {
       slug: "nyc1",
       name: "New York 1",
+      sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
+      available: true
+    },
+    {
+      slug: "fra1",
+      name: "Frankfurt 1",
       sizes: ["s-1vcpu-1gb", "s-1vcpu-2gb", "s-2vcpu-4gb", "s-4vcpu-8gb"],
       available: true
     },
@@ -1650,8 +1675,8 @@ var DigitalOceanClient = class {
         }
       }
       try {
-        const text2 = await response.text();
-        return text2 ? JSON.parse(text2) : {};
+        const text3 = await response.text();
+        return text3 ? JSON.parse(text3) : {};
       } catch (parseError) {
         console.warn(`Could not parse response as JSON: ${parseError}`);
         return {};
@@ -3262,8 +3287,8 @@ function adminMiddleware(req, res, next) {
   }
   next();
 }
-async function registerRoutes(app2) {
-  app2.post("/api/admin/reset-storm-password", async (req, res) => {
+async function registerRoutes(app3) {
+  app3.post("/api/admin/reset-storm-password", async (req, res) => {
     try {
       console.log("Attempting to reset admin (storm) password");
       const adminUser = await storage.getUserByUsername("storm");
@@ -3286,24 +3311,24 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  setupAuth(app2);
-  app2.get("/api/regions", async (_req, res) => {
+  setupAuth(app3);
+  app3.get("/api/regions", async (_req, res) => {
     const regions = await digitalOcean.getRegions();
     res.json(regions);
   });
-  app2.get("/api/sizes", async (_req, res) => {
+  app3.get("/api/sizes", async (_req, res) => {
     const sizes = await digitalOcean.getSizes();
     res.json(sizes);
   });
-  app2.get("/api/applications", async (_req, res) => {
+  app3.get("/api/applications", async (_req, res) => {
     const applications = await digitalOcean.getApplications();
     res.json(applications);
   });
-  app2.get("/api/distributions", async (_req, res) => {
+  app3.get("/api/distributions", async (_req, res) => {
     const distributions = await digitalOcean.getDistributions();
     res.json(distributions);
   });
-  app2.get("/api/maintenance", async (_req, res) => {
+  app3.get("/api/maintenance", async (_req, res) => {
     try {
       const [settings] = await db.select().from(maintenanceSettings).limit(1);
       res.json(settings || {
@@ -3316,7 +3341,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.patch("/api/admin/maintenance", adminMiddleware, async (req, res) => {
+  app3.patch("/api/admin/maintenance", adminMiddleware, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const parsed = insertMaintenanceSettingsSchema.safeParse(req.body);
@@ -3342,7 +3367,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/servers", async (req, res) => {
+  app3.get("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     if (req.user.isAdmin && req.query.all === "true") {
       const servers3 = await storage.getAllServers();
@@ -3352,7 +3377,7 @@ async function registerRoutes(app2) {
       res.json(servers3);
     }
   });
-  app2.get("/api/servers/:id", async (req, res) => {
+  app3.get("/api/servers/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -3382,7 +3407,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.post("/api/servers/:id/test-password-fix", async (req, res) => {
+  app3.post("/api/servers/:id/test-password-fix", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -3410,7 +3435,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.post("/api/servers", async (req, res) => {
+  app3.post("/api/servers", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const parsed = insertServerSchema.safeParse(req.body);
@@ -3517,7 +3542,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: error.message });
     }
   });
-  app2.delete("/api/servers/:id", async (req, res) => {
+  app3.delete("/api/servers/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id && !req.user.isAdmin) {
@@ -3541,7 +3566,7 @@ async function registerRoutes(app2) {
     await storage.deleteServer(server.id);
     res.sendStatus(204);
   });
-  app2.get("/api/servers/:id/volumes", async (req, res) => {
+  app3.get("/api/servers/:id/volumes", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id && !req.user.isAdmin) {
@@ -3550,7 +3575,7 @@ async function registerRoutes(app2) {
     const volumes2 = await storage.getVolumesByServer(server.id);
     res.json(volumes2);
   });
-  app2.post("/api/servers/:id/volumes", async (req, res) => {
+  app3.post("/api/servers/:id/volumes", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id) {
@@ -3616,7 +3641,7 @@ async function registerRoutes(app2) {
     });
     res.status(201).json(volume);
   });
-  app2.delete("/api/servers/:id/volumes/:volumeId", async (req, res) => {
+  app3.delete("/api/servers/:id/volumes/:volumeId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id && !req.user.isAdmin) {
@@ -3641,7 +3666,7 @@ async function registerRoutes(app2) {
     await storage.deleteVolume(volume.id);
     res.sendStatus(204);
   });
-  app2.patch("/api/servers/:id/volumes/:volumeId", async (req, res) => {
+  app3.patch("/api/servers/:id/volumes/:volumeId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id && !req.user.isAdmin) {
@@ -3686,7 +3711,7 @@ async function registerRoutes(app2) {
     });
     res.json(volume);
   });
-  app2.post("/api/billing/deposit", async (req, res) => {
+  app3.post("/api/billing/deposit", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const { amount } = req.body;
     if (!amount || amount < 5) {
@@ -3699,7 +3724,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: error.message });
     }
   });
-  app2.post("/api/billing/capture/:orderId", async (req, res) => {
+  app3.post("/api/billing/capture/:orderId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const { orderId } = req.params;
     try {
@@ -3721,7 +3746,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: error.message });
     }
   });
-  app2.get("/api/billing/transactions", async (req, res) => {
+  app3.get("/api/billing/transactions", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -3753,7 +3778,7 @@ async function registerRoutes(app2) {
       }
     });
   });
-  app2.patch("/api/docs/sections/:id/reorder", async (req, res) => {
+  app3.patch("/api/docs/sections/:id/reorder", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     try {
       const sectionId = parseInt(req.params.id);
@@ -3779,7 +3804,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.patch("/api/docs/articles/:id/reorder", async (req, res) => {
+  app3.patch("/api/docs/articles/:id/reorder", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     try {
       const articleId = parseInt(req.params.id);
@@ -3805,7 +3830,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/billing/transactions/:id/invoice", async (req, res) => {
+  app3.get("/api/billing/transactions/:id/invoice", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const transactionId = parseInt(req.params.id);
@@ -3855,12 +3880,12 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/tickets", async (req, res) => {
+  app3.get("/api/tickets", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const tickets = await storage.getTicketsByUser(req.user.id);
     res.json(tickets);
   });
-  app2.post("/api/tickets", async (req, res) => {
+  app3.post("/api/tickets", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const parsed = insertTicketSchema.safeParse(req.body);
@@ -3917,7 +3942,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: error.message });
     }
   });
-  app2.get("/api/tickets/:id", async (req, res) => {
+  app3.get("/api/tickets/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const ticket = await storage.getTicket(parseInt(req.params.id));
     if (!ticket || ticket.userId !== req.user.id && !req.user.isAdmin) {
@@ -3926,7 +3951,7 @@ async function registerRoutes(app2) {
     const messages = await storage.getMessagesByTicket(ticket.id);
     res.json({ ticket, messages });
   });
-  app2.post("/api/tickets/:id/messages", async (req, res) => {
+  app3.post("/api/tickets/:id/messages", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const ticket = await storage.getTicket(parseInt(req.params.id));
     if (!ticket || ticket.userId !== req.user.id && !req.user.isAdmin) {
@@ -3946,7 +3971,7 @@ async function registerRoutes(app2) {
     }
     res.status(201).json(message);
   });
-  app2.patch("/api/tickets/:id/status", async (req, res) => {
+  app3.patch("/api/tickets/:id/status", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const ticket = await storage.getTicket(parseInt(req.params.id));
     if (!ticket || ticket.userId !== req.user.id && !req.user.isAdmin) {
@@ -3959,7 +3984,7 @@ async function registerRoutes(app2) {
     const updatedTicket = await storage.updateTicketStatus(ticket.id, status);
     res.json(updatedTicket);
   });
-  app2.delete("/api/tickets/:id", async (req, res) => {
+  app3.delete("/api/tickets/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     if (!req.user.isAdmin) {
       return res.status(403).json({ message: "Only administrators can delete tickets" });
@@ -3975,7 +4000,7 @@ async function registerRoutes(app2) {
     await storage.deleteTicket(ticket.id);
     res.sendStatus(204);
   });
-  app2.patch("/api/tickets/:id/messages/:messageId", async (req, res) => {
+  app3.patch("/api/tickets/:id/messages/:messageId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const ticket = await storage.getTicket(parseInt(req.params.id));
     if (!ticket || ticket.userId !== req.user.id && !req.user.isAdmin) {
@@ -3999,7 +4024,7 @@ async function registerRoutes(app2) {
     const updatedMessage = await storage.updateMessage(message.id, { message: newMessage });
     res.json(updatedMessage);
   });
-  app2.post("/api/servers/:id/actions/reboot", async (req, res) => {
+  app3.post("/api/servers/:id/actions/reboot", async (req, res) => {
     if (!req.user) {
       console.log("[AUTH ERROR] User not authenticated for server reboot action");
       return res.sendStatus(401);
@@ -4035,7 +4060,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.post("/api/servers/:id/actions/:action", async (req, res) => {
+  app3.post("/api/servers/:id/actions/:action", async (req, res) => {
     if (!req.user) {
       console.log("[AUTH ERROR] User not authenticated for server action");
       return res.sendStatus(401);
@@ -4078,7 +4103,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.patch("/api/servers/:id/password", async (req, res) => {
+  app3.patch("/api/servers/:id/password", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const serverId = parseInt(req.params.id);
     const server = await storage.getServer(serverId);
@@ -4116,7 +4141,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/servers/:id/details", async (req, res) => {
+  app3.get("/api/servers/:id/details", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -4145,7 +4170,7 @@ async function registerRoutes(app2) {
       return res.status(500).json({ message: "Internal server error" });
     }
   });
-  app2.patch("/api/servers/:id/ipv6", async (req, res) => {
+  app3.patch("/api/servers/:id/ipv6", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id && !req.user.isAdmin) {
@@ -4184,7 +4209,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/servers/:id/firewall", async (req, res) => {
+  app3.get("/api/servers/:id/firewall", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id && !req.user.isAdmin) {
@@ -4209,7 +4234,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.put("/api/servers/:id/firewall", async (req, res) => {
+  app3.put("/api/servers/:id/firewall", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id && !req.user.isAdmin) {
@@ -4322,7 +4347,7 @@ async function registerRoutes(app2) {
       res.json(mockFirewall);
     }
   });
-  app2.post("/api/servers/:id/firewall/rules", async (req, res) => {
+  app3.post("/api/servers/:id/firewall/rules", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id && !req.user.isAdmin) {
@@ -4385,7 +4410,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to add firewall rule" });
     }
   });
-  app2.delete("/api/servers/:id/firewall/rules", async (req, res) => {
+  app3.delete("/api/servers/:id/firewall/rules", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const server = await storage.getServer(parseInt(req.params.id));
     if (!server || server.userId !== req.user.id && !req.user.isAdmin) {
@@ -4436,7 +4461,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete firewall rule" });
     }
   });
-  app2.patch("/api/account", async (req, res) => {
+  app3.patch("/api/account", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const { username, currentPassword, newPassword } = req.body;
     if (!username || !currentPassword) {
@@ -4499,7 +4524,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message || "An unexpected error occurred" });
     }
   });
-  app2.get("/api/account/api-key", async (req, res) => {
+  app3.get("/api/account/api-key", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const user = await storage.getUser(req.user.id);
@@ -4512,7 +4537,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch API key" });
     }
   });
-  app2.post("/api/account/api-key", async (req, res) => {
+  app3.post("/api/account/api-key", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const { password } = req.body;
     if (!password) {
@@ -4541,7 +4566,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to generate API key" });
     }
   });
-  app2.get("/api/servers/:id/metrics/latest", async (req, res) => {
+  app3.get("/api/servers/:id/metrics/latest", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -4594,7 +4619,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/servers/:id/metrics/history", async (req, res) => {
+  app3.get("/api/servers/:id/metrics/history", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -4609,7 +4634,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/servers/:id/bandwidth", async (req, res) => {
+  app3.get("/api/servers/:id/bandwidth", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -4627,7 +4652,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/servers/:id/snapshots", async (req, res) => {
+  app3.get("/api/servers/:id/snapshots", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -4645,7 +4670,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.post("/api/servers/:id/snapshots", async (req, res) => {
+  app3.post("/api/servers/:id/snapshots", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -4714,7 +4739,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/snapshots/:id", async (req, res) => {
+  app3.get("/api/snapshots/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const snapshotId = parseInt(req.params.id);
@@ -4746,7 +4771,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.delete("/api/servers/:id/snapshots/:snapshotId", async (req, res) => {
+  app3.delete("/api/servers/:id/snapshots/:snapshotId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -4786,7 +4811,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.delete("/api/snapshots/:id", async (req, res) => {
+  app3.delete("/api/snapshots/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const snapshotId = parseInt(req.params.id);
@@ -4820,7 +4845,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.post("/api/servers/:id/snapshots/:snapshotId/restore", async (req, res) => {
+  app3.post("/api/servers/:id/snapshots/:snapshotId/restore", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -4885,7 +4910,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.post("/api/servers/:id/metrics/refresh", async (req, res) => {
+  app3.post("/api/servers/:id/metrics/refresh", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
       const serverId = parseInt(req.params.id);
@@ -4951,9 +4976,9 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  const httpServer = createServer(app2);
-  setupTerminalSocket(httpServer);
-  app2.get("/api/test/password/:id", async (req, res) => {
+  const httpServer2 = createServer(app3);
+  setupTerminalSocket(httpServer2);
+  app3.get("/api/test/password/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const serverId = parseInt(req.params.id);
     try {
@@ -4980,7 +5005,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/docs/sections", async (_req, res) => {
+  app3.get("/api/docs/sections", async (_req, res) => {
     try {
       const sections = await db.query.docSections.findMany({
         orderBy: [asc(docSections.order)]
@@ -5001,7 +5026,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch documentation" });
     }
   });
-  app2.post("/api/docs/sections", async (req, res) => {
+  app3.post("/api/docs/sections", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
     try {
       const { title, order } = req.body;
@@ -5018,7 +5043,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to create section" });
     }
   });
-  app2.patch("/api/docs/sections/:id", async (req, res) => {
+  app3.patch("/api/docs/sections/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
     try {
       const sectionId = parseInt(req.params.id);
@@ -5036,7 +5061,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update section" });
     }
   });
-  app2.delete("/api/docs/sections/:id", async (req, res) => {
+  app3.delete("/api/docs/sections/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
     try {
       const sectionId = parseInt(req.params.id);
@@ -5048,7 +5073,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete section" });
     }
   });
-  app2.post("/api/docs/articles", async (req, res) => {
+  app3.post("/api/docs/articles", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
     try {
       const { sectionId, title, content, order } = req.body;
@@ -5068,7 +5093,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to create article" });
     }
   });
-  app2.patch("/api/docs/articles/:id", async (req, res) => {
+  app3.patch("/api/docs/articles/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
     try {
       const articleId = parseInt(req.params.id);
@@ -5094,7 +5119,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update article" });
     }
   });
-  app2.delete("/api/docs/articles/:id", async (req, res) => {
+  app3.delete("/api/docs/articles/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
     try {
       const articleId = parseInt(req.params.id);
@@ -5105,7 +5130,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete article" });
     }
   });
-  app2.patch("/api/docs/sections/:id/reorder", async (req, res) => {
+  app3.patch("/api/docs/sections/:id/reorder", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     try {
       const sectionId = parseInt(req.params.id);
@@ -5119,7 +5144,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.patch("/api/docs/articles/:id/reorder", async (req, res) => {
+  app3.patch("/api/docs/articles/:id/reorder", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     try {
       const articleId = parseInt(req.params.id);
@@ -5133,13 +5158,13 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  return httpServer;
+  return httpServer2;
 }
 
 // server/index.ts
 init_db();
 init_schema();
-import { eq as eq5 } from "drizzle-orm";
+import { eq as eq12 } from "drizzle-orm";
 
 // server/admin/routes.ts
 import * as crypto from "crypto";
@@ -5152,9 +5177,9 @@ function adminMiddleware2(req, res, next) {
   }
   next();
 }
-function registerAdminRoutes(app2) {
-  app2.use("/api/admin", adminMiddleware2);
-  app2.get("/api/admin/stats", async (req, res) => {
+function registerAdminRoutes(app3) {
+  app3.use("/api/admin", adminMiddleware2);
+  app3.get("/api/admin/stats", async (req, res) => {
     try {
       const users3 = await storage.getAllUsers();
       const servers3 = await storage.getAllServers();
@@ -5200,7 +5225,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to load admin statistics" });
     }
   });
-  app2.get("/api/admin/users", async (req, res) => {
+  app3.get("/api/admin/users", async (req, res) => {
     try {
       const users3 = await storage.getAllUsers();
       res.json(users3);
@@ -5209,7 +5234,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to load users" });
     }
   });
-  app2.patch("/api/admin/users/:id/balance", async (req, res) => {
+  app3.patch("/api/admin/users/:id/balance", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       const { amount } = req.body;
@@ -5245,7 +5270,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to update user balance" });
     }
   });
-  app2.patch("/api/admin/users/:id", async (req, res) => {
+  app3.patch("/api/admin/users/:id", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       const { username, password, isAdmin, isSuspended } = req.body;
@@ -5278,7 +5303,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to update user details" });
     }
   });
-  app2.get("/api/admin/servers", async (req, res) => {
+  app3.get("/api/admin/servers", async (req, res) => {
     try {
       const servers3 = await storage.getAllServers();
       res.json(servers3);
@@ -5287,7 +5312,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to load servers" });
     }
   });
-  app2.get("/api/admin/tickets", async (req, res) => {
+  app3.get("/api/admin/tickets", async (req, res) => {
     try {
       const tickets = await storage.getAllTickets();
       res.json(tickets);
@@ -5296,7 +5321,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to load tickets" });
     }
   });
-  app2.get("/api/admin/transactions", async (req, res) => {
+  app3.get("/api/admin/transactions", async (req, res) => {
     try {
       const transactions = await storage.getAllTransactions();
       res.json(transactions);
@@ -5305,7 +5330,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to load transactions" });
     }
   });
-  app2.get("/api/admin/ip-bans", async (req, res) => {
+  app3.get("/api/admin/ip-bans", async (req, res) => {
     try {
       const ipBans2 = await storage.getAllIPBans();
       res.json(ipBans2);
@@ -5314,7 +5339,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to load IP bans" });
     }
   });
-  app2.post("/api/admin/ip-bans", async (req, res) => {
+  app3.post("/api/admin/ip-bans", async (req, res) => {
     try {
       const { ipAddress, reason, expiresAt } = req.body;
       if (!ipAddress || !reason) {
@@ -5337,7 +5362,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to create IP ban" });
     }
   });
-  app2.delete("/api/admin/ip-bans/:id", async (req, res) => {
+  app3.delete("/api/admin/ip-bans/:id", async (req, res) => {
     try {
       const banId = parseInt(req.params.id);
       if (isNaN(banId)) {
@@ -5350,7 +5375,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to delete IP ban" });
     }
   });
-  app2.delete("/api/admin/cloudrack-terminal-keys", async (req, res) => {
+  app3.delete("/api/admin/cloudrack-terminal-keys", async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
       let totalRemoved = 0;
@@ -5380,7 +5405,7 @@ function registerAdminRoutes(app2) {
       });
     }
   });
-  app2.get("/api/admin/volumes", async (req, res) => {
+  app3.get("/api/admin/volumes", async (req, res) => {
     try {
       const servers3 = await storage.getAllServers();
       const volumes2 = [];
@@ -5404,7 +5429,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to retrieve volumes" });
     }
   });
-  app2.get("/api/admin/volume-stats", async (req, res) => {
+  app3.get("/api/admin/volume-stats", async (req, res) => {
     try {
       const servers3 = await storage.getAllServers();
       const volumes2 = [];
@@ -5430,7 +5455,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to retrieve volume statistics" });
     }
   });
-  app2.get("/api/admin/users/:id/api-key", async (req, res) => {
+  app3.get("/api/admin/users/:id/api-key", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       if (isNaN(userId)) {
@@ -5446,7 +5471,7 @@ function registerAdminRoutes(app2) {
       res.status(500).json({ message: "Failed to retrieve API key" });
     }
   });
-  app2.post("/api/admin/users/:id/api-key", async (req, res) => {
+  app3.post("/api/admin/users/:id/api-key", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       if (isNaN(userId)) {
@@ -5470,11 +5495,1449 @@ function registerAdminRoutes(app2) {
   log("Admin routes registered", "admin");
 }
 
-// server/index.ts
-var app = express2();
-app.use(express2.json());
-app.use(express2.urlencoded({ extended: false }));
+// server/routes/github.ts
+import express2 from "express";
+
+// server/services/github.ts
+init_db();
+init_schema();
+import fetch2 from "node-fetch";
+import { eq as eq5 } from "drizzle-orm";
+
+// server/utils/logger.ts
+var colors = {
+  reset: "\x1B[0m",
+  bright: "\x1B[1m",
+  dim: "\x1B[2m",
+  underscore: "\x1B[4m",
+  blink: "\x1B[5m",
+  reverse: "\x1B[7m",
+  hidden: "\x1B[8m",
+  // Text colors
+  black: "\x1B[30m",
+  red: "\x1B[31m",
+  green: "\x1B[32m",
+  yellow: "\x1B[33m",
+  blue: "\x1B[34m",
+  magenta: "\x1B[35m",
+  cyan: "\x1B[36m",
+  white: "\x1B[37m",
+  // Background colors
+  bgBlack: "\x1B[40m",
+  bgRed: "\x1B[41m",
+  bgGreen: "\x1B[42m",
+  bgYellow: "\x1B[43m",
+  bgBlue: "\x1B[44m",
+  bgMagenta: "\x1B[45m",
+  bgCyan: "\x1B[46m",
+  bgWhite: "\x1B[47m"
+};
+var icons = {
+  info: "\u2139\uFE0F",
+  success: "\u2705",
+  warning: "\u26A0\uFE0F",
+  error: "\u274C",
+  debug: "\u{1F50D}",
+  database: "\u{1F5C4}\uFE0F",
+  server: "\u{1F680}",
+  github: "\u{1F419}",
+  auth: "\u{1F510}",
+  api: "\u{1F310}"
+};
+var timestamp2 = () => {
+  const now = /* @__PURE__ */ new Date();
+  return `${colors.dim}[${now.toLocaleTimeString()}]${colors.reset}`;
+};
+var logger = {
+  info: (message) => {
+    console.log(`${timestamp2()} ${icons.info} ${colors.cyan}${message}${colors.reset}`);
+  },
+  success: (message) => {
+    console.log(`${timestamp2()} ${icons.success} ${colors.green}${message}${colors.reset}`);
+  },
+  warning: (message) => {
+    console.warn(`${timestamp2()} ${icons.warning} ${colors.yellow}${message}${colors.reset}`);
+  },
+  error: (message, error) => {
+    console.error(`${timestamp2()} ${icons.error} ${colors.red}${message}${colors.reset}`);
+    if (error) console.error(`${colors.dim}${error.stack || error}${colors.reset}`);
+  },
+  debug: (message, data) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`${timestamp2()} ${icons.debug} ${colors.magenta}${message}${colors.reset}`);
+      if (data) console.log(data);
+    }
+  },
+  database: (message) => {
+    console.log(`${timestamp2()} ${icons.database} ${colors.blue}[DB]${colors.reset} ${message}`);
+  },
+  server: (message) => {
+    console.log(`${timestamp2()} ${icons.server} ${colors.green}[SERVER]${colors.reset} ${message}`);
+  },
+  github: (message) => {
+    console.log(`${timestamp2()} ${icons.github} ${colors.magenta}[GitHub]${colors.reset} ${message}`);
+  },
+  auth: (message) => {
+    console.log(`${timestamp2()} ${icons.auth} ${colors.cyan}[AUTH]${colors.reset} ${message}`);
+  },
+  api: (message, method, path3, status, duration) => {
+    const statusColor = status && status >= 400 ? colors.red : colors.green;
+    const methodColor = method === "GET" ? colors.cyan : method === "POST" ? colors.green : method === "PUT" ? colors.yellow : method === "DELETE" ? colors.red : colors.blue;
+    console.log(
+      `${timestamp2()} ${icons.api} ${methodColor}${method}${colors.reset} ${path3} ${status ? `${statusColor}${status}${colors.reset}` : ""} ${duration ? `${colors.yellow}${duration}ms${colors.reset}` : ""}`
+    );
+  }
+};
+
+// server/services/github.ts
+async function saveGitHubToken(userId, token, userData) {
+  try {
+    await db.update(users).set({
+      githubToken: token,
+      githubUsername: userData?.login || null,
+      githubUserId: userData?.id || null,
+      githubConnectedAt: token ? (/* @__PURE__ */ new Date()).toISOString() : null
+    }).where(eq5(users.id, userId));
+    return true;
+  } catch (error) {
+    logger.error("Error saving GitHub token:", error);
+    throw error;
+  }
+}
+async function getUserRepositories(token) {
+  try {
+    const response = await fetch2("https://api.github.com/user/repos?sort=updated&per_page=100", {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`GitHub API error: ${response.status} ${errorText}`);
+      throw new Error(`Failed to fetch repositories: ${response.status}`);
+    }
+    const repos = await response.json();
+    return repos;
+  } catch (error) {
+    logger.error("Error fetching GitHub repositories:", error);
+    throw error;
+  }
+}
+
+// server/routes/github.ts
+init_db();
+init_schema();
+import { eq as eq6 } from "drizzle-orm";
+import fetch3 from "node-fetch";
+var router = express2.Router();
+router.use("/repos", requireAuth);
+router.use("/auth-url", requireAuth);
+router.use("/disconnect", requireAuth);
+router.get("/repos", async (req, res) => {
+  try {
+    const githubToken = req.user.githubToken;
+    if (!githubToken) {
+      return res.status(401).json({ error: "GitHub account not connected" });
+    }
+    const repos = await getUserRepositories(githubToken);
+    res.json(repos);
+  } catch (error) {
+    console.error("GitHub repositories fetch error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+router.get("/auth-url", async (req, res) => {
+  try {
+    const clientId2 = process.env.GITHUB_CLIENT_ID?.trim();
+    const redirectUri = process.env.GITHUB_REDIRECT_URI?.trim();
+    if (!clientId2 || !redirectUri) {
+      return res.status(500).json({ error: "GitHub OAuth configuration is missing" });
+    }
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId2}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user:email`;
+    logger.info(`\u{1F419} [GitHub] Redirecting to GitHub OAuth URL: ${authUrl}`);
+    return res.redirect(authUrl);
+  } catch (error) {
+    logger.error("Error generating GitHub auth URL:", error);
+    res.status(500).json({ error: "Failed to generate GitHub auth URL" });
+  }
+});
+router.get("/callback", async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) {
+      return res.status(400).json({ error: "Missing code parameter" });
+    }
+    const clientId2 = process.env.GITHUB_CLIENT_ID;
+    const clientSecret2 = process.env.GITHUB_CLIENT_SECRET;
+    const redirectUri = process.env.GITHUB_REDIRECT_URI;
+    if (!clientId2 || !clientSecret2 || !redirectUri) {
+      return res.status(500).json({ error: "GitHub OAuth configuration is missing" });
+    }
+    const tokenResponse = await fetch3("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        client_id: clientId2,
+        client_secret: clientSecret2,
+        code,
+        redirect_uri: redirectUri
+      })
+    });
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.access_token) {
+      return res.status(500).json({ error: "Failed to obtain access token" });
+    }
+    const accessToken = tokenData.access_token;
+    const userResponse = await fetch3("https://api.github.com/user", {
+      headers: {
+        "Authorization": `token ${accessToken}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
+    });
+    const userData = await userResponse.json();
+    if (!userData.id) {
+      return res.status(500).json({ error: "Failed to fetch user information from GitHub" });
+    }
+    await db.update(users).set({
+      githubToken: accessToken,
+      githubUsername: userData.login,
+      githubUserId: userData.id,
+      githubConnectedAt: (/* @__PURE__ */ new Date()).toISOString()
+    }).where(eq6(users.id, req.user.id));
+    res.redirect("/dashboard");
+  } catch (error) {
+    logger.error("Error handling GitHub OAuth callback:", error);
+    res.status(500).json({ error: "Failed to handle GitHub OAuth callback" });
+  }
+});
+router.post("/disconnect", async (req, res) => {
+  try {
+    await saveGitHubToken(req.user.id, null);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+var github_default = router;
+
+// server/routes/github-webhooks.ts
+import express3 from "express";
+import crypto2 from "crypto";
+init_db();
+init_schema();
+import { eq as eq8 } from "drizzle-orm";
+
+// server/services/app-platform.ts
+import fetch4 from "node-fetch";
+init_db();
+init_schema();
+import { eq as eq7 } from "drizzle-orm";
+var DO_TOKEN = process.env.DIGITAL_OCEAN_API_KEY || "";
+var BASE_URL = "https://api.digitalocean.com/v2";
+var APP_PLATFORM_BASE = `${BASE_URL}/apps`;
+async function createAppFromGitHub(userId, options) {
+  const user = await db.query.users.findFirst({
+    where: eq7(users.id, userId)
+  });
+  if (!user?.githubToken) {
+    throw new Error("User is not connected to GitHub");
+  }
+  const [owner, repo] = options.repository.split("/");
+  const appSpec = {
+    name: options.name,
+    region: options.region,
+    services: [
+      {
+        name: options.name,
+        github: {
+          repo: options.repository,
+          branch: options.branch,
+          deploy_on_push: true
+        },
+        source_dir: "/",
+        instance_size_slug: options.size,
+        instance_count: 1,
+        http_port: 8080,
+        run_command: "start",
+        envs: Object.entries(options.environmentVariables || {}).map(([key, value]) => ({
+          key,
+          value,
+          scope: "RUN_AND_BUILD_TIME"
+        }))
+      }
+    ]
+  };
+  try {
+    logger.info(`Creating new App Platform app: ${options.name} from ${options.repository}:${options.branch}`);
+    const response = await fetch4(`${BASE_URL}/apps`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${DO_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        spec: appSpec
+      })
+    });
+    if (!response.ok) {
+      const errorData = await response.text();
+      logger.error(`Error creating app: ${response.status} ${errorData}`);
+      throw new Error(`Failed to create app: ${response.status} ${errorData}`);
+    }
+    const data = await response.json();
+    logger.success(`Successfully created app: ${data.app.id}`);
+    return data.app;
+  } catch (error) {
+    logger.error(`Error in createAppFromGitHub: ${error.message}`);
+    throw error;
+  }
+}
+async function redeployApp(deployment) {
+  try {
+    logger.info(`Redeploying app: ${deployment.id}`);
+    const response = await fetch4(`${APP_PLATFORM_BASE}/${deployment.appId}/deployments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${DO_TOKEN}`
+      }
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to redeploy app: ${response.status} ${errorText}`);
+    }
+    const data = await response.json();
+    logger.success(`Redeployment triggered: ${data.deployment.id}`);
+    return data.deployment;
+  } catch (error) {
+    logger.error(`Error redeploying app:`, error);
+    throw error;
+  }
+}
+async function restartApp(deployment) {
+  try {
+    logger.info(`Restarting app: ${deployment.id}`);
+    const response = await fetch4(`${APP_PLATFORM_BASE}/${deployment.appId}/restart`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${DO_TOKEN}`
+      }
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to restart app: ${response.status} ${errorText}`);
+    }
+    logger.success(`App restart triggered: ${deployment.id}`);
+    return true;
+  } catch (error) {
+    logger.error(`Error restarting app:`, error);
+    throw error;
+  }
+}
+
+// server/routes/github-webhooks.ts
+var router2 = express3.Router();
+var WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || "";
+router2.use(express3.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
+function verifyGitHubWebhook(req) {
+  if (!WEBHOOK_SECRET) {
+    logger.warning("GitHub webhook secret not configured, skipping signature verification");
+    return true;
+  }
+  const signature = req.headers["x-hub-signature-256"];
+  if (!signature) {
+    logger.warning("No signature found in GitHub webhook");
+    return false;
+  }
+  const hmac = crypto2.createHmac("sha256", WEBHOOK_SECRET);
+  const calculatedSignature = "sha256=" + hmac.update(req.rawBody).digest("hex");
+  return crypto2.timingSafeEqual(
+    Buffer.from(calculatedSignature),
+    Buffer.from(signature)
+  );
+}
+async function findUsersForRepository(repoId, branch) {
+  try {
+    const usersWithAutoDeploy = await db.query.users.findMany({
+      where: eq8(users.githubToken, null, false)
+      // Only users with GitHub tokens
+    });
+    return usersWithAutoDeploy;
+  } catch (error) {
+    logger.error(`Error finding users for repository ${repoId}:${branch}:`, error);
+    return [];
+  }
+}
+router2.post("/", async (req, res) => {
+  try {
+    const event = req.headers["x-github-event"];
+    logger.info(`Received GitHub webhook event: ${event}`);
+    if (!verifyGitHubWebhook(req)) {
+      logger.warning("Invalid GitHub webhook signature");
+      return res.status(401).json({ error: "Invalid signature" });
+    }
+    if (event === "push") {
+      const payload = req.body;
+      const { repository, ref } = payload;
+      const branchName = ref.replace("refs/heads/", "");
+      logger.info(`Push event for repository ${repository.full_name} on branch ${branchName}`);
+      const applicableUsers = await findUsersForRepository(repository.id.toString(), branchName);
+      if (applicableUsers.length === 0) {
+        logger.info(`No users found with auto-deploy configured for ${repository.full_name}:${branchName}`);
+        return res.status(200).json({ message: "No applicable configurations found" });
+      }
+      for (const user of applicableUsers) {
+        try {
+          logger.info(`Triggering auto-deploy for user ${user.id} (${user.username})`);
+          const deploymentConfig = {
+            name: `${repository.name}-${branchName}`,
+            repoFullName: repository.full_name,
+            branch: branchName,
+            region: "nyc",
+            // Default region
+            size: "basic-xs"
+            // Default size
+          };
+          await createAppFromGitHub(user.id, {
+            name: deploymentConfig.name,
+            repository: deploymentConfig.repoFullName,
+            branch: deploymentConfig.branch,
+            region: deploymentConfig.region,
+            size: deploymentConfig.size
+          });
+          logger.success(`Auto-deploy triggered successfully for ${repository.full_name}:${branchName}`);
+        } catch (deployError) {
+          logger.error(`Failed to trigger auto-deploy for user ${user.id}:`, deployError);
+        }
+      }
+    } else if (event === "installation" || event === "installation_repositories") {
+      const action = req.body.action;
+      logger.info(`GitHub App installation event: ${action}`);
+    }
+    res.status(200).json({ received: true });
+  } catch (error) {
+    logger.error(`Error processing GitHub webhook:`, error);
+    res.status(500).json({ error: "Failed to process webhook" });
+  }
+});
+var github_webhooks_default = router2;
+
+// server/routes/github-debug.ts
+import express4 from "express";
+init_db();
+init_schema();
+import { eq as eq9 } from "drizzle-orm";
+import fetch5 from "node-fetch";
+var router3 = express4.Router();
+router3.use((req, res, next) => {
+  if (!req.user || !req.user.isAdmin) {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+});
+router3.get("/status", async (req, res) => {
+  try {
+    const user = await db.query.users.findFirst({
+      where: eq9(users.id, req.user.id)
+    });
+    if (!user?.githubToken) {
+      return res.json({
+        connected: false,
+        tokenStatus: "missing"
+      });
+    }
+    try {
+      const response = await fetch5("https://api.github.com/user", {
+        headers: {
+          Authorization: `token ${user.githubToken}`,
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "SkyVPS360-Platform"
+        }
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        const scopes = response.headers.get("x-oauth-scopes")?.split(", ") || [];
+        return res.json({
+          connected: true,
+          tokenStatus: "valid",
+          username: userData.login,
+          userId: userData.id,
+          email: userData.email,
+          avatarUrl: userData.avatar_url,
+          scopes,
+          profileUrl: userData.html_url
+        });
+      } else {
+        return res.json({
+          connected: false,
+          tokenStatus: "invalid",
+          error: `GitHub API returned status ${response.status}`
+        });
+      }
+    } catch (error) {
+      return res.json({
+        connected: false,
+        tokenStatus: "error",
+        error: error.message
+      });
+    }
+  } catch (error) {
+    logger.error("Error in GitHub debug status endpoint:", error);
+    res.status(500).json({ error: "Failed to get GitHub status" });
+  }
+});
+router3.post("/test-webhook", async (req, res) => {
+  try {
+    logger.info("Simulating GitHub webhook event");
+    const mockPayload = {
+      ref: "refs/heads/main",
+      repository: {
+        id: 123456789,
+        name: "test-repo",
+        full_name: "testuser/test-repo",
+        private: false
+      },
+      sender: {
+        id: req.user.id,
+        login: req.user.username
+      },
+      commits: [
+        {
+          id: "abc123",
+          message: "Test commit",
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      ]
+    };
+    logger.info("Processing test webhook for repository: testuser/test-repo (main)");
+    res.json({
+      success: true,
+      message: "Webhook test processed successfully",
+      payload: mockPayload
+    });
+  } catch (error) {
+    logger.error("Error in GitHub debug test-webhook endpoint:", error);
+    res.status(500).json({ error: "Failed to process test webhook" });
+  }
+});
+router3.get("/recent-activity", async (req, res) => {
+  try {
+    const mockActivity = [
+      {
+        type: "oauth",
+        description: "Connected GitHub account",
+        timestamp: new Date(Date.now() - 36e5).toISOString()
+        // 1 hour ago
+      },
+      {
+        type: "deploy",
+        description: "Deployed repository: user/repo",
+        timestamp: new Date(Date.now() - 72e5).toISOString()
+        // 2 hours ago
+      },
+      {
+        type: "webhook",
+        description: "Received push webhook from user/repo",
+        timestamp: new Date(Date.now() - 864e5).toISOString()
+        // 1 day ago
+      }
+    ];
+    res.json(mockActivity);
+  } catch (error) {
+    logger.error("Error in GitHub debug recent-activity endpoint:", error);
+    res.status(500).json({ error: "Failed to get recent activity" });
+  }
+});
+var github_debug_default = router3;
+
+// server/routes/github-deployments.ts
+import express5 from "express";
+init_db();
+
+// server/db/schema.ts
+import { pgTable as pgTable2, serial as serial2, integer as integer2, text as text2, timestamp as timestamp3 } from "drizzle-orm/pg-core";
+var deployments = pgTable2("deployments", {
+  id: serial2("id").primaryKey(),
+  userId: integer2("user_id").notNull(),
+  appId: text2("app_id"),
+  name: text2("name").notNull(),
+  repository: text2("repository").notNull(),
+  branch: text2("branch").notNull(),
+  status: text2("status").notNull(),
+  url: text2("url"),
+  region: text2("region").notNull(),
+  size: text2("size").notNull(),
+  envVars: text2("env_vars"),
+  createdAt: timestamp3("created_at").defaultNow(),
+  lastDeployedAt: timestamp3("last_deployed_at").defaultNow()
+});
+var githubConnections = pgTable2("github_connections", {
+  id: serial2("id").primaryKey(),
+  userId: integer2("user_id").notNull().unique(),
+  githubUserId: integer2("github_user_id"),
+  githubUsername: text2("github_username"),
+  accessToken: text2("access_token"),
+  refreshToken: text2("refresh_token"),
+  scopes: text2("scopes"),
+  connectedAt: timestamp3("connected_at").defaultNow()
+});
+
+// server/routes/github-deployments.ts
+import { eq as eq10 } from "drizzle-orm";
+var router4 = express5.Router();
+router4.use(requireAuth);
+router4.get("/", async (req, res) => {
+  try {
+    logger.info(`Retrieving deployments for user ${req.user.id}`);
+    const userDeployments = await db.select().from(deployments).where(eq10(deployments.userId, req.user.id));
+    logger.info(`Retrieved ${userDeployments.length} deployments for user ${req.user.id}`);
+    res.json(userDeployments);
+  } catch (error) {
+    logger.error("Error fetching deployments:", error);
+    res.status(500).json({ error: "Failed to fetch deployments" });
+  }
+});
+router4.get("/:id", async (req, res) => {
+  try {
+    const [deployment] = await db.select().from(deployments).where(eq10(deployments.id, parseInt(req.params.id, 10))).limit(1);
+    if (!deployment || deployment.userId !== req.user.id) {
+      return res.status(404).json({ error: "Deployment not found" });
+    }
+    res.json(deployment);
+  } catch (error) {
+    logger.error("Error fetching deployment details:", error);
+    res.status(500).json({ error: "Failed to fetch deployment details" });
+  }
+});
+router4.post("/:id/redeploy", async (req, res) => {
+  try {
+    const [deployment] = await db.select().from(deployments).where(eq10(deployments.id, parseInt(req.params.id, 10))).limit(1);
+    if (!deployment || deployment.userId !== req.user.id) {
+      return res.status(404).json({ error: "Deployment not found" });
+    }
+    logger.info(`Redeploying deployment ${deployment.id}`);
+    await redeployApp(deployment);
+    res.json({ message: "Deployment is redeploying" });
+  } catch (error) {
+    logger.error(`Error redeploying application: ${error}`);
+    res.status(500).json({ error: "Failed to redeploy application" });
+  }
+});
+router4.post("/:id/restart", async (req, res) => {
+  try {
+    const [deployment] = await db.select().from(deployments).where(eq10(deployments.id, parseInt(req.params.id, 10))).limit(1);
+    if (!deployment || deployment.userId !== req.user.id) {
+      return res.status(404).json({ error: "Deployment not found" });
+    }
+    logger.info(`Restarting deployment ${deployment.id}`);
+    await restartApp(deployment);
+    res.json({ message: "Deployment is restarting" });
+  } catch (error) {
+    logger.error(`Error restarting deployment ${req.params.id}:`, error);
+    res.status(500).json({ error: "Failed to restart deployment" });
+  }
+});
+var github_deployments_default = router4;
+
+// server/routes/app-platform.ts
+import express6 from "express";
+var router5 = express6.Router();
+router5.use(requireAuth);
+router5.get("/regions", async (req, res) => {
+  try {
+    const regions = [
+      {
+        id: "ams",
+        slug: "ams",
+        name: "Amsterdam, Netherlands",
+        available: true,
+        data_centers: ["ams3"],
+        default: false
+      },
+      {
+        id: "nyc",
+        slug: "nyc",
+        name: "New York, United States",
+        available: true,
+        data_centers: ["nyc1", "nyc3"],
+        default: true
+      },
+      {
+        id: "fra",
+        slug: "fra",
+        name: "Frankfurt, Germany",
+        available: true,
+        data_centers: ["fra1"],
+        default: false
+      },
+      {
+        id: "lon",
+        slug: "lon",
+        name: "London, United Kingdom",
+        available: true,
+        data_centers: ["lon1"],
+        default: false
+      },
+      {
+        id: "sfo",
+        slug: "sfo",
+        name: "San Francisco, United States",
+        available: true,
+        data_centers: ["sfo3"],
+        default: false
+      },
+      {
+        id: "sgp",
+        slug: "sgp",
+        name: "Singapore",
+        available: true,
+        data_centers: ["sgp1"],
+        default: false
+      }
+    ];
+    res.json(regions);
+  } catch (error) {
+    logger.error("Error fetching app platform regions:", error);
+    res.status(500).json({ error: "Failed to fetch regions" });
+  }
+});
+router5.get("/sizes", async (req, res) => {
+  try {
+    const sizes = [
+      {
+        slug: "basic-xxs",
+        name: "Basic XXS",
+        cpu: 1,
+        memory_bytes: 512 * 1024 * 1024,
+        usd_per_month: 5,
+        usd_per_second: 19e-7,
+        tier_slug: "basic",
+        tier_upgrade_to: "professional-xs",
+        included_bandwidth_bytes: 40 * 1024 * 1024 * 1024
+      },
+      {
+        slug: "basic-xs",
+        name: "Basic XS",
+        cpu: 1,
+        memory_bytes: 1024 * 1024 * 1024,
+        usd_per_month: 10,
+        usd_per_second: 38e-7,
+        tier_slug: "basic",
+        tier_upgrade_to: "professional-xs",
+        included_bandwidth_bytes: 80 * 1024 * 1024 * 1024
+      },
+      {
+        slug: "basic-s",
+        name: "Basic S",
+        cpu: 1,
+        memory_bytes: 2 * 1024 * 1024 * 1024,
+        usd_per_month: 18,
+        usd_per_second: 69e-7,
+        tier_slug: "basic",
+        tier_upgrade_to: "professional-xs",
+        included_bandwidth_bytes: 160 * 1024 * 1024 * 1024
+      },
+      {
+        slug: "professional-xs",
+        name: "Professional XS",
+        cpu: 2,
+        memory_bytes: 4 * 1024 * 1024 * 1024,
+        usd_per_month: 40,
+        usd_per_second: 15e-6,
+        tier_slug: "professional",
+        tier_upgrade_to: "professional-s",
+        included_bandwidth_bytes: 320 * 1024 * 1024 * 1024
+      }
+    ];
+    res.json(sizes);
+  } catch (error) {
+    logger.error("Error fetching app platform sizes:", error);
+    res.status(500).json({ error: "Failed to fetch sizes" });
+  }
+});
+var app_platform_default = router5;
+
+// server/routes/api-debug.ts
+import express7 from "express";
+import os from "os";
+var router6 = express7.Router();
+router6.use(requireAdmin);
+router6.get("/", async (req, res) => {
+  try {
+    const env = {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT,
+      GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+      GITHUB_REDIRECT_URI: process.env.GITHUB_REDIRECT_URI,
+      // Redact secret
+      GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET ? "***REDACTED***" : void 0,
+      DATABASE_URL: process.env.DATABASE_URL ? "***REDACTED***" : void 0
+    };
+    const system = {
+      platform: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version,
+      memory: {
+        total: `${Math.round(os.totalmem() / (1024 * 1024 * 1024))}GB`,
+        free: `${Math.round(os.freemem() / (1024 * 1024 * 1024))}GB`
+      },
+      cpus: os.cpus().length,
+      hostname: os.hostname(),
+      uptime: `${Math.round(os.uptime() / 60 / 60)} hours`
+    };
+    res.json({ env, system });
+  } catch (error) {
+    logger.error("Error in API debug route:", error);
+    res.status(500).json({ error: "Failed to get debug information" });
+  }
+});
+router6.get("/github-oauth-url", (req, res) => {
+  try {
+    const clientId2 = process.env.GITHUB_CLIENT_ID?.trim();
+    const redirectUri = process.env.GITHUB_REDIRECT_URI?.trim();
+    if (!clientId2 || !redirectUri) {
+      return res.status(500).json({ error: "GitHub OAuth configuration is missing" });
+    }
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId2}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user:email`;
+    res.json({ url: authUrl, components: { clientId: clientId2, redirectUri } });
+  } catch (error) {
+    logger.error("Error generating debug GitHub URL:", error);
+    res.status(500).json({ error: "Failed to generate GitHub auth URL" });
+  }
+});
+var api_debug_default = router6;
+
+// server/routes/github-connections.ts
+import express8 from "express";
+init_db();
+init_schema();
+import { eq as eq11 } from "drizzle-orm";
+
+// server/services/github-api.ts
+import fetch6 from "node-fetch";
+var GITHUB_API_BASE = "https://api.github.com";
+async function githubRequest(endpoint, token, options = {}) {
+  try {
+    const url = `${GITHUB_API_BASE}${endpoint}`;
+    const response = await fetch6(url, {
+      ...options,
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json",
+        ...options.headers
+      }
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      logger.error(`GitHub API error: ${response.status} ${response.statusText}`, errorBody);
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    logger.error(`Error making GitHub request to ${endpoint}:`, error);
+    throw error;
+  }
+}
+async function getGitHubUser(token) {
+  return await githubRequest("/user", token);
+}
+
+// server/routes/github-connections.ts
+var router7 = express8.Router();
+router7.use(requireAuth);
+router7.get("/status", async (req, res) => {
+  try {
+    const user = req.user;
+    res.json({
+      connected: !!user.githubToken,
+      githubUsername: user.githubUsername || null,
+      githubUserId: user.githubUserId || null,
+      connectedAt: user.githubConnectedAt || null
+    });
+  } catch (error) {
+    logger.error("Error getting GitHub connection status:", error);
+    res.status(500).json({ error: "Failed to get connection status" });
+  }
+});
+router7.post("/disconnect", async (req, res) => {
+  try {
+    await db.update(users).set({
+      githubToken: null,
+      githubUsername: null,
+      githubUserId: null,
+      githubConnectedAt: null
+    }).where(eq11(users.id, req.user.id));
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("Error disconnecting GitHub account:", error);
+    res.status(500).json({ error: "Failed to disconnect GitHub account" });
+  }
+});
+router7.get("/connection-details", async (req, res) => {
+  try {
+    const user = await db.query.users.findFirst({
+      where: eq11(users.id, req.user.id)
+    });
+    if (!user?.githubToken) {
+      return res.json({
+        connected: false
+      });
+    }
+    try {
+      const githubUser = await getGitHubUser(user.githubToken);
+      return res.json({
+        connected: true,
+        username: githubUser.login,
+        email: githubUser.email,
+        avatarUrl: githubUser.avatar_url,
+        userId: githubUser.id,
+        connectedAt: user.githubConnectedAt || (/* @__PURE__ */ new Date()).toISOString(),
+        scopes: ["repo", "user:email"]
+        // Mocked scopes, in reality would come from headers or token introspection
+      });
+    } catch (error) {
+      logger.error("Error fetching GitHub user:", error);
+      return res.json({
+        connected: false,
+        error: "Failed to verify GitHub token"
+      });
+    }
+  } catch (error) {
+    logger.error("Error in GitHub connection details:", error);
+    res.status(500).json({ error: "Failed to get connection details" });
+  }
+});
+router7.post("/settings", async (req, res) => {
+  try {
+    const { autoDeploy, buildCache } = req.body;
+    logger.info(`User ${req.user.id} updated GitHub settings: autoDeploy=${autoDeploy}, buildCache=${buildCache}`);
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("Error saving GitHub settings:", error);
+    res.status(500).json({ error: "Failed to save settings" });
+  }
+});
+router7.post("/webhooks/configure", async (req, res) => {
+  try {
+    const { url, secret } = req.body;
+    if (!url) {
+      return res.status(400).json({ error: "Webhook URL is required" });
+    }
+    logger.info(`User ${req.user.id} configured GitHub webhook: url=${url}`);
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("Error configuring webhooks:", error);
+    res.status(500).json({ error: "Failed to configure webhooks" });
+  }
+});
+router7.get("/recent-activity", async (req, res) => {
+  try {
+    const mockActivity = [
+      {
+        type: "oauth",
+        description: "Connected GitHub account",
+        timestamp: new Date(Date.now() - 36e5).toISOString()
+        // 1 hour ago
+      },
+      {
+        type: "deploy",
+        description: "Deployed repository: user/repo",
+        timestamp: new Date(Date.now() - 72e5).toISOString()
+        // 2 hours ago
+      },
+      {
+        type: "webhook",
+        description: "Received push webhook from user/repo",
+        timestamp: new Date(Date.now() - 864e5).toISOString()
+        // 1 day ago
+      }
+    ];
+    res.json(mockActivity);
+  } catch (error) {
+    logger.error("Error getting recent activity:", error);
+    res.status(500).json({ error: "Failed to get recent activity" });
+  }
+});
+var github_connections_default = router7;
+
+// server/utils/env.ts
+function loadGitHubCredentials() {
+  try {
+    const clientId2 = process.env.GITHUB_CLIENT_ID;
+    const clientSecret2 = process.env.GITHUB_CLIENT_SECRET;
+    const redirectUri = process.env.GITHUB_REDIRECT_URI;
+    const displayClientId = clientId2 ? `${clientId2.substring(0, 5)}...` : "Not set";
+    const displayClientSecret = clientSecret2 ? "Set" : "Not set";
+    logger.info(`\u{1F419} [GitHub] GitHub OAuth Configuration:`);
+    logger.info(`\u{1F419} [GitHub] - Client ID: ${displayClientId}`);
+    logger.info(`\u{1F419} [GitHub] - Client Secret: ${displayClientSecret}`);
+    logger.info(`\u{1F419} [GitHub] - Redirect URI: ${redirectUri}`);
+    if (clientId2 && clientSecret2 && redirectUri) {
+      process.env.GITHUB_CLIENT_ID = clientId2.trim();
+      process.env.GITHUB_CLIENT_SECRET = clientSecret2.trim();
+      process.env.GITHUB_REDIRECT_URI = redirectUri.trim();
+      logger.success("GitHub OAuth credentials successfully loaded. GitHub integration is available.");
+      return true;
+    } else {
+      logger.warning("GitHub OAuth credentials are missing or incomplete. GitHub integration will not work properly.");
+      return false;
+    }
+  } catch (error) {
+    logger.error("Error loading GitHub credentials:", error);
+    return false;
+  }
+}
+
+// server/server.ts
+import express9 from "express";
+import path2 from "path";
+import cors from "cors";
+import { createServer as createServer2 } from "http";
+import compression from "compression";
+import helmet from "helmet";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import bodyParser from "body-parser";
+
+// server/github-oauth.ts
+import axios from "axios";
+var GitHubOAuth = class {
+  clientId;
+  clientSecret;
+  redirectUri;
+  debugMode = true;
+  // Enable for more detailed logging
+  constructor() {
+    this.clientId = process.env.GITHUB_CLIENT_ID || "";
+    this.clientSecret = process.env.GITHUB_CLIENT_SECRET || "";
+    this.redirectUri = process.env.GITHUB_CALLBACK_URL || "http://localhost:5000/auth/github/callback";
+    if (!this.clientId || !this.clientSecret) {
+      console.error("\u274C [GitHub] GitHub OAuth credentials not configured properly.");
+    } else {
+      console.log("\u2139\uFE0F \u{1F419} [GitHub] GitHub OAuth Configuration:");
+      console.log(`\u2139\uFE0F \u{1F419} [GitHub] - Client ID: ${this.clientId.substring(0, 5)}...`);
+      console.log(`\u2139\uFE0F \u{1F419} [GitHub] - Client Secret: ${this.clientSecret ? "Set" : "Not Set"}`);
+      console.log(`\u2139\uFE0F \u{1F419} [GitHub] - Redirect URI: ${this.redirectUri}`);
+      if (this.debugMode) {
+        console.log(`\u2139\uFE0F \u{1F419} [GitHub] DEBUG - Full Redirect URI: ${this.redirectUri}`);
+      }
+      console.log("\u2705 GitHub OAuth credentials successfully loaded. GitHub integration is available.");
+    }
+  }
+  isConfigured() {
+    return Boolean(this.clientId && this.clientSecret);
+  }
+  getAuthUrl() {
+    const params = new URLSearchParams({
+      client_id: this.clientId,
+      redirect_uri: this.redirectUri,
+      scope: "repo,user:email"
+    });
+    const authUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
+    if (this.debugMode) {
+      console.log(`\u2139\uFE0F \u{1F419} [GitHub] DEBUG - Generated Auth URL: ${authUrl}`);
+    }
+    return authUrl;
+  }
+  async getAccessToken(code) {
+    try {
+      console.log(`\u2139\uFE0F \u{1F419} [GitHub] Exchanging code for access token...`);
+      if (this.debugMode) {
+        console.log(`\u2139\uFE0F \u{1F419} [GitHub] DEBUG - Exchange parameters:`);
+        console.log(`  - Client ID: ${this.clientId}`);
+        console.log(`  - Redirect URI: ${this.redirectUri}`);
+        console.log(`  - Code: ${code.substring(0, 6)}...`);
+      }
+      const params = {
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        code,
+        redirect_uri: this.redirectUri
+      };
+      if (this.debugMode) {
+        console.log(`\u2139\uFE0F \u{1F419} [GitHub] DEBUG - Making POST request to https://github.com/login/oauth/access_token`);
+        console.log(`\u2139\uFE0F \u{1F419} [GitHub] DEBUG - Params: ${JSON.stringify({
+          ...params,
+          client_secret: "***MASKED***"
+        })}`);
+      }
+      const tokenResponse = await axios.post(
+        "https://github.com/login/oauth/access_token",
+        params,
+        {
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          }
+        }
+      );
+      if (this.debugMode) {
+        console.log(`\u2139\uFE0F \u{1F419} [GitHub] DEBUG - Response status: ${tokenResponse.status}`);
+        console.log(`\u2139\uFE0F \u{1F419} [GitHub] DEBUG - Response headers: ${JSON.stringify(tokenResponse.headers)}`);
+        console.log(`\u2139\uFE0F \u{1F419} [GitHub] DEBUG - Response data: ${JSON.stringify({
+          ...tokenResponse.data,
+          access_token: tokenResponse.data.access_token ? "***MASKED***" : void 0
+        })}`);
+      }
+      if (!tokenResponse.data.access_token) {
+        console.error("\u274C [GitHub] No access token in response:", tokenResponse.data);
+        throw new Error("GitHub did not provide an access token");
+      }
+      console.log("\u2705 [GitHub] Successfully obtained access token");
+      return tokenResponse.data.access_token;
+    } catch (error) {
+      console.error("\u274C [GitHub] Failed to exchange code for token:", error.message);
+      if (error.response) {
+        console.error(`\u274C [GitHub] Response status: ${error.response.status}`);
+        console.error(`\u274C [GitHub] Response headers: ${JSON.stringify(error.response.headers)}`);
+        console.error(`\u274C [GitHub] Response data: ${JSON.stringify(error.response.data)}`);
+      } else if (error.request) {
+        console.error(`\u274C [GitHub] No response received. Request: ${JSON.stringify(error.request)}`);
+      }
+      throw new Error("Failed to obtain access token");
+    }
+  }
+  setupRoutes(app3) {
+    if (!this.isConfigured()) {
+      console.warn("\u26A0\uFE0F [GitHub] OAuth routes not set up due to missing configuration");
+      return;
+    }
+    app3.get("/api/github/authorize", requireAuth, (req, res) => {
+      const authUrl = this.getAuthUrl();
+      console.log(`\u2139\uFE0F \u{1F419} [GitHub] Redirecting to GitHub OAuth URL: ${authUrl}`);
+      res.redirect(authUrl);
+    });
+    app3.get("/api/github/auth-url", requireAuth, (req, res) => {
+      const authUrl = this.getAuthUrl();
+      console.log(`\u2139\uFE0F \u{1F419} [GitHub] Returning GitHub OAuth URL: ${authUrl}`);
+      res.json({ url: authUrl });
+    });
+    const callbackHandler = async (req, res) => {
+      const { code, error } = req.query;
+      console.log(`\u2139\uFE0F \u{1F419} [GitHub] Received callback: ${req.url}`);
+      console.log(`\u2139\uFE0F \u{1F419} [GitHub] Code present: ${Boolean(code)}, Error present: ${Boolean(error)}`);
+      if (error) {
+        console.error(`\u274C [GitHub] OAuth error: ${error}`);
+        return res.redirect("/dashboard?error=github-oauth-rejected");
+      }
+      if (!code) {
+        console.error("\u274C [GitHub] No code provided in callback");
+        return res.redirect("/dashboard?error=github-no-code");
+      }
+      try {
+        if (!req.user || !req.user.id) {
+          console.log("\u274C [GitHub] User not authenticated during callback");
+          if (this.debugMode) {
+            console.log("\u2139\uFE0F \u{1F419} [GitHub] DEBUG - User object:", req.user);
+            console.log("\u2139\uFE0F \u{1F419} [GitHub] DEBUG - Session:", req.session);
+          }
+          return res.send(`
+            <html>
+              <head>
+                <title>GitHub Authentication</title>
+                <style>
+                  body { font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 2rem; }
+                  .card { border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+                  .button { background: #0366d6; color: white; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; display: inline-block; margin-top: 1rem; }
+                </style>
+              </head>
+              <body>
+                <div class="card">
+                  <h2>Almost there!</h2>
+                  <p>Your GitHub authorization was successful, but you need to be logged in to complete the connection.</p>
+                  <p>Please log in to your account first, then try connecting GitHub again.</p>
+                  <a class="button" href="/login">Go to Login</a>
+                </div>
+              </body>
+            </html>
+          `);
+        }
+        const accessToken = await this.getAccessToken(code);
+        await storage.updateUser(req.user.id, { github_token: accessToken });
+        console.log(`\u2705 [GitHub] Successfully linked GitHub account for user ${req.user.id}`);
+        res.redirect("/dashboard?github=connected");
+      } catch (error2) {
+        console.error("\u274C [GitHub] Error during token exchange:", error2);
+        if (this.debugMode) {
+          return res.send(`
+            <html>
+              <head>
+                <title>GitHub Authentication Error</title>
+                <style>
+                  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
+                  .error-card { border: 1px solid #f44336; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+                  .error-title { color: #f44336; }
+                  pre { background: #f1f1f1; padding: 1rem; border-radius: 4px; overflow: auto; }
+                  .button { background: #0366d6; color: white; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; display: inline-block; margin-top: 1rem; }
+                </style>
+              </head>
+              <body>
+                <div class="error-card">
+                  <h2 class="error-title">GitHub Authentication Error</h2>
+                  <p>There was an error exchanging the code for an access token:</p>
+                  <pre>${error2.message || "Unknown error"}</pre>
+
+                  <h3>Debug Information:</h3>
+                  <ul>
+                    <li>Client ID: ${this.clientId.substring(0, 5)}...</li>
+                    <li>Redirect URI: ${this.redirectUri}</li>
+                    <li>Code length: ${code.length}</li>
+                  </ul>
+
+                  <a class="button" href="/dashboard">Return to Dashboard</a>
+                </div>
+              </body>
+            </html>
+          `);
+        }
+        res.redirect("/dashboard?error=github-token-exchange");
+      }
+    };
+    app3.get("/auth/github/callback", callbackHandler);
+    app3.get("/api/github/callback", callbackHandler);
+    app3.get("/api/github/status", requireAuth, async (req, res) => {
+      if (!req.user) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const user = await storage.getUser(req.user.id);
+      const isConnected = Boolean(user?.github_token);
+      res.json({
+        connected: isConnected
+      });
+    });
+    app3.post("/api/github/disconnect", requireAuth, async (req, res) => {
+      if (!req.user) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      try {
+        await storage.updateUser(req.user.id, { github_token: null });
+        res.json({ success: true, message: "GitHub account disconnected" });
+      } catch (error) {
+        console.error("\u274C [GitHub] Error disconnecting account:", error);
+        res.status(500).json({ error: "Failed to disconnect GitHub account" });
+      }
+    });
+    app3.get("/api/github/repos", requireAuth, async (req, res) => {
+      if (!req.user) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const user = await storage.getUser(req.user.id);
+      if (!user?.github_token) {
+        return res.status(401).json({ error: "GitHub account not connected" });
+      }
+      try {
+        const response = await axios.get("https://api.github.com/user/repos", {
+          headers: {
+            Authorization: `token ${user.github_token}`,
+            Accept: "application/vnd.github.v3+json"
+          },
+          params: {
+            sort: "updated",
+            per_page: 100
+          }
+        });
+        res.json(response.data);
+      } catch (error) {
+        console.error("\u274C [GitHub] Error fetching repositories:", error.response?.data || error.message);
+        if (error.response?.status === 401) {
+          await storage.updateUser(req.user.id, { github_token: null });
+          return res.status(401).json({ error: "GitHub token is invalid. Please reconnect your account." });
+        }
+        res.status(500).json({ error: "Failed to fetch GitHub repositories" });
+      }
+    });
+  }
+};
+var githubOAuth = new GitHubOAuth();
+
+// server/debug-routes.ts
+function setupDebugRoutes(app3) {
+  if (process.env.NODE_ENV === "production") return;
+  app3.get("/debug/env", (req, res) => {
+    if (!req.query.secret || req.query.secret !== "debug-mode") {
+      return res.status(403).json({
+        error: "Access denied",
+        message: "Add ?secret=debug-mode to view environment variables"
+      });
+    }
+    const envVars = {
+      NODE_ENV: process.env.NODE_ENV,
+      GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID ? `${process.env.GITHUB_CLIENT_ID.substring(0, 5)}...` : "not set",
+      GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET ? "set (length: " + process.env.GITHUB_CLIENT_SECRET.length + ")" : "not set",
+      GITHUB_CALLBACK_URL: process.env.GITHUB_CALLBACK_URL,
+      DATABASE_URL: process.env.DATABASE_URL ? `...${process.env.DATABASE_URL.split("@")[1] || "masked"}` : "not set",
+      PORT: process.env.PORT || "5000 (default)"
+    };
+    res.json({
+      env: envVars,
+      dotenvLoaded: typeof process.env.GITHUB_CLIENT_ID === "string",
+      nodeVersion: process.version
+    });
+  });
+  app3.get("/debug/github-url", (req, res) => {
+    const clientId2 = process.env.GITHUB_CLIENT_ID;
+    const redirectUri = process.env.GITHUB_CALLBACK_URL;
+    if (!clientId2) {
+      return res.status(500).json({ error: "GITHUB_CLIENT_ID not set" });
+    }
+    if (!redirectUri) {
+      return res.status(500).json({ error: "GITHUB_CALLBACK_URL not set" });
+    }
+    const params = new URLSearchParams({
+      client_id: clientId2,
+      redirect_uri: redirectUri,
+      scope: "repo,user:email"
+    });
+    const authUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
+    res.json({
+      authUrl,
+      redirectUri,
+      clientIdPrefix: clientId2.substring(0, 5) + "..."
+    });
+  });
+}
+
+// server/server.ts
+var app = express9();
+var httpServer = createServer2(app);
+app.use(cors());
+app.use(compression());
+app.use(helmet({
+  contentSecurityPolicy: false
+  // Disable for development
+}));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(morgan((tokens, req, res) => {
+  const timestamp4 = (/* @__PURE__ */ new Date()).toLocaleTimeString();
+  const method = tokens.method(req, res);
+  const url = tokens.url(req, res);
+  const status = tokens.status(req, res);
+  const responseTime = tokens["response-time"](req, res);
+  console.log(`[${timestamp4}] \u{1F310} ${method} ${url} ${status} ${responseTime}ms`);
+  if (req.url.startsWith("/api/")) {
+    const resBody = res.locals.responseBody;
+    if (resBody) {
+      const truncatedBody = JSON.stringify(resBody).substring(0, 100) + "...";
+      console.log(`[${timestamp4}] \u{1F50D} Response: ${truncatedBody}`);
+    }
+  }
+  return null;
+}));
 app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function(body) {
+    res.locals.responseBody = body;
+    return originalJson.call(this, body);
+  };
+  next();
+});
+(async () => {
+  try {
+    await storage.initialize();
+    console.log("Successfully connected to database");
+    console.log("[1:16:56 AM] \u{1F5C4}\uFE0F [DB] Database connection successful");
+    await runMigrations();
+  } catch (error) {
+    console.error("Failed to connect to database:", error);
+  }
+})();
+async function runMigrations() {
+  try {
+    console.log("Running migration: add-snapshots-table");
+    await storage.run(`
+      CREATE TABLE IF NOT EXISTS snapshots (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        data JSONB NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+    `);
+    console.log("Successfully created snapshots table");
+    await storage.run(`
+      CREATE INDEX IF NOT EXISTS idx_snapshots_user_id ON snapshots(user_id);
+      CREATE INDEX IF NOT EXISTS idx_snapshots_created_at ON snapshots(created_at);
+    `);
+    console.log("Successfully added indexes to snapshots table");
+    console.log("[1:16:57 AM] \u2705 Snapshots table migration completed successfully");
+    console.log("Running migration: add-github-token");
+    try {
+      await storage.run(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS github_token TEXT;
+      `);
+      console.log("Successfully added github_token column to users table");
+    } catch (error) {
+      console.log("github_token column already exists in users table");
+      console.log("[1:16:57 AM] \u26A0\uFE0F GitHub token migration failed or was already applied");
+    }
+  } catch (error) {
+    console.error("Error running migrations:", error);
+  }
+}
+setupAuth(app);
+githubOAuth.setupRoutes(app);
+setupDebugRoutes(app);
+app.get("/api/maintenance", async (req, res) => {
+  try {
+    const maintenanceSettings2 = await storage.getMaintenanceSettings();
+    res.json(maintenanceSettings2);
+  } catch (error) {
+    console.error("Error fetching maintenance settings:", error);
+    res.status(500).json({ error: "Failed to fetch maintenance settings" });
+  }
+});
+var adminRouter = express9.Router();
+app.use("/admin", adminRouter);
+console.log("1:16:57 AM [admin] Admin routes registered");
+if (process.env.NODE_ENV === "production") {
+  app.use(express9.static(path2.join(__dirname, "../client/dist")));
+  app.get("*", (req, res) => {
+    res.sendFile(path2.join(__dirname, "../client/dist/index.html"));
+  });
+}
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: "Internal Server Error" });
+});
+var PORT = process.env.PORT || 5e3;
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`[1:16:57 AM] \u{1F680} [SERVER] Starting server on port ${PORT}, NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`[1:16:57 AM] \u2705 Server running on port ${PORT} and accessible from all network interfaces`);
+});
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received: closing HTTP server");
+  httpServer.close(() => {
+    console.log("HTTP server closed");
+    storage.close().then(() => {
+      console.log("Database connection closed");
+      process.exit(0);
+    });
+  });
+});
+
+// server/index.ts
+import { existsSync } from "fs";
+console.log(`Server starting in ${process.env.NODE_ENV || "development"} mode`);
+console.log(`Database: ${process.env.DATABASE_URL ? "Configured" : "Not configured"}`);
+var skipDrizzle = existsSync(".drizzle-unavailable");
+if (skipDrizzle) {
+  console.log("\u26A0\uFE0F Skipping drizzle migrations - drizzle-kit not available in this environment");
+}
+var app2 = express10();
+app2.use(express10.json());
+app2.use(express10.urlencoded({ extended: false }));
+app2.use((req, res, next) => {
   const start = Date.now();
   const path3 = req.path;
   let capturedJsonResponse = void 0;
@@ -5486,21 +6949,24 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path3.startsWith("/api")) {
-      let logLine = `${req.method} ${path3} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      logger.api(
+        "Request completed",
+        req.method,
+        path3,
+        res.statusCode,
+        duration
+      );
+      if (process.env.NODE_ENV === "development" && capturedJsonResponse) {
+        const responsePreview = JSON.stringify(capturedJsonResponse).length > 100 ? JSON.stringify(capturedJsonResponse).substring(0, 97) + "..." : JSON.stringify(capturedJsonResponse);
+        logger.debug(`Response: ${responsePreview}`);
       }
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "\u2026";
-      }
-      log(logLine);
     }
   });
   next();
 });
 async function createTestData() {
   try {
-    const admins = await db.select().from(users).where(eq5(users.isAdmin, true));
+    const admins = await db.select().from(users).where(eq12(users.isAdmin, true));
     if (admins.length === 0) {
       const admin = await storage.createUser({
         username: "admin",
@@ -5511,7 +6977,7 @@ async function createTestData() {
         // $100.00 starting balance
         apiKey: null
       });
-      log("Created default admin user: admin / admin123");
+      logger.success("Created default admin user: admin / admin123");
       const user = await storage.createUser({
         username: "user",
         password: await hashPassword("user123"),
@@ -5521,11 +6987,11 @@ async function createTestData() {
         // $50.00 starting balance
         apiKey: null
       });
-      log("Created default regular user: user / user123");
+      logger.success("Created default regular user: user / user123");
       const server = await storage.createServer({
         userId: user.id,
         name: "Test Server",
-        region: "nyc1",
+        region: "tor1",
         size: "s-1vcpu-1gb",
         dropletId: "12345",
         status: "active",
@@ -5554,54 +7020,69 @@ async function createTestData() {
         userId: user.id,
         message: "I need help configuring my server. Can you assist?"
       });
-      log("Created test data (server and support ticket)");
+      logger.success("Created test data (server and support ticket)");
     }
   } catch (error) {
-    console.error("Error creating test data:", error);
+    logger.error("Error creating test data:", error);
   }
 }
 (async () => {
   try {
     await pool.query("SELECT 1");
-    console.log("Database connection successful");
+    logger.database("Database connection successful");
     try {
-      const { runMigration: runMigration2 } = await Promise.resolve().then(() => (init_add_snapshots_table(), add_snapshots_table_exports));
-      const result = await runMigration2();
-      if (result) {
-        console.log("Snapshots table migration completed successfully");
+      const { runMigration: runSnapshotsMigration } = await Promise.resolve().then(() => (init_add_snapshots_table(), add_snapshots_table_exports));
+      const snapshotsResult = await runSnapshotsMigration();
+      if (snapshotsResult) {
+        logger.success("Snapshots table migration completed successfully");
       } else {
-        console.warn("Snapshots table migration failed or was already applied");
+        logger.warning("Snapshots table migration failed or was already applied");
+      }
+      const { runMigration: runGitHubTokenMigration } = await init_add_github_token().then(() => add_github_token_exports);
+      const githubTokenResult = await runGitHubTokenMigration();
+      if (githubTokenResult) {
+        logger.success("GitHub token migration completed successfully");
+      } else {
+        logger.warning("GitHub token migration failed or was already applied");
       }
     } catch (migrationError) {
-      console.error("Error running snapshots migration:", migrationError);
+      logger.error("Error running migrations:", migrationError);
     }
+    loadGitHubCredentials();
     await createTestData();
-    setupAuth(app);
-    registerAdminRoutes(app);
-    const server = await registerRoutes(app);
-    app.use((err, _req, res, _next) => {
-      console.error("Express error handler:", err);
+    setupAuth(app2);
+    registerAdminRoutes(app2);
+    const server = await registerRoutes(app2);
+    app2.use("/api/github", github_default);
+    app2.use("/api/github/deployments", github_deployments_default);
+    app2.use("/api/github/webhooks", github_webhooks_default);
+    app2.use("/api/github/debug", github_debug_default);
+    app2.use("/api/github/connections", github_connections_default);
+    app2.use("/api/app-platform", app_platform_default);
+    app2.use("/api/debug", api_debug_default);
+    app2.use((err, _req, res, _next) => {
+      logger.error("Express error handler:", err);
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
       res.status(status).json({ message });
     });
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
+    if (app2.get("env") === "development") {
+      await setupVite(app2, server);
     } else {
-      serveStatic(app);
+      serveStatic(app2);
     }
     const port = process.env.NODE_ENV === "development" ? 5e3 : process.env.PORT || 8080;
-    console.log(`Starting server on port ${port}, NODE_ENV: ${process.env.NODE_ENV}`);
+    logger.server(`Starting server on port ${port}, NODE_ENV: ${process.env.NODE_ENV}`);
     server.listen({
       port,
       host: "0.0.0.0",
       // Explicitly listen on all network interfaces
       reusePort: true
     }, () => {
-      log(`serving on port ${port} and accessible from all network interfaces`);
+      logger.success(`Server running on port ${port} and accessible from all network interfaces`);
     });
   } catch (error) {
-    console.error("Application startup error:", error);
+    logger.error("Application startup error:", error);
     process.exit(1);
   }
 })();
