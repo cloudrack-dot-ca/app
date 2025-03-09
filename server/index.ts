@@ -9,6 +9,8 @@ import { eq } from "drizzle-orm";
 import { registerAdminRoutes } from "./admin/routes";
 import githubRoutes from "./routes/github";
 import { logger } from "./utils/logger";
+import githubDeploymentsRoutes from "./routes/github-deployments";
+import appPlatformRoutes from "./routes/app-platform";
 
 const app = express();
 app.use(express.json());
@@ -162,6 +164,8 @@ async function createTestData() {
     const server = await registerRoutes(app);
 
     app.use("/api/github", githubRoutes);
+    app.use("/api/github/deployments", githubDeploymentsRoutes);
+    app.use("/api/app-platform", appPlatformRoutes);
 
     // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

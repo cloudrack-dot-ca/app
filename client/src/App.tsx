@@ -23,6 +23,7 @@ import ApiDocsPage from "@/pages/api-docs-page";
 import AdminDashboard from "@/pages/admin/dashboard";
 import MaintenanceSettings from "@/pages/admin/maintenance";
 import GitHubSetupPage from "@/pages/github-setup";
+import DeploymentsPage from "@/pages/deployments"; // Add this import
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Button } from "@/components/ui/button";
@@ -144,6 +145,7 @@ function Router() {
         <Route path="/" component={HomePage} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/docs" component={DocsPage} />
+        <Route path="/deployments" component={DeploymentsPage} />
         <ProtectedRoute path="/api-docs" component={ApiDocsPage} />
         <ProtectedRoute path="/dashboard" component={Dashboard} />
         <ProtectedRoute path="/billing" component={BillingPage} />

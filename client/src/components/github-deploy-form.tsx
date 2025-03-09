@@ -14,6 +14,17 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "wouter";
 
+// Add a new interface for app platform regions
+interface AppPlatformRegion {
+  id: string;
+  name: string;
+  slug: string;
+  available: boolean;
+  // These are specific to DigitalOcean App Platform regions
+  data_centers: string[];
+  default: boolean;
+}
+
 const deployFormSchema = z.object({
   repo: z.string().min(1, "Repository is required"),
   branch: z.string().min(1, "Branch is required"),
@@ -27,6 +38,7 @@ const deployFormSchema = z.object({
       "Name must be a valid hostname (only letters, numbers, hyphens, and periods allowed)"
     ),
   envVars: z.string().optional(),
+  deploymentType: z.enum(['static', 'container', 'auto']).default('auto'),
 });
 
 interface Size {
@@ -56,6 +68,7 @@ export default function GitHubDeployForm() {
       size: "",
       name: "",
       envVars: "",
+      deploymentType: 'auto',
     },
   });
 
@@ -79,6 +92,114 @@ export default function GitHubDeployForm() {
 
   const { data: sizes = [] } = useQuery<Size[]>({
     queryKey: ["/api/sizes"],
+  });
+
+  // Load app platform regions (separate from VPS regions)
+  const { data: appRegions = [] } = useQuery<AppPlatformRegion[]>({
+    queryKey: ["/api/app-platform/regions"],
+    // This is a temporary mock implementation until the API endpoint exists
+    queryFn: async () => [
+      { 
+        id: "ams", 
+        slug: "ams", 
+        name: "Amsterdam, Netherlands", 
+        available: true, 
+        data_centers: ["ams3"], 
+        default: false 
+      },
+      { 
+        id: "nyc", 
+        slug: "nyc", 
+        name: "New York, United States", 
+        available: true, 
+        data_centers: ["nyc1", "nyc3"], 
+        default: true 
+      },
+      { 
+        id: "fra", 
+        slug: "fra", 
+        name: "Frankfurt, Germany", 
+        available: true, 
+        data_centers: ["fra1"], 
+        default: false 
+      },
+      { 
+        id: "lon", 
+        slug: "lon", 
+        name: "London, United Kingdom", 
+        available: true, 
+        data_centers: ["lon1"], 
+        default: false 
+      },
+      { 
+        id: "sfo", 
+        slug: "sfo", 
+        name: "San Francisco, United States", 
+        available: true, 
+        data_centers: ["sfo3"], 
+        default: false 
+      },
+      { 
+        id: "sgp", 
+        slug: "sgp", 
+        name: "Singapore", 
+        available: true, 
+        data_centers: ["sgp1"], 
+        default: false 
+      }
+    ],
+  });
+
+  // Load app platform sizes (different from VPS sizes)
+  const { data: appSizes = [] } = useQuery<any[]>({
+    queryKey: ["/api/app-platform/sizes"],
+    // Mock implementation
+    queryFn: async () => [
+      {
+        slug: "basic-xxs",
+        name: "Basic XXS",
+        cpu: 1,
+        memory_bytes: 512 * 1024 * 1024,
+        usd_per_month: 5,
+        usd_per_second: 0.0000019,
+        tier_slug: "basic",
+        tier_upgrade_to: "professional-xs",
+        included_bandwidth_bytes: 40 * 1024 * 1024 * 1024,
+      },
+      {
+        slug: "basic-xs",
+        name: "Basic XS",
+        cpu: 1,
+        memory_bytes: 1024 * 1024 * 1024,
+        usd_per_month: 10,
+        usd_per_second: 0.0000038,
+        tier_slug: "basic",
+        tier_upgrade_to: "professional-xs",
+        included_bandwidth_bytes: 80 * 1024 * 1024 * 1024,
+      },
+      {
+        slug: "basic-s",
+        name: "Basic S",
+        cpu: 1,
+        memory_bytes: 2 * 1024 * 1024 * 1024,
+        usd_per_month: 18,
+        usd_per_second: 0.0000069,
+        tier_slug: "basic",
+        tier_upgrade_to: "professional-xs",
+        included_bandwidth_bytes: 160 * 1024 * 1024 * 1024,
+      },
+      {
+        slug: "professional-xs",
+        name: "Professional XS",
+        cpu: 2,
+        memory_bytes: 4 * 1024 * 1024 * 1024,
+        usd_per_month: 40,
+        usd_per_second: 0.000015,
+        tier_slug: "professional",
+        tier_upgrade_to: "professional-s",
+        included_bandwidth_bytes: 320 * 1024 * 1024 * 1024,
+      }
+    ]
   });
 
   // Handle repo change to populate the app name
@@ -148,6 +269,21 @@ export default function GitHubDeployForm() {
       setIsDeploying(false);
     }
   }
+
+  // Add deploymentType state to manage deployment options
+  const [deploymentType, setDeploymentType] = useState<'static' | 'container' | 'auto'>('auto');
+
+  // Add a function to format memory size
+  const formatMemory = (bytes: number) => {
+    const gb = bytes / (1024 * 1024 * 1024);
+    return gb >= 1 ? `${gb}GB` : `${bytes / (1024 * 1024)}MB`;
+  };
+
+  // Add a function to format bandwidth
+  const formatBandwidth = (bytes: number) => {
+    const gb = bytes / (1024 * 1024 * 1024);
+    return gb >= 1000 ? `${gb / 1000}TB` : `${gb}GB`;
+  };
 
   // Loading state when not connected to GitHub
   if (repos.length === 0 && !isLoadingRepos) {
@@ -250,6 +386,52 @@ export default function GitHubDeployForm() {
           )}
         />
 
+        {/* Add deployment type selector */}
+        <div className="space-y-1">
+          <Label className="text-sm font-medium">Deployment Type</Label>
+          <div className="grid grid-cols-3 gap-2">
+            <Button 
+              type="button" 
+              variant={deploymentType === 'auto' ? 'default' : 'outline'}
+              onClick={() => setDeploymentType('auto')}
+              className="h-auto py-2 px-3"
+            >
+              <div className="text-left">
+                <div className="font-medium text-sm">Auto-Detect</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Automatically detect project type
+                </div>
+              </div>
+            </Button>
+            <Button 
+              type="button" 
+              variant={deploymentType === 'static' ? 'default' : 'outline'}
+              onClick={() => setDeploymentType('static')}
+              className="h-auto py-2 px-3"
+            >
+              <div className="text-left">
+                <div className="font-medium text-sm">Static Site</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  HTML, JS, CSS files only
+                </div>
+              </div>
+            </Button>
+            <Button 
+              type="button" 
+              variant={deploymentType === 'container' ? 'default' : 'outline'}
+              onClick={() => setDeploymentType('container')}
+              className="h-auto py-2 px-3"
+            >
+              <div className="text-left">
+                <div className="font-medium text-sm">Docker</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Use Dockerfile
+                </div>
+              </div>
+            </Button>
+          </div>
+        </div>
+
         <FormField
           control={form.control}
           name="name"
@@ -267,30 +449,34 @@ export default function GitHubDeployForm() {
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <FormField
             control={form.control}
             name="region"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Region</FormLabel>
+                <FormLabel>Deployment Region</FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select region" />
+                      <SelectValue placeholder="Select deployment region" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {regions.map((region) => (
+                    {appRegions.map((region) => (
                       <SelectItem key={region.slug} value={region.slug}>
                         {region.name}
+                        {region.default && <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded text-blue-800 dark:text-blue-200">Recommended</span>}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <FormDescription className="text-xs">
+                  App Platform regions are different from VPS regions. Choose the closest to your users.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -301,24 +487,35 @@ export default function GitHubDeployForm() {
             name="size"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Size</FormLabel>
+                <FormLabel>Compute Resources</FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select size" />
+                      <SelectValue placeholder="Select resources" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {sizes.map((size) => (
+                    {appSizes.map((size) => (
                       <SelectItem key={size.slug} value={size.slug}>
-                        {size.memory / 1024}GB RAM, {size.vcpus} vCPUs
+                        <div className="flex justify-between w-full">
+                          <span>{size.name}</span>
+                          <span className="text-muted-foreground">
+                            ${size.usd_per_month.toFixed(2)}/mo
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {size.cpu} vCPU, {formatMemory(size.memory_bytes)}, {formatBandwidth(size.included_bandwidth_bytes)} Bandwidth
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <FormDescription className="text-xs">
+                  Resources allocated to your application.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -363,6 +560,19 @@ export default function GitHubDeployForm() {
             </>
           )}
         </Button>
+
+        {/* Add a link to deployments page */}
+        <div className="text-center">
+          <Button
+            variant="link"
+            className="text-sm"
+            asChild
+          >
+            <Link href="/deployments">
+              View Your Deployments
+            </Link>
+          </Button>
+        </div>
       </form>
 
       <Dialog open={showEnvVarsDialog} onOpenChange={setShowEnvVarsDialog}>
